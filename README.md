@@ -8,21 +8,13 @@ Open-source Instagram-style social media app for groups, events, local communiti
 
 ## Screenshots
 
-Add your screenshots here after running the app.
+| Feed | Create |
+| --- | --- |
+| <img src="./docs/screenshots/feed.PNG" alt="ciaorelated feed screen" width="280" /> | <img src="./docs/screenshots/create.PNG" alt="ciaorelated create screen" width="280" /> |
 
-| Feed | Explore | Profile |
-| --- | --- | --- |
-| ![Feed screenshot](./docs/screenshots/feed.png) | ![Explore screenshot](./docs/screenshots/explore.png) | ![Profile screenshot](./docs/screenshots/profile.png) |
-
-| Groups | Chat | Create |
-| --- | --- | --- |
-| ![Groups screenshot](./docs/screenshots/groups.png) | ![Chat screenshot](./docs/screenshots/chat.png) | ![Create screenshot](./docs/screenshots/create.png) |
-
-You can create the folder with:
-
-```bash
-mkdir -p docs/screenshots
-```
+| Profile | Activity |
+| --- | --- |
+| <img src="./docs/screenshots/profile.PNG" alt="ciaorelated profile screen" width="280" /> | <img src="./docs/screenshots/activity.PNG" alt="ciaorelated activity screen" width="280" /> |
 
 ## Features
 
