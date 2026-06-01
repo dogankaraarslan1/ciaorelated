@@ -1,0 +1,68 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "ios": {
+      "env": {
+        "NODE_ENV": "production"
+      }
+    },
+    "development": {
+      "node": "20.18.1",
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql"
+      }
+    },
+    "dev-simulator": {
+      "node": "20.18.1",
+      "developmentClient": true,
+      "distribution": "internal",
+      "ios": { "simulator": true },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:4000/graphql"
+      }
+    },
+    "preview": {
+      "node": "20.18.1",
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql"
+      }
+    },
+    "production": {
+      "node": "20.18.1",
+      "distribution": "store",
+      "android": { "buildType": "app-bundle" },
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql"
+      }
+    },
+    "screenshots-ios-sim": {
+      "node": "20.18.1",
+      "distribution": "internal",
+      "ios": { "simulator": true },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:4000/graphql"
+      }
+    },
+    "screenshots-android": {
+      "node": "20.18.1",
+      "distribution": "internal",
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql"
+      }
+    }
+  },
+  "submit": {
+    "production": {
+      "android": { "track": "internal" }
+    }
+  }
+}

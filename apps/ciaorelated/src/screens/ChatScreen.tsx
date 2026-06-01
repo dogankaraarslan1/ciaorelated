@@ -1,0 +1,1130 @@
+// apps/ciaorelated/src/screens/ChatScreen.tsx
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
+import {
+  GiftedChat,
+  IMessage,
+  Message,
+  Composer,
+  Bubble,
+  Time,
+} from "react-native-gifted-chat";
+import { Ionicons } from "@expo/vector-icons";
+import { gql, useMutation, useQuery, useSubscription } from "@apollo/client";
+import * as ImagePicker from "expo-image-picker";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import { Image as ExpoImage } from "expo-image";
+
+import { uploadToS3 } from "../lib/uploadToS3";
+import { apollo } from "../apollo";
+import { useTheme } from "../theme/ThemeProvider";
+
+import * as FileSystem from "expo-file-system/legacy";
+import * as Sharing from "expo-sharing";
+
+import "react-native-gifted-chat";
+
+import { CommonActions, useFocusEffect } from "@react-navigation/native";
+import { setActiveChatThreadId } from "../lib/chatPresence";
+import { avatarPlaceholder } from "../../assets/placeholders";
+
+
+import { useTranslation } from "react-i18next";
+
+/* ───────────────── GiftedChat types ───────────────── */
+declare module "react-native-gifted-chat" {
+  interface IMessage {
+    kind?: "text" | "image" | "video" | "file";
+    pending?: boolean;
+
+    // optional: wenn du später den “no-jump” serverId approach wieder einbaust
+    serverId?: string;
+
+    story?: {
+      id: string;
+      mediaUrl?: string | null;
+      thumbUrl?: string | null;
+      isVideo?: boolean | null;
+      createdAt?: string | null;
+      author?: { id: string; username: string; avatarThumbUrl?: string | null; avatarUrl?: string | null } | null;
+    } | null;
+
+    // ✅ NEU: Story expired / gelöscht
+    storyExpired?: boolean;
+  }
+}
+
+/* ───────────────── GraphQL ───────────────── */
+const MESSAGES = gql`
+  query Messages($threadId: ID!, $cursor: ID, $take: Int) {
+    messages(threadId: $threadId, cursor: $cursor, take: $take) {
+      edges {
+        node {
+          storyExpired
+          story {
+            id
+            mediaUrl
+            thumbUrl
+            isVideo
+            createdAt
+            author { id username avatarThumbUrl avatarUrl  }
+          }
+
+          id
+          createdAt
+          kind
+          text
+          sender {
+            id
+            username
+            avatarThumbUrl
+            avatarUrl
+          }
+          media {
+            url
+            mime
+          }
+        }
+      }
+      nextCursor
+    }
+  }
+`;
+
+const SEND_MESSAGE = gql`
+  mutation Send($input: SendMessageInput!) {
+    sendMessage(input: $input) {
+      id
+      createdAt
+      kind
+      text
+      sender {
+        id
+        username
+        avatarThumbUrl
+        avatarUrl
+      }
+      storyExpired
+      story {
+        id
+        mediaUrl
+        thumbUrl
+        isVideo
+        createdAt
+        author { id username avatarThumbUrl avatarUrl }
+      }
+
+      media {
+        url
+        mime
+      }
+    }
+  }
+`;
+
+const SUB_MESSAGE_ADDED = gql`
+  subscription OnAdded($threadId: ID!) {
+    messageAdded(threadId: $threadId) {
+      id
+      createdAt
+      kind
+      text
+      sender {
+        id
+        username
+        avatarThumbUrl
+        avatarUrl
+      }
+      media {
+        url
+        mime
+      }
+      storyExpired
+      story {
+        id
+        mediaUrl
+        thumbUrl
+        isVideo
+        createdAt
+        author { id username avatarThumbUrl avatarUrl }
+      }
+
+    }
+  }
+`;
+
+const ME_Q = gql`
+  query {
+    me {
+      id
+      username
+      avatarThumbUrl
+      avatarUrl
+    }
+  }
+`;
+
+const DELETE_MESSAGE = gql`
+  mutation DeleteMessage($messageId: ID!) {
+    deleteMessage(messageId: $messageId)
+  }
+`;
+
+const MARK_THREAD_READ = gql`
+  mutation MarkThreadRead($threadId: ID!) {
+    markThreadRead(threadId: $threadId)
+  }
+`;
+
+type MsgNode = {
+  id: string;
+  createdAt: string;
+  kind: "text" | "image" | "video" | "file";
+  text?: string;
+  sender: { id: string; username: string; avatarThumbUrl?: string | null; avatarUrl?: string | null };
+  media?: { url: string; mime: string };
+  storyExpired?: boolean | null;
+  story?: {
+    id: string;
+    mediaUrl?: string | null;
+    thumbUrl?: string | null;
+    isVideo?: boolean | null;
+    createdAt?: string | null;
+    author?: { id: string; username: string; avatarThumbUrl?: string | null; avatarUrl?: string | null } | null;
+  } | null;
+
+};
+
+export default function ChatScreen({ route, navigation }: any) {
+  const { t } = useTranslation();
+
+  const { theme } = useTheme();
+  const C = useMemo(() => {
+    const x: any = theme?.colors ?? {};
+    return {
+      bg: x.bg ?? "#0B0B0B",
+      card: x.card ?? "#111214",
+      text: x.text ?? "#F3F4F6",
+      sub: x.subtext ?? "#9CA3AF",
+      border: x.border ?? "#23262B",
+      accent: x.primary ?? "#4f46e5",
+    };
+  }, [theme]);
+
+  const styles = useMemo(() => makeStyles(C), [C]);
+  const insets = useSafeAreaInsets();
+  const storyCardWidth = useMemo(() => {
+    const w = Dimensions.get("window")?.width ?? 375;
+    return Math.min(300, Math.max(220, Math.floor(w * 0.72)));
+  }, []);
+
+  const threadId = route.params?.threadId as string;
+  const title = (route.params?.title as string) ?? "Chat";
+  const initialDraft = (route.params?.initialDraft as string | undefined) ?? "";
+
+  const [messages, setMessages] = useState<IMessage[]>([]);
+  const [inputText, setInputText] = useState("");
+  const hasText = inputText.trim().length > 0;
+
+  useEffect(() => {
+    const draft = String(initialDraft || "").trim();
+    if (!draft) return;
+    setInputText((prev) => (prev.trim() ? prev : draft));
+  }, [initialDraft, threadId]);
+
+  const { data: meQ } = useQuery(ME_Q, { fetchPolicy: "cache-first" });
+  const myId = meQ?.me?.id ?? "me";
+  const myAvatar = meQ?.me?.avatarThumbUrl ?? meQ?.me?.avatarUrl ?? undefined;
+
+  const seenIds = useRef(new Set<string>());
+
+  const { data } = useQuery(MESSAGES, {
+    variables: { threadId, take: 30 },
+    skip: !threadId,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [deleteMessageMut] = useMutation(DELETE_MESSAGE);
+  const [markThreadRead] = useMutation(MARK_THREAD_READ);
+  const [sendMessage] = useMutation(SEND_MESSAGE);
+
+  const lastReadPing = useRef(0);
+  const markRead = useCallback(() => {
+    if (!threadId) return;
+    const now = Date.now();
+    if (now - lastReadPing.current < 800) return;
+    lastReadPing.current = now;
+    markThreadRead({ variables: { threadId } }).catch(() => {});
+  }, [markThreadRead, threadId]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      setActiveChatThreadId(threadId);
+      markRead();
+      return () => setActiveChatThreadId(null);
+    }, [threadId, markRead])
+  );
+
+  useEffect(() => {
+    setMessages([]);
+    seenIds.current = new Set<string>();
+  }, [threadId]);
+
+  useEffect(() => {
+    if (!data?.messages) return;
+    const nodes = data.messages.edges.map((e: any) => e.node);
+
+    for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
+
+    const mapped = mapMessages(nodes);
+    setMessages((prev) => mergeById(prev, mapped));
+    markRead();
+  }, [data, markRead]);
+
+  useSubscription(SUB_MESSAGE_ADDED, {
+    variables: { threadId },
+    skip: !threadId,
+    onError: (e) => console.warn("[Chat] messageAdded sub error", e),
+    onData: ({ data }) => {
+      const msg = data.data?.messageAdded as MsgNode | undefined;
+      if (!msg) return;
+
+      const id = String(msg.id);
+      if (seenIds.current.has(id)) return;
+      seenIds.current.add(id);
+
+      const incoming = mapMessages([msg]);
+      setMessages((prev) => {
+        if (hasMessage(prev, id)) return prev;
+        return mergeById(prev, incoming);
+      });
+
+      if (String(msg.sender?.id) !== String(myId)) markRead();
+    },
+  });
+
+  useEffect(() => {
+    const urls = Array.from(
+      new Set(
+        messages
+          .map((m) => (m.user as any)?.avatar as string | undefined)
+          .filter(Boolean)
+          .map((u) => String(u).split("?")[0])
+      )
+    );
+    if (urls.length) ExpoImage.prefetch(urls).catch(() => {});
+
+  }, [messages]);
+
+  /* ───────────────── KEY warning fix ───────────────── */
+  const renderMessage = useCallback((props: any) => {
+    const { key: _ignore, ...rest } = props ?? {};
+    return <Message {...rest} />;
+  }, []);
+
+  /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
+  const goToProfileTab = useCallback(
+    (userId: string) => {
+      if (!userId) return;
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: "AppTabs",
+              params: {
+                screen: "Profile",
+                params: {
+                  screen: "ProfileMain",
+                  params: { userId },
+                },
+              },
+            },
+          ],
+        })
+      );
+    },
+    [navigation]
+  );
+
+  const renderAvatar = useCallback(
+    (props: any) => {
+      const msg = props?.currentMessage as any;
+      const uid = String(msg?.user?._id ?? "");
+      if (!uid) return null;
+
+      // Nur Gegenüber links
+      if (uid === String(myId)) return <View  />;
+
+      const uri = msg?.user?.avatar as string | undefined;
+      const cacheKey = uri ? String(uri).split("?")[0] : undefined;
+
+
+      return (
+        <TouchableOpacity
+          onPress={() => goToProfileTab(uid)}
+          activeOpacity={0.9}
+          style={{ marginLeft: 6, marginRight: 6 }}
+        >
+          <ExpoImage
+            source={uri ? { uri, cacheKey } : avatarPlaceholder}
+            style={styles.avatar}
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={80}
+          />
+        </TouchableOpacity>
+      );
+    },
+    [goToProfileTab, myId, styles.avatar]
+  );
+
+
+  const renderBubble = useCallback(
+    (props: any) => {
+      const m = props?.currentMessage as any;
+      const isStoryMsg = !!m?.story || !!m?.storyExpired;
+      const hasText = typeof m?.text === "string" && m.text.trim().length > 0;
+      const storyOnly = isStoryMsg && !hasText;
+      return (
+        <Bubble
+          {...props}
+          wrapperStyle={{
+            left: storyOnly
+              ? { backgroundColor: "transparent", borderWidth: 0, padding: 0, maxWidth: storyCardWidth }
+              : { backgroundColor: C.card, borderWidth: 1, borderColor: C.border },
+            right: storyOnly
+              ? { backgroundColor: "transparent", borderWidth: 0, padding: 0, maxWidth: storyCardWidth }
+              : { backgroundColor: C.accent },
+          }}
+          textStyle={{
+            left: { color: C.text },
+            right: { color: "#fff" },
+          }}
+        />
+      );
+    },
+    [C.accent, C.border, C.card, C.text, storyCardWidth]
+  );
+
+  /* ───────────────── ActionSheet / Delete ───────────────── */
+  const [actionMsg, setActionMsg] = useState<IMessage | null>(null);
+  const closeSheet = () => setActionMsg(null);
+
+  const doDeleteMessage = useCallback(
+    async (msg: IMessage) => {
+      const id = String(msg?._id ?? "");
+      if (!id || id.startsWith("tmp-")) return;
+
+      const snapshot = messages;
+      setMessages((prev) => prev.filter((m) => String(m._id) !== id));
+      closeSheet();
+
+      try {
+        await deleteMessageMut({ variables: { messageId: id } });
+      } catch (e: any) {
+        setMessages(snapshot);
+        Alert.alert(t("chat.deleteFailedTitle"), e?.message || t("common.tryAgain"));
+      }
+    },
+    [deleteMessageMut, messages, t]
+  );
+
+  const ActionSheet = () => {
+    if (!actionMsg) return null;
+
+    const isMine = String((actionMsg as any)?.user?._id) === String(myId);
+    const imageUrl = (actionMsg as any)?.image as string | undefined;
+
+    return (
+      <View
+        style={{
+          position: "absolute",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: C.bg,
+          borderTopLeftRadius: 16,
+          borderTopRightRadius: 16,
+          borderTopWidth: 1,
+          borderColor: C.border,
+          paddingTop: 8,
+          paddingBottom: Math.max(insets.bottom, 12),
+        }}
+      >
+        <View
+          style={{
+            height: 4,
+            width: 44,
+            alignSelf: "center",
+            borderRadius: 2,
+            backgroundColor: C.border,
+            marginBottom: 8,
+          }}
+        />
+
+        {imageUrl ? (
+          <TouchableOpacity
+            onPress={async () => {
+              await downloadAndShare(imageUrl, "image.jpg");
+              closeSheet();
+            }}
+            style={{ paddingHorizontal: 16, paddingVertical: 14 }}
+          >
+            <Text style={{ color: C.text, fontSize: 16 }}>{t("chat.downloadShareImage")}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        {isMine ? (
+          <TouchableOpacity
+            onPress={() => doDeleteMessage(actionMsg)}
+            style={{ paddingHorizontal: 16, paddingVertical: 14 }}
+          >
+            <Text style={{ color: "#ef4444", fontSize: 16, fontWeight: "800" }}>{t("chat.deleteMessage")}</Text>
+          </TouchableOpacity>
+        ) : null}
+
+        <TouchableOpacity onPress={closeSheet} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
+          <Text style={{ color: C.sub, fontSize: 16 }}>{t("chat.cancel")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  /* ───────────────── SEND TEXT ───────────────── */
+  const onSend = useCallback(
+    async (out: IMessage[] = []) => {
+      if (!threadId) return;
+
+      for (const m of out) {
+        const text = m.text?.trim();
+        if (!text) continue;
+
+        const tempId = "tmp-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
+        setMessages((prev) =>
+          mergeById(prev, [
+            {
+              _id: tempId,
+              text,
+              createdAt: new Date(),
+              user: { _id: myId, avatar: myAvatar },
+              pending: true,
+              kind: "text",
+            } as any,
+          ])
+        );
+
+        try {
+          const res = await sendMessage({
+            variables: { input: { threadId, kind: "text", text } },
+          });
+
+          const serverMsg = res.data?.sendMessage as MsgNode | undefined;
+
+          if (serverMsg?.id) {
+            const sid = String(serverMsg.id);
+            seenIds.current.add(sid);
+
+            // tmp ersetzen wie du es hast (ok), Jump ist jetzt weg weil statusSlot konstant
+            setMessages((prev) => {
+              const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
+              if (hasMessage(withoutTmp, sid)) return withoutTmp;
+              return mergeById(withoutTmp, mapMessages([serverMsg]));
+            });
+          } else {
+            setMessages((prev) =>
+              prev.map((x) => (String(x._id) === String(tempId) ? ({ ...x, pending: false } as any) : x))
+            );
+          }
+        } catch (e: any) {
+          setMessages((prev) => prev.filter((x) => String(x._id) !== String(tempId)));
+          Alert.alert(t("chat.sendFailedTitle"), e?.message || t("common.tryAgain"));
+        }
+      }
+
+      setInputText("");
+      markRead();
+    },
+    [threadId, sendMessage, myId, myAvatar, markRead, t]
+  );
+
+  async function downloadAndShare(url: string, suggestedName?: string) {
+    try {
+      const raw = url.split("?")[0];
+      const filename = suggestedName || decodeURIComponent(raw.split("/").pop() || "download");
+
+      const baseDir = FileSystem.cacheDirectory || FileSystem.documentDirectory || "";
+      const target = baseDir + filename;
+
+      const { uri, status } = await FileSystem.downloadAsync(url, target);
+      if (status !== 200) throw new Error(t("chat.downloadFailedStatus", { status }));
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri);
+      } else {
+        Alert.alert(t("chat.savedTitle"), t("chat.fileSaved", { uri }));
+      }
+    } catch (e: any) {
+      Alert.alert(t("chat.downloadFailedTitle"), e?.message || String(e));
+    }
+  }
+
+  /* ───────────────── IMAGE ───────────────── */
+  const pickImage = useCallback(async () => {
+    try {
+      if (!threadId) return;
+
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== "granted") {
+        Alert.alert(t("chat.permissionMissingTitle"), t("chat.photosPermissionBody"));
+        return;
+      }
+
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 0.9,
+      });
+
+      if (res.canceled) return;
+      const a = res.assets?.[0];
+      if (!a?.uri) return;
+
+      const tempId = "tmp-img-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+
+      setMessages((prev) =>
+        mergeById(prev, [
+          {
+            _id: tempId,
+            text: "",
+            createdAt: new Date(),
+            user: { _id: myId, avatar: myAvatar },
+            image: a.uri,
+            pending: true,
+            kind: "image",
+          } as any,
+        ])
+      );
+
+      const uploaded = await uploadToS3(apollo, {
+        uri: a.uri,
+        name: a.fileName ?? "image.jpg",
+        type: a.mimeType ?? "image/jpeg",
+      });
+
+      const res2 = await sendMessage({
+        variables: {
+          input: {
+            threadId,
+            kind: "image",
+            media: { key: uploaded.key, mime: uploaded.mime },
+          },
+        },
+      });
+
+      const serverMsg = res2.data?.sendMessage as MsgNode | undefined;
+
+      if (serverMsg?.id) {
+        const sid = String(serverMsg.id);
+        seenIds.current.add(sid);
+
+        setMessages((prev) => {
+          const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
+          if (hasMessage(withoutTmp, sid)) return withoutTmp;
+          return mergeById(withoutTmp, mapMessages([serverMsg]));
+        });
+      } else {
+        setMessages((prev) =>
+          prev.map((x) => (String(x._id) === String(tempId) ? ({ ...x, pending: false } as any) : x))
+        );
+      }
+    } catch (e: any) {
+      console.warn("[Chat] pickImage failed:", e?.message || e);
+      Alert.alert(t("chat.imageSendFailedTitle"), e?.message || t("chat.imageSendFailedBody"));
+    }
+  }, [apollo, threadId, sendMessage, myId, myAvatar, t]);
+
+  const renderMessageImage = useCallback(
+    (props: any) => {
+      const uri = props?.currentMessage?.image;
+      if (!uri) return null;
+      const cacheKey = String(uri).split("?")[0];
+      return (
+        <View style={{ padding: 2 }}>
+          <ExpoImage source={{ uri, cacheKey }} style={styles.image} contentFit="cover" cachePolicy="disk" transition={120} />
+        </View>
+      );
+    },
+    [styles.image]
+  );
+  const openStoryFromMsg = useCallback(
+  (m: any) => {
+    const story = m?.story;
+    if (!story?.id) return;
+
+    // ⚠️ Du brauchst einen Screen/Flow der eine einzelne Story öffnen kann.
+    // Minimal: StoryViewer mit 1 Slide.
+    navigation.navigate("StoryViewer", {
+      user: story.author ? { id: story.author.id, username: story.author.username, avatar: story.author.avatarUrl } : { id: undefined, username: t("chat.storyFallbackName"), avatar: null },
+      slides: [
+        {
+          id: story.id,
+          uri: story.mediaUrl,
+          isVideo: !!story.isVideo,
+          thumb: story.thumbUrl ?? null,
+          when: story.createdAt ?? undefined,
+          userId: story.author?.id ?? null,
+        },
+      ],
+      startIndex: 0,
+      mine: false,
+    });
+  },
+  [navigation, t]
+);
+
+const renderCustomView = useCallback(
+  (props: any) => {
+    const m = props?.currentMessage as any;
+    if (!m) return null;
+
+    const story = m.story;
+    const expired = !!m.storyExpired;
+
+    if (!story && !expired) return null;
+
+    // ───────────────── Expired ─────────────────
+    if (expired || !story?.mediaUrl) {
+      return (
+        <View style={[styles.storyExpiredCard, { backgroundColor: C.card, borderColor: C.border,width: storyCardWidth, alignSelf: "flex-start", }]}>
+          <Ionicons name="time-outline" size={18} color={C.sub} />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.storyExpiredTitle, { color: C.text }]}>
+              {t("chat.storyNoLongerAvailable")}</Text>
+            <Text style={[styles.storyExpiredSub, { color: C.sub }]}>
+              {t("chat.thisStoryHasExpired")}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    // ───────────────── Story Card ─────────────────
+    const authorId = story.author?.id;
+    const isMineStory = !!authorId && String(authorId) === String(myId);
+    const isOpenable = !isMineStory;
+
+    const Container: any = isOpenable ? TouchableOpacity : View;
+    const thumbUri = story.thumbUrl || story.mediaUrl ;
+    const thumbCacheKey = thumbUri ? String(thumbUri).split("?")[0] : undefined;
+
+    const authorAvatar =
+      story?.author?.avatarThumbUrl ||
+      story?.author?.avatarUrl ||
+      null;
+
+    return (
+      <Container
+        activeOpacity={isOpenable ? 0.9 : undefined}
+        onPress={isOpenable ? () => openStoryFromMsg(m) : undefined}
+        style={[
+          styles.storyCard,
+          {
+            backgroundColor: C.card,
+            borderColor: C.border,
+            opacity: isOpenable ? 1 : 0.85, // dezenter disabled look
+            width: storyCardWidth,
+            alignSelf: "flex-start",
+            marginLeft: 15,
+            marginRight: 10,
+          },
+        ]}
+      >
+        {/* ─── Thumbnail ─── */}
+        <View style={styles.storyThumbOuter}>
+          <ExpoImage
+            source={thumbUri ? { uri: thumbUri, cacheKey: thumbCacheKey } : avatarPlaceholder}
+            style={styles.storyThumb}
+            contentFit="cover"
+            cachePolicy="disk"
+            transition={120}
+          />
+
+          {/* leichter Overlay */}
+          <View style={styles.storyThumbOverlay} />
+
+          {/* Story Badge (bleibt) */}
+          <View style={styles.storyBadge}>
+            <Ionicons
+              name={story.isVideo ? "play" : "image-outline"}
+              size={12}
+              color="#fff"
+            />
+            <Text style={styles.storyBadgeText}>
+              {story.isVideo ? t("chat.storyBadgeVideo") : t("chat.storyBadgePhoto")}
+            </Text>
+          </View>
+        </View>
+
+        {/* ─── Footer ─── */}
+        <View style={styles.storyFooter}>
+          <Text style={[styles.storyReplyText, { color: C.text }]}>
+            {t("chat.replyToStory")}</Text>
+
+          <Ionicons name="chevron-forward" size={18} color={C.sub} />
+        </View>
+      </Container>
+    );
+  },
+  [C, myId, openStoryFromMsg, styles, storyCardWidth, t]
+);
+
+
+  /* ───────────────── Toolbar ───────────────── */
+  const renderPillToolbar = useCallback(
+    (props: any) => {
+      const handlePressSend = () => {
+        const text = inputText.trim();
+        if (!text) return;
+
+        props.onSend?.(
+          [{ _id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, text, createdAt: new Date(), user: { _id: myId } }],
+          true
+        );
+
+        setInputText("");
+      };
+
+      return (
+        <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: Math.max(insets.bottom, 8) }]}>
+          {!hasText && (
+            <TouchableOpacity style={[styles.camBtn, { backgroundColor: C.accent }]} onPress={pickImage} activeOpacity={0.9}>
+              <Ionicons name="camera-outline" size={18} color="#fff" />
+            </TouchableOpacity>
+          )}
+
+          <View style={[styles.pill, { backgroundColor: C.card, borderColor: C.border }]}>
+            <Composer
+              {...props}
+              text={inputText}
+              onTextChanged={setInputText}
+              placeholder={t("chat.sendAMessage")}
+              textInputProps={{ placeholderTextColor: C.sub, multiline: true, blurOnSubmit: false }}
+              textInputStyle={[styles.composer, { color: C.text }]}
+            />
+
+            {hasText ? (
+              <TouchableOpacity style={[styles.sendBtn, { backgroundColor: C.accent }]} onPress={handlePressSend} activeOpacity={0.9}>
+                <Ionicons name="send" size={16} color="#fff" />
+              </TouchableOpacity>
+            ) : (
+              <View style={{ width: 8 }} />
+            )}
+          </View>
+        </View>
+      );
+    },
+    [C.bg, C.card, C.border, C.text, C.sub, C.accent, hasText, inputText, myId, pickImage, insets.bottom]
+  );
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      {/* Header */}
+      <View style={[styles.header, { paddingTop: 10 }]}>
+        <TouchableOpacity
+          style={[styles.headerBtn, { backgroundColor: C.card, borderColor: C.border }]}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="chevron-back" size={22} color={C.text} />
+        </TouchableOpacity>
+
+        <Text style={[styles.headerTitle, { color: C.text }]} numberOfLines={1}>
+          {title}
+        </Text>
+
+        <View style={{ width: 38 }} />
+      </View>
+
+      <GiftedChat
+        messages={messages}
+        onSend={onSend}
+        user={{ _id: myId, avatar: myAvatar }}
+        text={inputText}
+        onInputTextChanged={setInputText}
+        keyboardShouldPersistTaps="handled"
+        messagesContainerStyle={{ backgroundColor: C.bg }}
+        renderMessage={renderMessage}
+        renderBubble={renderBubble}
+        renderCustomView={renderCustomView}
+        renderInputToolbar={renderPillToolbar}
+        renderMessageImage={renderMessageImage}
+        messageIdGenerator={() => `${Date.now()}-${Math.random().toString(36).slice(2)}`}
+        onLongPress={(_ctx, message) => setActionMsg(message)}
+        // ✅ AVATAR wirklich aktivieren:
+        showUserAvatar={true} 
+        showAvatarForEveryMessage={true}
+        renderAvatar={renderAvatar}
+        // falls du trotzdem onPressAvatar willst:
+        onPressAvatar={(user) => {
+          const userId = String((user as any)?._id);
+          if (userId) goToProfileTab(userId);
+        }}
+      />
+
+      <ActionSheet />
+    </SafeAreaView>
+  );
+}
+
+/* ───────────────── Helpers ───────────────── */
+function mapMessages(nodes: MsgNode[]): IMessage[] {
+  return nodes.map((n) => ({
+    _id: n.id,
+    text: n.kind === "text" ? (n.text ?? "") : "",
+    createdAt: new Date(n.createdAt),
+    user: {
+      _id: n.sender.id,
+      name: n.sender.username,
+      avatar: n.sender.avatarThumbUrl ?? n.sender.avatarUrl ?? undefined,
+    },
+    image: n.kind === "image" ? n.media?.url : undefined,
+    video: n.kind === "video" ? n.media?.url : undefined,
+    kind: n.kind,
+    story: n.story ?? null,
+    storyExpired: Boolean(n.storyExpired),
+  })) as any;
+}
+
+function hasMessage(prev: IMessage[], id: string) {
+  return prev.some((m) => String(m._id) === String(id));
+}
+
+function mergeById(prev: IMessage[], incoming: IMessage[]) {
+  const map = new Map<string, IMessage>();
+  for (const m of prev) map.set(String(m._id), m);
+  for (const m of incoming) map.set(String(m._id), m);
+  const out = Array.from(map.values());
+  out.sort((a, b) => +new Date(b.createdAt as any) - +new Date(a.createdAt as any));
+  return out;
+}
+
+/* ───────────────── Styles ───────────────── */
+const makeStyles = (C: any) =>
+  StyleSheet.create({
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 12,
+      paddingBottom: 8,
+      gap: 10,
+    },
+    headerBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 12,
+      borderWidth: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      flex: 1,
+      textAlign: "center",
+      fontWeight: "800",
+      fontSize: 16,
+    },
+
+    avatar: {
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: C.card,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.08)",
+    },
+
+    timeRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: 6,
+    },
+    timeText: {
+      fontSize: 11,
+      opacity: 0.7,
+    },
+    statusSlot: {
+      width: 12, // ✅ immer gleich
+      height: 12,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+
+    toolbarWrap: {
+      flexDirection: "row",
+      alignItems: "center",
+      paddingHorizontal: 10,
+      paddingTop: 6,
+    },
+    camBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: "center",
+      justifyContent: "center",
+      marginRight: 8,
+    },
+    pill: {
+      flex: 1,
+      minHeight: 38,
+      maxHeight: 120,
+      borderRadius: 20,
+      borderWidth: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      paddingLeft: 10,
+      paddingRight: 6,
+    },
+    composer: {
+      flex: 1,
+      fontSize: 16,
+      paddingTop: 8,
+      paddingBottom: 8,
+    },
+    sendBtn: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      marginLeft: 4,
+    },
+    image: {
+      width: 220,
+      height: 220,
+      borderRadius: 14,
+      backgroundColor: C.card,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.06)",
+    },
+    storyAttachWrap: {
+      marginTop: 6,
+      borderWidth: 1,
+      borderRadius: 14,
+      padding: 10,
+    },
+    storyAttachRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    storyAttachKicker: {
+      fontSize: 12,
+      fontWeight: "700",
+      marginBottom: 2,
+    },
+    storyAttachTitle: {
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    storyAttachSub: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 2,
+    },
+    storyThumbWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 12,
+      overflow: "hidden",
+      borderWidth: 1,
+    },
+    storyVideoBadge: {
+      position: "absolute",
+      right: 4,
+      bottom: 4,
+      width: 18,
+      height: 18,
+      borderRadius: 9,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.55)",
+    },
+
+    storyCard: {
+      marginTop: 8,
+      borderWidth: 1,
+      borderRadius: 18,
+      overflow: "hidden",
+    },
+
+    storyThumbOuter: {
+      height: 130,
+      width: "100%",
+      position: "relative",
+    },
+
+    storyThumb: {
+      width: "100%",
+      height: "100%",
+    },
+
+    storyThumbOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: "rgba(0,0,0,0.18)",
+    },
+
+    storyBadge: {
+      position: "absolute",
+      left: 10,
+      bottom: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 999,
+      backgroundColor: "rgba(0,0,0,0.55)",
+    },
+
+    storyBadgeText: {
+      color: "#fff",
+      fontSize: 12,
+      fontWeight: "800",
+    },
+
+    storyFooter: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+    },
+
+    storyReplyText: {
+      fontSize: 14,
+      fontWeight: "800",
+    },
+
+    // ─── Expired ───
+    storyExpiredCard: {
+      marginTop: 8,
+      borderWidth: 1,
+      borderRadius: 16,
+      padding: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+
+    storyExpiredTitle: {
+      fontSize: 14,
+      fontWeight: "900",
+    },
+
+    storyExpiredSub: {
+      fontSize: 12,
+      fontWeight: "700",
+      marginTop: 2,
+    },
+
+  });
