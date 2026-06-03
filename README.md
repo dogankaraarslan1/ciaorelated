@@ -82,6 +82,7 @@ The project can be used as a learning resource, a social media app starter, or a
 
 - pnpm workspace
 - `apps/ciaorelated` mobile app
+- `apps/ciaorelated-landing` static landing/deep-link website
 - `apps/server` GraphQL backend
 - `packages/shared` shared package placeholder/foundation
 
@@ -91,6 +92,7 @@ The project can be used as a learning resource, a social media app starter, or a
 .
 ├── apps
 │   ├── ciaorelated        # React Native / Expo mobile app
+│   ├── ciaorelated-landing # Static landing/deep-link website
 │   └── server             # Node.js GraphQL API
 ├── packages
 │   └── shared             # Shared package workspace
@@ -521,6 +523,7 @@ This repository is intentionally neutral:
 - no committed `node_modules`
 - no hardcoded EAS project ID
 - no hardcoded production secrets
+- no hardcoded production website domain
 
 Each fork should configure its own:
 
@@ -544,6 +547,7 @@ Each fork should configure its own:
 - contact discovery with privacy-preserving matching
 - production-ready screenshot and demo data
 - web landing page and deep-link pages
+- production Universal Links / App Links configuration
 
 ## Keywords
 
