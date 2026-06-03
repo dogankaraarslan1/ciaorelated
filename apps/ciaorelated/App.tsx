@@ -17,7 +17,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { AuthVault } from "./src/lib/auth-vault";
-import appsFlyer from "react-native-appsflyer";
 
 import * as Device from "expo-device";
 import { useFonts } from "expo-font";
@@ -1053,6 +1052,14 @@ function ThemedRootNavigator({
 
     if (!APPSFLYER_DEV_KEY || !IOS_APP_STORE_ID) {
       console.log("AppsFlyer skipped: missing dev key or iOS App Store ID.");
+      return;
+    }
+
+    let appsFlyer: any;
+    try {
+      appsFlyer = require("react-native-appsflyer").default;
+    } catch (e) {
+      console.log("AppsFlyer skipped: native module is not available.", e);
       return;
     }
 
