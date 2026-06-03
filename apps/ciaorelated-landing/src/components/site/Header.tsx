@@ -20,13 +20,7 @@ export function Header() {
   return (
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
-          <img
-            src="/assets/app-icon.png"
-            alt=""
-            className="h-8 w-8 rounded-xl object-cover shadow-sm"
-            aria-hidden
-          />
+        <Link to="/" className="font-semibold tracking-tight">
           <span className="text-base">ciao<span className="text-primary">related</span></span>
         </Link>
 
