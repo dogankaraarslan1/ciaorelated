@@ -235,6 +235,7 @@ EXPO_PUBLIC_APP_SCHEME=ciaorelated
 EXPO_PUBLIC_ASSOCIATED_DOMAINS=
 EXPO_PUBLIC_IOS_APP_STORE_ID=
 EXPO_PUBLIC_APPSFLYER_DEV_KEY=
+EXPO_PUBLIC_APPSFLYER_ENABLED=false
 EXPO_OWNER=
 EXPO_IOS_BUNDLE_IDENTIFIER=com.example.ciaorelated
 EXPO_ANDROID_PACKAGE=com.example.ciaorelated
@@ -262,6 +263,7 @@ Mobile variables at a glance:
 | `EXPO_PUBLIC_ASSOCIATED_DOMAINS` | Optional | Comma-separated Universal Link domains, e.g. `example.com,www.example.com`. |
 | `EXPO_PUBLIC_IOS_APP_STORE_ID` | Optional | iOS App Store ID used by update/deep-link helpers. |
 | `EXPO_PUBLIC_APPSFLYER_DEV_KEY` | Optional | AppsFlyer key if you use AppsFlyer deep links. |
+| `EXPO_PUBLIC_APPSFLYER_ENABLED` | Optional | Set to `true` only in builds where AppsFlyer should initialize. Defaults to `false`. |
 | `EXPO_OWNER` | Optional | Expo account/organization owner. |
 | `EXPO_IOS_BUNDLE_IDENTIFIER` | Recommended for builds | iOS bundle identifier. |
 | `EXPO_ANDROID_PACKAGE` | Recommended for builds | Android package name. |

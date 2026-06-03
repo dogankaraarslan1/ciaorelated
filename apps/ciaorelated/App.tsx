@@ -132,6 +132,8 @@ const REGISTER_PUSH_TOKEN = gql`
 `;
 let pendingPushNav: any | null = null;
 const IOS_APP_STORE_ID = String(Constants.expoConfig?.extra?.iosAppStoreId ?? "");
+const APPSFLYER_DEV_KEY = String(Constants.expoConfig?.extra?.appsFlyerDevKey ?? "");
+const APPSFLYER_ENABLED = Constants.expoConfig?.extra?.appsFlyerEnabled === true;
 
 let pendingDeepLink: { route: string; params?: any } | null = null;
 
@@ -706,6 +708,12 @@ function Tabs() {
 let lastJoinSlugSeen: string | null = null;
 let lastJoinSeenAt = 0;
 
+function firstQueryValue(value: unknown) {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value) && typeof value[0] === "string") return value[0];
+  return null;
+}
+
 function setPendingDeepLinkFromUrl(url: string) {
   console.log("DEEPLINK IN:", url);
   try {
@@ -713,10 +721,15 @@ function setPendingDeepLinkFromUrl(url: string) {
     const path = parsed.path ?? "";
     const parts = path.split("/").filter(Boolean);
     const i = parts[0] === "--" ? 1 : 0;
+    const queryParams = parsed.queryParams as Record<string, unknown> | undefined;
 
-    const qSlug = (parsed.queryParams as any)?.slug;
+    const qSlug =
+      firstQueryValue(queryParams?.slug) ??
+      firstQueryValue(queryParams?.deep_link_sub1) ??
+      firstQueryValue(queryParams?.af_sub1) ??
+      firstQueryValue(queryParams?.sub1);
     const slug =
-      (qSlug && typeof qSlug === "string" ? qSlug : null) ??
+      (qSlug ? qSlug : null) ??
       (parts[i] === "join" && parts[i + 1] ? parts[i + 1] : null);
 
     if (slug) {
@@ -1035,59 +1048,58 @@ function ThemedRootNavigator({
   }, []);
 
 
-/*
   useEffect(() => {
-  if (__DEV__) return;
-  // AppsFlyer init
-  appsFlyer.initSdk(
-    {
-      devKey: String(Constants.expoConfig?.extra?.appsFlyerDevKey ?? ""),
-      appId: IOS_APP_STORE_ID,
-      isDebug: __DEV__,
-      // wichtig für Deep Linking:
-      onDeepLinkListener: true,
-      timeToWaitForATTUserAuthorization: 60,
-    },
-    (res :any) => console.log("AppsFlyer init ok", res),
-    (err :any) => console.log("AppsFlyer init err", err)
-  );
+    if (!APPSFLYER_ENABLED) return;
 
-  // Deep Link Listener (für installed + deferred)
-  const unsub = appsFlyer.onDeepLink((res: any) => {
-    try {
-      // res?.deepLinkStatus: FOUND / NOT_FOUND / ERROR
-      const status = res?.deepLinkStatus;
-      const dl = res?.data;
-
-      console.log("AF onDeepLink:", { status, dl });
-
-      if (status !== "FOUND") return;
-
-      // AppsFlyer liefert deep_link_sub1 meist hier:
-      const slug =
-        dl?.deep_link_sub1 ||
-        dl?.deep_link_sub2 ||
-        dl?.sub1 || // manchmal so
-        dl?.af_sub1; // manchmal so
-
-      if (typeof slug === "string" && slug.trim()) {
-        setPendingJoinFromSlug(slug.trim());
-        flushPendingDeepLinkIfReady(); // du hast die Funktion schon ✅
-      }
-    } catch (e) {
-      console.log("AF onDeepLink parse failed:", e);
+    if (!APPSFLYER_DEV_KEY || !IOS_APP_STORE_ID) {
+      console.log("AppsFlyer skipped: missing dev key or iOS App Store ID.");
+      return;
     }
-  });
 
-  return () => {
-    try {
-      // einige Versionen returnen eine function, andere ein object
-      if (typeof unsub === "function") unsub();
-      else if (unsub?.remove) unsub.remove();
-    } catch {}
-  };
-}, []);
-*/
+    appsFlyer.initSdk(
+      {
+        devKey: APPSFLYER_DEV_KEY,
+        appId: IOS_APP_STORE_ID,
+        isDebug: __DEV__,
+        onDeepLinkListener: true,
+        timeToWaitForATTUserAuthorization: 60,
+      },
+      (res: any) => console.log("AppsFlyer init ok", res),
+      (err: any) => console.log("AppsFlyer init err", err)
+    );
+
+    const unsub = appsFlyer.onDeepLink((res: any) => {
+      try {
+        const status = res?.deepLinkStatus;
+        const dl = res?.data;
+
+        console.log("AF onDeepLink:", { status, dl });
+
+        if (status !== "FOUND") return;
+
+        const slug =
+          dl?.deep_link_sub1 ||
+          dl?.deep_link_sub2 ||
+          dl?.sub1 ||
+          dl?.af_sub1;
+
+        if (typeof slug === "string" && slug.trim()) {
+          setPendingJoinFromSlug(slug.trim());
+          flushPendingDeepLinkIfReady();
+        }
+      } catch (e) {
+        console.log("AF onDeepLink parse failed:", e);
+      }
+    });
+
+    return () => {
+      try {
+        const cleanup = unsub as any;
+        if (typeof cleanup === "function") cleanup();
+        else if (cleanup?.remove) cleanup.remove();
+      } catch {}
+    };
+  }, []);
 
 
 
