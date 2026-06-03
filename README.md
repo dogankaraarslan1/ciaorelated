@@ -104,8 +104,8 @@ The project can be used as a learning resource, a social media app starter, or a
 
 ### Requirements
 
-- Node.js
-- pnpm
+- Node.js 22.x for the workspace/backend
+- pnpm 10.x
 - PostgreSQL
 - Expo tooling
 - iOS Simulator, Android Emulator, Expo Go, or an Expo development build
@@ -113,7 +113,8 @@ The project can be used as a learning resource, a social media app starter, or a
 Recommended:
 
 ```bash
-npm install -g pnpm
+node -v
+pnpm -v
 ```
 
 Install dependencies:
@@ -341,13 +342,15 @@ createdb ciaorelated
 Then apply Prisma migrations:
 
 ```bash
-pnpm --dir apps/server exec prisma migrate dev
+pnpm --dir apps/server exec prisma migrate deploy
 ```
 
-If you only want to sync a local development database to the current Prisma schema:
+`migrate deploy` is non-interactive and applies the committed migrations. This is the recommended setup command for a fresh clone.
+
+If you are actively developing Prisma schema changes and want Prisma to create a new migration, use:
 
 ```bash
-pnpm --dir apps/server exec prisma db push
+pnpm --dir apps/server exec prisma migrate dev
 ```
 
 Generate Prisma Client:
@@ -376,8 +379,16 @@ http://YOUR_LAN_IP:4000/graphql
 
 ## Run The Mobile App
 
+For iOS Simulator or Android Emulator on the same machine:
+
 ```bash
-pnpm --dir apps/ciaorelated start
+pnpm --dir apps/ciaorelated start:local
+```
+
+For a physical phone on the same Wi-Fi:
+
+```bash
+pnpm --dir apps/ciaorelated start:device
 ```
 
 Or, from the app folder:
@@ -388,6 +399,14 @@ npx expo start -c
 ```
 
 If you are testing on a physical phone, make sure `EXPO_PUBLIC_API_URL` uses your LAN IP.
+
+If the app logs `Network request failed`, verify that the backend is running and that `EXPO_PUBLIC_API_URL` points to a reachable GraphQL endpoint:
+
+```bash
+curl -H "content-type: application/json" \
+  --data '{"query":"query { __typename }"}' \
+  http://YOUR_LAN_IP:4000/graphql
+```
 
 ## Phone Auth
 
@@ -415,7 +434,13 @@ SENDGRID_API_KEY=
 EMAIL_FROM=
 ```
 
-If email is not configured, email verification and reset flows may need local adjustment or mock behavior.
+In local development, if SendGrid is not configured or the key is invalid, verification and password reset codes are printed to the server console.
+
+Expected development log format:
+
+```txt
+[email][DEV] VERIFY CODE to user@example.com code: 123456
+```
 
 ## Media Uploads
 
@@ -429,10 +454,22 @@ S3_REGION=
 S3_BUCKET=
 S3_ACCESS_KEY_ID=
 S3_SECRET_ACCESS_KEY=
-S3_PUBLIC_BASE_URL=
+S3_PUBLIC_BASE=
 ```
 
 Use a provider such as AWS S3, DigitalOcean Spaces, Cloudflare R2, MinIO, or another S3-compatible storage service.
+
+## Development Checks
+
+Useful checks after installation:
+
+```bash
+pnpm --filter "{./apps/server}" build
+```
+
+The backend build should pass after dependencies and environment variables are configured.
+
+The mobile TypeScript check is still being cleaned up for open-source contributor workflows. Known current issues include a missing `react-native-fs` type/module reference and a small set of existing React Native style/type mismatches.
 
 ## Deployment
 
