@@ -17,7 +17,6 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { AuthVault } from "./src/lib/auth-vault";
-import appsFlyer from "react-native-appsflyer";
 
 import * as Device from "expo-device";
 import { useFonts } from "expo-font";
