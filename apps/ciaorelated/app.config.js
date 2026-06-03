@@ -1,4 +1,6 @@
 // apps/ciaorelated/app.config.js
+import "dotenv/config";
+
 const associatedDomains = (process.env.EXPO_PUBLIC_ASSOCIATED_DOMAINS || "")
   .split(",")
   .map((domain) => domain.trim())
@@ -6,12 +8,13 @@ const associatedDomains = (process.env.EXPO_PUBLIC_ASSOCIATED_DOMAINS || "")
   .map((domain) => `applinks:${domain}`);
 
 const easProjectId = process.env.EAS_PROJECT_ID || "";
+const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || "ciaorelated";
 
 export default {
   expo: {
     name: 'ciaorelated',
     slug: 'ciaorelated',
-    scheme: "ciaorelated",
+    scheme: appScheme,
     owner: process.env.EXPO_OWNER,
     version: '1.0.6',
     orientation: 'portrait',
@@ -28,6 +31,9 @@ export default {
 
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
+      websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL ?? "",
+      oneLinkUrl: process.env.EXPO_PUBLIC_ONELINK_URL ?? "",
+      appScheme,
       iosAppStoreId: process.env.EXPO_PUBLIC_IOS_APP_STORE_ID ?? "",
       appsFlyerDevKey: process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY ?? "",
       eas: { projectId: easProjectId },

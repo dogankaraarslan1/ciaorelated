@@ -7,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 
 import Screen from "./components/Screen";
 import { useTheme } from "../theme/ThemeProvider";
+import { buildJoinUrl } from "../config/webLinks";
 import GroupLinkSheet from "./GroupLinkSheet";
 import type { RootStackParamList } from "../../App";
 
@@ -83,7 +84,7 @@ export default function GroupsScreen() {
   const onCopy = useCallback(async (slug?: string | null) => {
     if (!slug) return;
 
-    const url = `https://ciaorelated.com/join?slug=${slug}`;
+    const url = buildJoinUrl(slug);
     await Clipboard.setStringAsync(url);
 
     Alert.alert(t("groups.copiedTitle"), t("groups.inviteLinkCopied"));

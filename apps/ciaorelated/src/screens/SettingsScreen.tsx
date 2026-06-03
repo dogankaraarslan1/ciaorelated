@@ -22,6 +22,7 @@ import { useTheme } from "../theme/ThemeProvider";
 import { Ionicons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import { getLanguageMode, type AppLanguageMode } from "../i18n";
+import { buildLegalUrls } from "../config/webLinks";
 
 /* ---------- Row ---------- */
 type RowProps = {
@@ -105,12 +106,18 @@ export default function SettingsScreen() {
   const canOpenAdminDashboard = String(data?.me?.username ?? "").toLowerCase() === "dogankaraarslan";
 
   const [setPrivate, { loading }] = useMutation(SET_PRIVATE);
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const [langMode, setLangMode] = useState<AppLanguageMode>("auto");
 
   /* ---------- URLs ---------- */
-  const POLICY_URL = t("settings.privacyUrl");
-  const TERMS_WEB_URL = t("settings.termsUrl");
+  const legalLang = langMode === "de" || langMode === "en"
+    ? langMode
+    : i18n.language.toLowerCase().startsWith("de")
+      ? "de"
+      : "en";
+  const legalUrls = buildLegalUrls(legalLang);
+  const POLICY_URL = legalUrls.privacy;
+  const TERMS_WEB_URL = legalUrls.terms;
 
   const onTogglePrivate = useCallback(async (next: boolean) => {
     // optional confirmation when turning private on

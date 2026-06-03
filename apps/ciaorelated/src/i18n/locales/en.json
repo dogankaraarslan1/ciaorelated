@@ -404,8 +404,8 @@
     "language_en": "English",
     "manageBlockedUsers": "Manage blocked users",
     "addAccount": "Add account",
-    "privacyUrl": "https://ciaorelated.com/privacy.html",
-    "termsUrl": "https://ciaorelated.com/terms.html",
+    "privacyUrl": "",
+    "termsUrl": "",
      "display": "Display",
 
     "privateConfirmTitle": "Make profile private?",

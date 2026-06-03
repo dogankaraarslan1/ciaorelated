@@ -24,6 +24,7 @@ import { AvatarImage } from "./components/AvatarImage";
 import { useTheme } from "../theme/ThemeProvider";
 import { PostCard } from "./components/feed/PostCard";
 import { useMarkPostViewed } from "../hooks/useMarkPostViewed";
+import { buildJoinUrl } from "../config/webLinks";
 
 const heroBackground = require("../../assets/sticky-header-bg.png");
 
@@ -121,7 +122,7 @@ const COMMUNITY_SPACE = gql`
 `;
 
 function inviteUrl(slug?: string | null) {
-  return slug ? `https://ciaorelated.com/join?slug=${slug}` : "";
+  return slug ? buildJoinUrl(slug) : "";
 }
 
 function createQrModules(value: string): { modules: QrModule[]; size: number } {
