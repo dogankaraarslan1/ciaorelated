@@ -1,6 +1,14 @@
 // apps/server/src/config.ts
 import "dotenv/config";
 
+const cleanEnv = (value: string | undefined, fallback = "") =>
+  (value || fallback)
+    .trim()
+    .replace(/^['"]/, "")
+    .replace(/['"];?$/, "")
+    .replace(/;$/, "")
+    .trim();
+
 export const JWT_SECRET = (process.env.JWT_SECRET || "replace-with-a-long-random-secret").trim();
 export const JWT_EXPIRES_IN = "365d";
 
@@ -8,11 +16,11 @@ export type JwtPayload = {
   accountId?: string;
   profileId?: string;
 };
-export const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
-export const EMAIL_FROM = process.env.EMAIL_FROM || "ciaorelated <noreply@example.com>";
-export const TWILIO_ACCOUNT_SID = (process.env.TWILIO_ACCOUNT_SID || "").trim();
-export const TWILIO_AUTH_TOKEN = (process.env.TWILIO_AUTH_TOKEN || "").trim();
-export const TWILIO_VERIFY_SERVICE_SID = (process.env.TWILIO_VERIFY_SERVICE_SID || "").trim();
+export const SENDGRID_API_KEY = cleanEnv(process.env.SENDGRID_API_KEY);
+export const EMAIL_FROM = cleanEnv(process.env.EMAIL_FROM, "ciaorelated <noreply@example.com>");
+export const TWILIO_ACCOUNT_SID = cleanEnv(process.env.TWILIO_ACCOUNT_SID);
+export const TWILIO_AUTH_TOKEN = cleanEnv(process.env.TWILIO_AUTH_TOKEN);
+export const TWILIO_VERIFY_SERVICE_SID = cleanEnv(process.env.TWILIO_VERIFY_SERVICE_SID);
 
 //export const SMTP_HOST = process.env.SMTP_HOST || "";
 //export const SMTP_PORT = process.env.SMTP_PORT || "587";
