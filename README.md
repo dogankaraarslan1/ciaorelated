@@ -235,6 +235,7 @@ EXPO_PUBLIC_APP_SCHEME=ciaorelated
 EXPO_PUBLIC_ASSOCIATED_DOMAINS=
 EXPO_PUBLIC_IOS_APP_STORE_ID=
 EXPO_PUBLIC_APPSFLYER_DEV_KEY=
+EXPO_PUBLIC_APPSFLYER_ENABLED=false
 EXPO_OWNER=
 EXPO_IOS_BUNDLE_IDENTIFIER=com.example.ciaorelated
 EXPO_ANDROID_PACKAGE=com.example.ciaorelated
@@ -262,6 +263,7 @@ Mobile variables at a glance:
 | `EXPO_PUBLIC_ASSOCIATED_DOMAINS` | Optional | Comma-separated Universal Link domains, e.g. `example.com,www.example.com`. |
 | `EXPO_PUBLIC_IOS_APP_STORE_ID` | Optional | iOS App Store ID used by update/deep-link helpers. |
 | `EXPO_PUBLIC_APPSFLYER_DEV_KEY` | Optional | AppsFlyer key if you use AppsFlyer deep links. |
+| `EXPO_PUBLIC_APPSFLYER_ENABLED` | Optional | Set to `true` only in builds where AppsFlyer should initialize. Defaults to `false`. |
 | `EXPO_OWNER` | Optional | Expo account/organization owner. |
 | `EXPO_IOS_BUNDLE_IDENTIFIER` | Recommended for builds | iOS bundle identifier. |
 | `EXPO_ANDROID_PACKAGE` | Recommended for builds | Android package name. |
@@ -338,6 +340,88 @@ EAS_PROJECT_ID=your-eas-project-id
 ```
 
 Forks should use their own EAS project ID, not one from another deployment.
+
+### Deep Links / AppsFlyer OneLink
+
+The app can use regular web invite links and AppsFlyer OneLink links.
+
+Default invite URL shape:
+
+```txt
+https://your-domain.example/join?slug=GROUP_SLUG
+```
+
+Default app scheme URL shape:
+
+```txt
+ciaorelated://join?slug=GROUP_SLUG
+```
+
+If you use AppsFlyer, create your own OneLink setup instead of reusing another deployment's domain or keys.
+
+Recommended AppsFlyer setup:
+
+1. Create or select an AppsFlyer app.
+2. Create a OneLink template for the mobile app.
+3. Configure app launch methods in the template:
+   - Universal Links for your public domain, for example `your-domain.example`
+   - URI scheme fallback:
+     ```txt
+     ciaorelated://join?slug={deep_link_sub1}
+     ```
+4. Optional but recommended: add a branded domain such as:
+   ```txt
+   link.your-domain.example
+   ```
+5. In your DNS provider, point the branded domain to the AppsFlyer CNAME destination shown by AppsFlyer:
+   ```txt
+   link CNAME your-appsflyer-customlinks-target.example.
+   ```
+6. Configure the OneLink/custom link deep-link parameters:
+   ```txt
+   deep_link_value=join
+   deep_link_sub1=GROUP_SLUG
+   ```
+7. Configure fallbacks:
+   - iOS not installed: App Store
+   - Android not installed: Play Store or website
+   - Desktop: your website or `/join?slug={deep_link_sub1}`
+
+Example AppsFlyer link shape:
+
+```txt
+https://link.your-domain.example/TEMPLATE_ID/invite?deep_link_value=join&deep_link_sub1=GROUP_SLUG
+```
+
+Mobile env example:
+
+```env
+EXPO_PUBLIC_WEBSITE_URL=https://your-domain.example
+EXPO_PUBLIC_ONELINK_URL=https://link.your-domain.example
+EXPO_PUBLIC_APP_SCHEME=ciaorelated
+EXPO_PUBLIC_ASSOCIATED_DOMAINS=your-domain.example,www.your-domain.example,link.your-domain.example
+EXPO_PUBLIC_APPSFLYER_ENABLED=true
+EXPO_PUBLIC_APPSFLYER_DEV_KEY=your-appsflyer-dev-key
+EXPO_PUBLIC_IOS_APP_STORE_ID=your-apple-app-id
+```
+
+For local development, keep AppsFlyer disabled:
+
+```env
+EXPO_PUBLIC_APPSFLYER_ENABLED=false
+```
+
+When AppsFlyer is disabled, the app still accepts regular links such as `ciaorelated://join?slug=GROUP_SLUG` and `https://your-domain.example/join?slug=GROUP_SLUG`.
+
+The mobile parser also accepts AppsFlyer-style slug parameters:
+
+```txt
+deep_link_sub1
+af_sub1
+sub1
+```
+
+The static website includes `/join`, `/join/$slug`, and a placeholder `public/deep-link.js`. Wire that script to your own store URLs and app scheme before using it as a production web fallback.
 
 ## Database Setup
 

@@ -36,6 +36,7 @@ export default {
       appScheme,
       iosAppStoreId: process.env.EXPO_PUBLIC_IOS_APP_STORE_ID ?? "",
       appsFlyerDevKey: process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY ?? "",
+      appsFlyerEnabled: process.env.EXPO_PUBLIC_APPSFLYER_ENABLED === "true",
       eas: { projectId: easProjectId },
     },
     plugins: [
