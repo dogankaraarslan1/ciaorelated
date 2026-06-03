@@ -82,6 +82,7 @@ The project can be used as a learning resource, a social media app starter, or a
 
 - pnpm workspace
 - `apps/ciaorelated` mobile app
+- `apps/ciaorelated-landing` static landing/deep-link website
 - `apps/server` GraphQL backend
 - `packages/shared` shared package placeholder/foundation
 
@@ -91,6 +92,7 @@ The project can be used as a learning resource, a social media app starter, or a
 .
 ├── apps
 │   ├── ciaorelated        # React Native / Expo mobile app
+│   ├── ciaorelated-landing # Static landing/deep-link website
 │   └── server             # Node.js GraphQL API
 ├── packages
 │   └── shared             # Shared package workspace
@@ -395,6 +397,51 @@ npx expo start -c
 
 If you are testing on a physical phone, make sure `EXPO_PUBLIC_API_URL` uses your LAN IP.
 
+## Run The Landing Website
+
+The landing website lives in `apps/ciaorelated-landing`. It contains the homepage, support page, legal pages, campaign page, and the invite/deep-link landing page used by group links.
+
+```bash
+pnpm --dir apps/ciaorelated-landing dev
+```
+
+Build the static site:
+
+```bash
+pnpm --dir apps/ciaorelated-landing build
+```
+
+Static output:
+
+```txt
+apps/ciaorelated-landing/.output/public
+```
+
+For static hosting providers such as DigitalOcean Static Sites, use:
+
+```txt
+Build command: pnpm --dir apps/ciaorelated-landing build
+Output directory: apps/ciaorelated-landing/.output/public
+```
+
+The supported invite URL shape is:
+
+```txt
+/join?slug=abc123
+```
+
+The page includes stable DOM IDs for later deep-link wiring:
+
+```txt
+statusText
+slugText
+openApp
+copyBtn
+appStoreBtn
+```
+
+Deep-link behavior should be wired in `apps/ciaorelated-landing/public/deep-link.js`. The placeholder script does not redirect by itself.
+
 ## Phone Auth
 
 The app supports phone login/registration with verification codes.
@@ -476,6 +523,7 @@ This repository is intentionally neutral:
 - no committed `node_modules`
 - no hardcoded EAS project ID
 - no hardcoded production secrets
+- no hardcoded production website domain
 
 Each fork should configure its own:
 
@@ -499,6 +547,7 @@ Each fork should configure its own:
 - contact discovery with privacy-preserving matching
 - production-ready screenshot and demo data
 - web landing page and deep-link pages
+- production Universal Links / App Links configuration
 
 ## Keywords
 
