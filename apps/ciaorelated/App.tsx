@@ -766,14 +766,12 @@ function Gate() {
   const [ready, setReady] = useState(false);
 
   const decide = React.useCallback(async () => {
-    await reconcileSession();
-
-    const [t, p] = await Promise.all([Auth.get(), Auth.getProfileId()]);
     const nav = navigationRef.current;
-
     const current = nav?.getCurrentRoute?.()?.name;
 
-    // nicht eingeloggt → Auth Flow
+    let [t, p] = await Promise.all([Auth.get(), Auth.getProfileId()]);
+
+    // Local logout/no-session state should not trigger network-only auth checks.
     if (!t || !p) {
       setReady(true);
       if (nav && current !== "Auth") {
@@ -784,6 +782,23 @@ function Gate() {
           ],
         });
 
+      }
+      return;
+    }
+
+    await reconcileSession();
+    [t, p] = await Promise.all([Auth.get(), Auth.getProfileId()]);
+
+    // Reconcile may remove an invalid/stale session.
+    if (!t || !p) {
+      setReady(true);
+      if (nav && current !== "Auth") {
+        nav.reset({
+          index: 0,
+          routes: [
+            { name: "Auth" as never, params: { start: "login", asAddAccount: false } as never },
+          ],
+        });
       }
       return;
     }
