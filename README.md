@@ -471,6 +471,14 @@ The backend build should pass after dependencies and environment variables are c
 
 The mobile TypeScript check is still being cleaned up for open-source contributor workflows. Known current issues include a missing `react-native-fs` type/module reference and a small set of existing React Native style/type mismatches.
 
+## App Store Review Notes
+
+A reusable App Store review notes template is available at:
+
+[`docs/app-store-review-notes.md`](./docs/app-store-review-notes.md)
+
+It documents user-generated content moderation, reporting/blocking flows, privacy permissions, account deletion, and reviewer test account placeholders.
+
 ## Deployment
 
 This repository includes an example GitHub Actions deploy workflow in:
