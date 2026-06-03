@@ -18,6 +18,7 @@ import { useMutation } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import { useTheme } from "../theme/ThemeProvider";
+import { buildJoinUrl } from "../config/webLinks";
 
 import { gql } from "@apollo/client";
 
@@ -118,7 +119,7 @@ export default function GroupLinkSheet({
 
     const slug = res.data.createGroupLink.slug;
     await joinGroup({ variables: { slug } });
-    const link = `https://ciaorelated.com/join?slug=${slug}`;
+    const link = buildJoinUrl(slug);
 
     setCreatedLink(link);
     onCreated?.();

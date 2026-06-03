@@ -88,6 +88,7 @@ import ResetPasswordRequestScreen from "./src/screens/ResetPasswordRequestScreen
 import ResetPasswordScreen from "./src/screens/ResetPasswordScreen";
 import { warmupMediaLibrary } from "./src/lib/mediaWarmup";
 import JoinGroupScreen from "./src/screens/JoinGroupScreen";
+import { appScheme, isTrustedWebUrl, linkingPrefixes } from "./src/config/webLinks";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 
@@ -911,10 +912,8 @@ function ErrorBridge() {
 
 async function shouldAcceptInitialUrl(initialUrl: string) {
   // ✅ Prod / echte Schemes immer akzeptieren
-  if (initialUrl.startsWith("ciaorelated://")) return true;
-  if (initialUrl.startsWith("https://ciaorelated.com")) return true;
-  if (initialUrl.startsWith("https://www.ciaorelated.com")) return true;
-  if (initialUrl.startsWith("https://ciaorelated.onelink.me")) return true;
+  if (initialUrl.startsWith(`${appScheme}://`)) return true;
+  if (isTrustedWebUrl(initialUrl)) return true;
 
 
   // ✅ DEV exp:// initialUrl NIE akzeptieren (Expo Go sticky)
@@ -991,7 +990,7 @@ function ThemedRootNavigator({
   const C = theme.colors as any;
 
   const linking = {
-    prefixes: ["ciaorelated://", "https://ciaorelated.com"],
+    prefixes: linkingPrefixes,
     config: {
       screens: {
         JoinGroup: "join/:slug",

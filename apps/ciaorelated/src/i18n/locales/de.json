@@ -409,8 +409,8 @@
     "language_en": "English",
     "manageBlockedUsers": "Verwalte blockierte Nutzer",
     "addAccount": "Konto hinzufügen",
-    "privacyUrl": "https://ciaorelated.com/privacy-de.html",
-    "termsUrl": "https://ciaorelated.com/terms-de.html",
+    "privacyUrl": "",
+    "termsUrl": "",
     "display": "Anzeige",
 
     "privateConfirmTitle": "Profil privat machen?",

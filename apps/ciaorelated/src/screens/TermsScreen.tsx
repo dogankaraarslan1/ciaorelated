@@ -9,6 +9,7 @@ import { openLink } from "../lib/openLink";
 import { TERMS_Q } from "../useTermsGate";
 import { useTheme } from "../theme/ThemeProvider";
 import { useTranslation } from "react-i18next";
+import { buildLegalUrls } from "../config/webLinks";
 
 const ACCEPT_TERMS = gql`
   mutation AcceptTerms($version: Int!) {
@@ -35,18 +36,7 @@ export default function TermsScreen() {
   const version = route.params?.version ?? 1;
   const lang: "de" | "en" = (i18n.language || "").toLowerCase().startsWith("de") ? "de" : "en";
 
-  const links = {
-    de: {
-      terms: "https://ciaorelated.com/terms-de.html",
-      guidelines: "https://ciaorelated.com/guidelines-de.html",
-      privacy: "https://ciaorelated.com/datenschutz.html",
-    },
-    en: {
-      terms: "https://ciaorelated.com/terms.html",
-      guidelines: "https://ciaorelated.com/guidelines.html",
-      privacy: "https://ciaorelated.com/privacy.html",
-    },
-  } as const;
+  const links = buildLegalUrls(lang);
 
   const handle = async () => {
     if (!checked || busy) return;
@@ -94,16 +84,16 @@ export default function TermsScreen() {
         <Text style={s.body}>{t("terms.body")}</Text>
 
         {/* Links */}
-        <TouchableOpacity onPress={() => openLink(links[lang].terms)} style={s.linkRow}>
+        <TouchableOpacity onPress={() => openLink(links.terms)} style={s.linkRow}>
           <Text style={s.link}>{t("terms.readTerms")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity onPress={() => openLink(links[lang].guidelines)} style={s.linkRow}>
+        <TouchableOpacity onPress={() => openLink(links.guidelines)} style={s.linkRow}>
           <Text style={s.link}>{t("terms.readGuidelines")}</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() => openLink(links[lang].privacy)}
+          onPress={() => openLink(links.privacy)}
           style={[s.linkRow, { marginBottom: 14 }]}
         >
           <Text style={s.link}>{t("terms.readPrivacy")}</Text>
