@@ -15,33 +15,40 @@ function TermsDePage() {
   return (
     <LegalPageLayout
       title="Nutzungsbedingungen"
-      lastUpdated="2026-01-01"
+      lastUpdated="September 2025"
       related={[
         { href: "/terms.html", label: "English" },
         { href: "/privacy-de.html", label: "Datenschutzerklärung" },
         { href: "/guidelines-de.html", label: "Community-Richtlinien" },
       ]}
     >
-      <LegalSection heading="Geltungsbereich">
-        <p>Mit der Erstellung eines Kontos oder der Nutzung von ciaorelated stimmst du diesen Bedingungen zu. Wenn du nicht zustimmst, nutze die App bitte nicht.</p>
+      <p className="text-muted-foreground">
+        Diese Bedingungen regeln die Nutzung von <strong>Beverly</strong>. Durch die Nutzung erklärst du dich mit diesen Bedingungen einverstanden.
+      </p>
+      <LegalSection heading="1. Registrierung & Konto">
+        <p>Du musst ein Konto erstellen, um Beverly nutzen zu können. Deine Zugangsdaten müssen vertraulich behandelt werden. Mehrere Konten oder falsche Angaben sind nicht erlaubt.</p>
       </LegalSection>
-      <LegalSection heading="Dein Konto">
-        <p>Du bist für dein Konto, deine Geräte und die Inhalte verantwortlich, die du in deinen Gruppen teilst.</p>
+      <LegalSection heading="2. Nutzung der App">
+        <ul className="list-disc space-y-1 pl-6">
+          <li>Verwende die App nur im Einklang mit geltendem Recht.</li>
+          <li>Teile nur Inhalte, an denen du die Rechte hast.</li>
+          <li>Respektiere andere Nutzer:innen – keine Belästigung oder Hassrede.</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="Zulässige Nutzung">
-        <p>Halte dich an unsere <a className="text-primary underline" href="/guidelines-de.html">Community-Richtlinien</a>. Keine illegalen Inhalte, kein Hass, kein Spam.</p>
+      <LegalSection heading="3. Inhalte & Rechte">
+        <p>Du behältst die Rechte an deinen Inhalten, erteilst uns jedoch eine nicht-exklusive Lizenz, sie in der App anzuzeigen und bereitzustellen. Wir können Inhalte entfernen, die gegen unsere <a href="/guidelines-de.html" className="text-primary underline">Community-Richtlinien</a> verstoßen.</p>
       </LegalSection>
-      <LegalSection heading="Deine Inhalte">
-        <p>Du behältst die Rechte an deinen Inhalten. Du gewährst uns eine eingeschränkte Lizenz, deine Inhalte den von dir gewählten Personen zuzustellen und anzuzeigen.</p>
+      <LegalSection heading="4. Datenschutz">
+        <p>Wir verarbeiten personenbezogene Daten gemäß unserer <a href="/privacy-de.html" className="text-primary underline">Datenschutzerklärung</a>.</p>
       </LegalSection>
-      <LegalSection heading="Sperrung und Beendigung">
-        <p>Wir können Konten sperren oder beenden, die gegen diese Bedingungen verstoßen oder der Community schaden. Du kannst dein Konto jederzeit löschen.</p>
+      <LegalSection heading="5. Haftung">
+        <p>Beverly übernimmt keine Verantwortung für von Nutzern erstellte Inhalte. Wir haften nicht für Schäden, die durch die Nutzung der App entstehen, außer bei grober Fahrlässigkeit oder Vorsatz.</p>
       </LegalSection>
-      <LegalSection heading="Haftungsausschluss">
-        <p>Die App wird „wie sie ist" bereitgestellt. Wir garantieren keine ununterbrochene oder fehlerfreie Verfügbarkeit. Die Nutzung erfolgt auf eigenes Risiko.</p>
+      <LegalSection heading="6. Änderungen">
+        <p>Wir können diese Nutzungsbedingungen jederzeit ändern. Nutzer:innen werden informiert, wenn eine neue Version vorliegt, und müssen diese akzeptieren, um die App weiter zu verwenden.</p>
       </LegalSection>
-      <LegalSection heading="Kontakt">
-        <p>Fragen? <a className="text-primary underline" href="mailto:legal@your-domain.example">legal@your-domain.example</a></p>
+      <LegalSection heading="7. Kündigung">
+        <p>Wir behalten uns das Recht vor, Konten bei Verstößen gegen diese Bedingungen oder die Community-Richtlinien zu sperren oder zu löschen.</p>
       </LegalSection>
     </LegalPageLayout>
   );

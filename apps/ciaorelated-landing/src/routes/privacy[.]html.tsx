@@ -15,41 +15,47 @@ function PrivacyPage() {
   return (
     <LegalPageLayout
       title="Privacy Policy"
-      lastUpdated="2026-01-01"
+      lastUpdated="Sep 2025"
       related={[
         { href: "/privacy-de.html", label: "Deutsch" },
         { href: "/terms.html", label: "Terms of Service" },
         { href: "/guidelines.html", label: "Community Guidelines" },
       ]}
     >
-      <LegalSection heading="Overview">
-        <p>
-          ciaorelated ("we", "us") provides a social app for real groups, chats, events,
-          and shared moments. This Privacy Policy explains what data we collect, how we
-          use it, and the choices you have. The current operator and contact address will
-          be published at your-domain.example.
-        </p>
+      <p className="text-muted-foreground">
+        We value your privacy. This policy explains how <strong>Beverly</strong> processes your information.
+      </p>
+      <LegalSection heading="1. Controller">
+        <p>The controller of your data is the Beverly team. For questions, please contact us via the <a href="/support.html" className="text-primary underline">Support page</a>.</p>
       </LegalSection>
-      <LegalSection heading="Information we collect">
-        <p>Account data: display name, email, profile photo, language preference.</p>
-        <p>Usage data: groups you create or join, messages you post, events you RSVP to.</p>
-        <p>Device data: device type, OS version, app version, crash diagnostics.</p>
+      <LegalSection heading="2. Data Collected">
+        <ul className="list-disc space-y-1 pl-6">
+          <li>Profile data (name, username, avatar, bio)</li>
+          <li>Contact information (email address)</li>
+          <li>Content you upload (posts, vlogs, stories)</li>
+          <li>Usage data (interactions, logins, device information)</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="How we use information">
-        <p>To operate the app, deliver messages to the groups they're meant for, surface relevant events, and keep the service safe.</p>
-        <p>We do not sell your personal data and we do not run third-party advertising inside the app.</p>
+      <LegalSection heading="3. Purpose of Processing">
+        <p>We use your data to:</p>
+        <ul className="list-disc space-y-1 pl-6">
+          <li>provide and manage the app and your account,</li>
+          <li>display content and enable interactions,</li>
+          <li>prevent abuse and ensure security,</li>
+          <li>inform you about updates and changes.</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="Sharing">
-        <p>Content you post is shared with the members of the groups or spaces you choose. Some processors (hosting, analytics, push notifications) operate strictly on our behalf.</p>
+      <LegalSection heading="4. Sharing">
+        <p>We do not share your data with third parties, except when required by law or necessary for operation (e.g., hosting providers).</p>
       </LegalSection>
-      <LegalSection heading="Your rights">
-        <p>You can access, export, correct, or delete your account data from inside the app. Reach us at <a className="text-primary underline" href="mailto:privacy@your-domain.example">privacy@your-domain.example</a>.</p>
+      <LegalSection heading="5. Storage & Security">
+        <p>Your data is stored on secure servers. We use encryption and access restrictions to protect against unauthorized access.</p>
       </LegalSection>
-      <LegalSection heading="Retention">
-        <p>We keep account data for as long as your account is active. When you delete your account we remove personal data within a reasonable period, except where retention is required by law.</p>
+      <LegalSection heading="6. Your Rights">
+        <p>You have the right to access, correct, delete, restrict processing, and request portability of your data. Contact us to exercise these rights.</p>
       </LegalSection>
-      <LegalSection heading="Changes">
-        <p>We may update this policy. Material changes will be announced in the app and on this page.</p>
+      <LegalSection heading="7. Changes">
+        <p>We may update this Privacy Policy. Users will be notified when a new version applies.</p>
       </LegalSection>
     </LegalPageLayout>
   );

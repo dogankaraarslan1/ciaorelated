@@ -27,9 +27,11 @@ export function LegalPageLayout({
           {t.legal.backHome}
         </Link>
         <h1 className="mt-6 text-4xl font-semibold tracking-tight">{title}</h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {t.legal.lastUpdated}: {lastUpdated}
-        </p>
+        {lastUpdated ? (
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t.legal.lastUpdated}: {lastUpdated}
+          </p>
+        ) : null}
         <article className="prose-legal mt-10 space-y-8 text-[15px] leading-relaxed text-foreground/90">
           {children}
         </article>

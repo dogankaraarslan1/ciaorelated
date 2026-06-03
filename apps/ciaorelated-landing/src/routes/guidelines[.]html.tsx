@@ -15,30 +15,36 @@ function GuidelinesPage() {
   return (
     <LegalPageLayout
       title="Community Guidelines"
-      lastUpdated="2026-01-01"
+      lastUpdated="February 2025"
       related={[
         { href: "/guidelines-de.html", label: "Deutsch" },
         { href: "/terms.html", label: "Terms of Service" },
         { href: "/privacy.html", label: "Privacy Policy" },
       ]}
     >
-      <LegalSection heading="The short version">
-        <p>ciaorelated is for real groups, real conversations, and real moments. Be the person you'd want in your own group.</p>
+      <p className="text-muted-foreground">
+        To keep <strong>Beverly</strong> a safe and inspiring place for everyone, the following rules apply:
+      </p>
+      <LegalSection heading="1. Respect & Safety">
+        <p>Treat others with respect. No harassment, threats, hate speech, or bullying.</p>
       </LegalSection>
-      <LegalSection heading="What's allowed">
-        <p>Sharing moments, photos, plans, and updates with the people in your spaces. Honest opinions. Friendly disagreement.</p>
+      <LegalSection heading="2. Content">
+        <ul className="list-disc space-y-1 pl-6">
+          <li>No pornographic, sexually explicit, or glorification of violence.</li>
+          <li>No promotion of illegal activities or dangerous behavior.</li>
+          <li>No spam, unauthorized advertising, or fraudulent activity.</li>
+          <li>No disinformation or manipulative content.</li>
+          <li>Respect copyright – only upload content you own or are allowed to share.</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="What's not allowed">
-        <p>Harassment, hate speech, threats, doxxing.</p>
-        <p>Sexual content involving minors, in any form.</p>
-        <p>Spam, scams, or coordinated manipulation.</p>
-        <p>Sharing private information about other people without their consent.</p>
+      <LegalSection heading="3. Privacy">
+        <p>Do not share sensitive information of yourself or others (e.g. addresses, phone numbers, private messages).</p>
       </LegalSection>
-      <LegalSection heading="Hosting a group">
-        <p>If you create a group, you set the tone. Use the moderation tools, be fair, and remove content that breaks these guidelines.</p>
+      <LegalSection heading="4. Reporting">
+        <p>Use the reporting function for problematic content or behavior. Reports are usually reviewed within 24 hours.</p>
       </LegalSection>
-      <LegalSection heading="Reporting">
-        <p>Use the in-app report flow on any post, message, or profile. We review reports and act when guidelines are broken.</p>
+      <LegalSection heading="5. Consequences">
+        <p>Violations may result in content removal and temporary or permanent account suspension.</p>
       </LegalSection>
     </LegalPageLayout>
   );

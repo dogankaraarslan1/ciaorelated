@@ -15,33 +15,40 @@ function TermsPage() {
   return (
     <LegalPageLayout
       title="Terms of Service"
-      lastUpdated="2026-01-01"
+      lastUpdated="Sep 2025"
       related={[
         { href: "/terms-de.html", label: "Deutsch" },
         { href: "/privacy.html", label: "Privacy Policy" },
         { href: "/guidelines.html", label: "Community Guidelines" },
       ]}
     >
-      <LegalSection heading="Acceptance">
-        <p>By creating an account or using ciaorelated you agree to these Terms. If you don't agree, please don't use the app.</p>
+      <p className="text-muted-foreground">
+        These terms govern the use of <strong>Beverly</strong>. By using the app, you agree to these terms.
+      </p>
+      <LegalSection heading="1. Registration & Account">
+        <p>You must create an account to use Beverly. Keep your login credentials secure. Multiple accounts or false information are not allowed.</p>
       </LegalSection>
-      <LegalSection heading="Your account">
-        <p>You're responsible for your account, your devices, and the content you share with your groups.</p>
+      <LegalSection heading="2. Use of the App">
+        <ul className="list-disc space-y-1 pl-6">
+          <li>Use the app only in compliance with applicable law.</li>
+          <li>Only share content you own or have the right to use.</li>
+          <li>Respect other users - no harassment or hate speech.</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="Acceptable use">
-        <p>Follow our <a className="text-primary underline" href="/guidelines.html">Community Guidelines</a>. No illegal content, harassment, or spam.</p>
+      <LegalSection heading="3. Content & Rights">
+        <p>You retain rights to your content but grant us a non-exclusive license to display and provide it within the app. We may remove content that violates our <a href="/guidelines.html" className="text-primary underline">Community Guidelines</a>.</p>
       </LegalSection>
-      <LegalSection heading="Your content">
-        <p>You keep ownership of what you post. You give us a limited license to deliver and display it to the people you share it with.</p>
+      <LegalSection heading="4. Privacy">
+        <p>We process personal data in accordance with our <a href="/privacy.html" className="text-primary underline">Privacy Policy</a>.</p>
       </LegalSection>
-      <LegalSection heading="Suspension and termination">
-        <p>We can suspend or end accounts that break these Terms or harm the community. You can delete your account at any time.</p>
+      <LegalSection heading="5. Liability">
+        <p>Beverly is not responsible for content created by users. We are not liable for damages arising from the use of the app, except in cases of gross negligence or intent.</p>
       </LegalSection>
-      <LegalSection heading="Disclaimer">
-        <p>The app is provided "as is". We do not promise it is uninterrupted or error-free. Use of the app is at your own risk.</p>
+      <LegalSection heading="6. Changes">
+        <p>We may update these terms at any time. Users will be notified when a new version is available and must accept it to continue using the app.</p>
       </LegalSection>
-      <LegalSection heading="Contact">
-        <p>Questions about these Terms? <a className="text-primary underline" href="mailto:legal@your-domain.example">legal@your-domain.example</a></p>
+      <LegalSection heading="7. Termination">
+        <p>We reserve the right to suspend or delete accounts that violate these terms or our Community Guidelines.</p>
       </LegalSection>
     </LegalPageLayout>
   );

@@ -15,40 +15,47 @@ function PrivacyDePage() {
   return (
     <LegalPageLayout
       title="Datenschutzerklärung"
-      lastUpdated="2026-01-01"
+      lastUpdated="September 2025"
       related={[
         { href: "/privacy.html", label: "English" },
         { href: "/terms-de.html", label: "Nutzungsbedingungen" },
         { href: "/guidelines-de.html", label: "Community-Richtlinien" },
       ]}
     >
-      <LegalSection heading="Überblick">
-        <p>
-          ciaorelated („wir") betreibt eine Social-App für echte Gruppen, Chats,
-          Events und gemeinsame Momente. Diese Datenschutzerklärung erklärt,
-          welche Daten wir verarbeiten und welche Rechte du hast.
-        </p>
+      <p className="text-muted-foreground">
+        Wir legen großen Wert auf den Schutz deiner Daten. Diese Erklärung erläutert, wie <strong>Beverly</strong> deine Informationen verarbeitet.
+      </p>
+      <LegalSection heading="1. Verantwortlicher">
+        <p>Verantwortlich für die Datenverarbeitung ist das Team von Beverly. Bei Fragen kontaktiere uns über die <a href="/support.html" className="text-primary underline">Support-Seite</a>.</p>
       </LegalSection>
-      <LegalSection heading="Welche Daten wir verarbeiten">
-        <p>Kontodaten: Anzeigename, E-Mail-Adresse, Profilbild, Spracheinstellung.</p>
-        <p>Nutzungsdaten: erstellte oder beigetretene Gruppen, Beiträge, Event-Zusagen.</p>
-        <p>Gerätedaten: Gerätetyp, Betriebssystemversion, App-Version, Absturzdiagnose.</p>
+      <LegalSection heading="2. Erhobene Daten">
+        <ul className="list-disc space-y-1 pl-6">
+          <li>Profildaten (Name, Nutzername, Avatar, Bio)</li>
+          <li>Kontaktinformationen (E-Mail-Adresse)</li>
+          <li>Inhalte, die du hochlädst (Posts, Vlogs, Stories)</li>
+          <li>Nutzungsdaten (Interaktionen, Logins, Geräteinformationen)</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="Zwecke der Verarbeitung">
-        <p>Bereitstellung der App, Zustellung von Nachrichten an die richtigen Gruppen, Anzeige relevanter Events und Sicherheit des Dienstes.</p>
-        <p>Wir verkaufen keine personenbezogenen Daten und schalten keine Drittanbieter-Werbung in der App.</p>
+      <LegalSection heading="3. Zweck der Verarbeitung">
+        <p>Wir nutzen deine Daten, um:</p>
+        <ul className="list-disc space-y-1 pl-6">
+          <li>die App bereitzustellen und dein Profil zu verwalten,</li>
+          <li>Inhalte anzuzeigen und Interaktionen zu ermöglichen,</li>
+          <li>Missbrauch zu verhindern und Sicherheit zu gewährleisten,</li>
+          <li>dich über Updates und Änderungen zu informieren.</li>
+        </ul>
       </LegalSection>
-      <LegalSection heading="Weitergabe">
-        <p>Inhalte, die du veröffentlichst, werden mit den von dir gewählten Gruppen geteilt. Einzelne Auftragsverarbeiter (Hosting, Analyse, Push-Benachrichtigungen) arbeiten ausschließlich in unserem Auftrag.</p>
+      <LegalSection heading="4. Weitergabe">
+        <p>Wir geben deine Daten nicht an Dritte weiter, außer wenn es gesetzlich vorgeschrieben ist oder für den Betrieb (z. B. Hosting) erforderlich ist.</p>
       </LegalSection>
-      <LegalSection heading="Deine Rechte">
-        <p>Du kannst deine Daten in der App einsehen, exportieren, berichtigen oder löschen. Schreib uns an <a className="text-primary underline" href="mailto:privacy@your-domain.example">privacy@your-domain.example</a>.</p>
+      <LegalSection heading="5. Speicherung & Sicherheit">
+        <p>Deine Daten werden auf sicheren Servern gespeichert. Wir nutzen Verschlüsselung und Zugriffsbeschränkungen, um unbefugten Zugriff zu verhindern.</p>
       </LegalSection>
-      <LegalSection heading="Speicherdauer">
-        <p>Wir speichern Kontodaten, solange dein Konto aktiv ist. Nach einer Löschung entfernen wir personenbezogene Daten innerhalb eines angemessenen Zeitraums, soweit keine gesetzlichen Aufbewahrungspflichten bestehen.</p>
+      <LegalSection heading="6. Deine Rechte">
+        <p>Du hast das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der Verarbeitung und Datenübertragbarkeit. Kontaktiere uns, um diese Rechte auszuüben.</p>
       </LegalSection>
-      <LegalSection heading="Änderungen">
-        <p>Wir können diese Erklärung anpassen. Wesentliche Änderungen kommunizieren wir in der App und auf dieser Seite.</p>
+      <LegalSection heading="7. Änderungen">
+        <p>Wir können diese Datenschutzerklärung anpassen. Nutzer:innen werden informiert, wenn eine neue Version gilt.</p>
       </LegalSection>
     </LegalPageLayout>
   );
