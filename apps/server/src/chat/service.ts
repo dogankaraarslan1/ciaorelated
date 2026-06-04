@@ -447,10 +447,10 @@ export async function ensureCommunityThread(prisma: PrismaClient, groupId: strin
         },
       }));
 
-    if (thread.title !== group.title || (thread as any).kind !== "COMMUNITY") {
+    if (thread.title !== group.title) {
       await tx.thread.update({
         where: { id: thread.id },
-        data: { title: group.title, kind: "COMMUNITY" },
+        data: { title: group.title },
       });
     }
 
