@@ -454,6 +454,7 @@ export function PostWizard({
 
     const [processedUri, setProcessedUri] = useState<string | null>(null);
     const [uploading, setUploading] = useState(false);
+    const uploadingRef = useRef(false);
 
     useEffect(() => {
     let cancelled = false;
@@ -1421,7 +1422,8 @@ const runPlayerOp = useCallback(async (op: () => Promise<void>) => {
   }, [selected.length]);
 
 const onShare = useCallback(async () => {
-  if (uploading) return;
+  if (uploadingRef.current || uploading) return;
+  uploadingRef.current = true;
   setUploading(true);
 
   const pendingId = `pending:${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -1437,7 +1439,7 @@ const onShare = useCallback(async () => {
       text: t("postwizard.upload.pending"),
       previewUri:
         first?.mediaType !== "video"
-          ? (processedUri ?? sourceUri ?? null)
+          ? (processedUri ?? (first?.playableUri && !isPhUri(first.playableUri) ? first.playableUri : null) ?? sourceUri ?? null)
           : ((first?.thumbUri && !isPhUri(first.thumbUri)) ? first.thumbUri : (sourceUri ?? null)),
 
       createdAt: new Date().toISOString(),
@@ -1454,6 +1456,9 @@ const onShare = useCallback(async () => {
       Alert.alert(t("common.error"), t("postwizard.error.noSelection"));
       return;
     }
+
+    insertPending();
+
     // =========================
     // CAROUSEL
     // =========================
@@ -1578,9 +1583,6 @@ const onShare = useCallback(async () => {
       return;
     }
 
-    // ✅ ab hier: carousel-items existieren → Pending + zurück in Feed
-    insertPending();
-
     console.log("UPLOAD_ITEMS", items.map((it, i) => ({
       i,
       isVideo: it.isVideo,
@@ -1618,6 +1620,7 @@ const onShare = useCallback(async () => {
 
     }
     setUploading(false);
+    uploadingRef.current = false;
 
   }
 }, [
