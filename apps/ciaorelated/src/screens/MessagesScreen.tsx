@@ -319,17 +319,7 @@ export default function MessagesScreen() {
 
         <Text style={styles.headerTitle}>{t("messages.news")}</Text>
 
-        <TouchableOpacity
-          onPress={() => {
-            // UX: Fokus auf Suche -> Nutzer kann neuen Chat starten
-            // (TextInput ist sowieso oben)
-          }}
-          style={styles.headerBtn}
-          hitSlop={12}
-          activeOpacity={0.78}
-        >
-          <Ionicons name="create-outline" size={24} color={C.text} />
-        </TouchableOpacity>
+        <View style={styles.headerBtn} />
       </View>
 
       {/* Suche (inline) */}
@@ -521,7 +511,6 @@ const makeStyles = (C: {
       fontSize: 20,
       fontWeight: "800",
       textAlign: "center",
-      marginRight: 38, // optisch zentrieren (weil links button)
     },
 
     searchRow: {
