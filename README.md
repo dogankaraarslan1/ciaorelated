@@ -6,6 +6,47 @@ Open-source Instagram-style social media app for groups, events, local communiti
 
 > Goal: build a social media app that helps people connect through real groups, real events, and real moments.
 
+## Try It
+
+An early test build is available for feedback. It may lag behind `main` while the open-source version is being cleaned up:
+
+```txt
+TestFlight / APK: add-your-current-test-build-link-here
+```
+
+If you are reviewing the project, this is the fastest way to feel the feed, profile, moments, chats, and group invite flow without setting up providers first.
+
+## Quickstart
+
+After installing Node.js, pnpm, PostgreSQL, and Expo tooling, this is the shortest local path to a running feed:
+
+```bash
+pnpm install
+cp apps/server/.env.example apps/server/.env
+cp apps/ciaorelated/.env.example apps/ciaorelated/.env
+createdb ciaorelated && pnpm --dir apps/server exec prisma migrate deploy
+pnpm --dir apps/server dev
+```
+
+In a second terminal, set `EXPO_PUBLIC_API_URL` in `apps/ciaorelated/.env` to your machine's LAN URL, for example `http://192.168.1.50:4000/graphql`, then run:
+
+```bash
+pnpm --dir apps/ciaorelated start:device
+```
+
+Local defaults are intentionally provider-light: SMS codes can be printed to the server console, email/S3/AppsFlyer can stay empty while you explore the core app.
+
+## Privacy By Default
+
+`ciaorelated` does not initialize AppsFlyer or tracking by default. The app accepts normal invite links without AppsFlyer, and attribution only runs if you add your own keys and explicitly enable it:
+
+```env
+EXPO_PUBLIC_APPSFLYER_ENABLED=true
+EXPO_PUBLIC_APPSFLYER_DEV_KEY=your-appsflyer-dev-key
+```
+
+No ads or third-party attribution are required to run the project locally.
+
 ## Screenshots
 
 | Feed | Create |
