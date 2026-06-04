@@ -762,7 +762,10 @@
     "noResultsFound": "Keine Treffer",
     "tryADifferentName": "Versuche einen anderen Namen.",
     "followsYou": "· folgt dir",
-    "sendMessage": "Nachricht senden"
+    "sendMessage": "Nachricht senden",
+    "threadLabelCommunity": "Community",
+    "threadLabelDisabled": "Deaktiviert",
+    "threadLabelGroup": "Gruppe"
   },
   "vlogdetail": {
     "noPostsYet": "Noch keine Beiträge",

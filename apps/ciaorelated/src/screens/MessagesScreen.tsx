@@ -368,6 +368,13 @@ export default function MessagesScreen() {
     };
   };
 
+  const getThreadLabel = (thr: any) => {
+    if (thr?.kind === "DISABLED") return t("messages.threadLabelDisabled");
+    if (thr?.community || thr?.kind === "COMMUNITY" || thr?.kind === "BROADCAST") return t("messages.threadLabelCommunity");
+    if (thr?.isGroupChat || thr?.kind === "GROUP") return t("messages.threadLabelGroup");
+    return "";
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header (Theme) */}
@@ -453,6 +460,7 @@ export default function MessagesScreen() {
           }
           renderItem={({ item }: any) => {
             const { title, avatar } = getThreadDisplay(item);
+            const threadLabel = getThreadLabel(item);
 
             return (
               <TouchableOpacity
@@ -468,10 +476,19 @@ export default function MessagesScreen() {
                   transition={120}
                 />
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemTitle} numberOfLines={1}>
-                    {title}
-                  </Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.itemTopRow}>
+                    <Text style={[styles.itemTitle, styles.itemTitleInRow]} numberOfLines={1}>
+                      {title}
+                    </Text>
+                    {!!threadLabel && (
+                      <View style={[styles.threadLabel, item.kind === "DISABLED" && styles.threadLabelDisabled]}>
+                        <Text style={[styles.threadLabelText, item.kind === "DISABLED" && styles.threadLabelTextDisabled]} numberOfLines={1}>
+                          {threadLabel}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.itemSub} numberOfLines={1}>
                     {item.lastMessageAt ? dateShort(item.lastMessageAt) : "—"}
                   </Text>
@@ -687,7 +704,33 @@ const makeStyles = (C: {
       backgroundColor: C.border,
     },
     itemTitle: { color: C.text, fontWeight: "700", fontSize: 16 },
+    itemTitleInRow: { flex: 1, minWidth: 0 },
     itemSub: { color: C.subtext, fontSize: 12, marginTop: 2 },
+    itemTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    threadLabel: {
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      backgroundColor: C.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: C.border,
+    },
+    threadLabelDisabled: {
+      opacity: 0.85,
+    },
+    threadLabelText: {
+      color: C.subtext,
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    threadLabelTextDisabled: {
+      color: C.danger,
+    },
 
     badge: {
       backgroundColor: C.danger,

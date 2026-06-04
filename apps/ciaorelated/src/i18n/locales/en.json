@@ -757,7 +757,10 @@
     "noResultsFound": "No results found",
     "tryADifferentName": "Try a different name.",
     "followsYou": "· follows you",
-    "sendMessage": "Send message"
+    "sendMessage": "Send message",
+    "threadLabelCommunity": "Community",
+    "threadLabelDisabled": "Disabled",
+    "threadLabelGroup": "Group"
   },
   "vlogdetail": {
     "noPostsYet": "No posts yet",
