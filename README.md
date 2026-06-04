@@ -34,7 +34,7 @@ In a second terminal, set `EXPO_PUBLIC_API_URL` in `apps/ciaorelated/.env` to yo
 pnpm --dir apps/ciaorelated start:device
 ```
 
-Local defaults are intentionally provider-light: SMS codes can be printed to the server console, email/S3/AppsFlyer can stay empty while you explore the core app.
+Local defaults are intentionally provider-light: SMS codes can be printed to the server console and AppsFlyer stays off. Media creation/upload flows need S3-compatible storage keys; without S3 configured you can still boot the app, authenticate, inspect the shell/navigation, and wire the backend before enabling uploads.
 
 ## Privacy By Default
 
@@ -577,7 +577,7 @@ Expected development log format:
 
 ## Media Uploads
 
-The backend is designed for S3-compatible object storage.
+The backend is designed for S3-compatible object storage. Configure this before testing photo/video posts, profile avatars, chat media, or any flow that requests signed upload URLs.
 
 Typical variables:
 
@@ -591,6 +591,8 @@ S3_PUBLIC_BASE=
 ```
 
 Use a provider such as AWS S3, DigitalOcean Spaces, Cloudflare R2, MinIO, or another S3-compatible storage service.
+
+For a minimal local smoke test you can leave S3 empty, but upload mutations will fail until these values point to a real bucket/container.
 
 ## Development Checks
 
