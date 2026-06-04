@@ -1025,7 +1025,7 @@ const makeStyles = (C: any) =>
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 10,
-      paddingTop: 4,
+      paddingTop: 10,
     },
     camBtn: {
       width: 42,
