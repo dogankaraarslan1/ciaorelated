@@ -32,6 +32,14 @@ const THREADS = gql`
       title
       lastMessageAt
       unreadCount
+      kind
+      isGroupChat
+      community {
+        id
+        title
+        imageUrl
+        imageThumbUrl
+      }
       members {
         id
         username
@@ -294,11 +302,12 @@ export default function MessagesScreen() {
   // Anzeige-Infos für Thread (Titel/Avatar): bei 1:1 "anderer" User
   const getThreadDisplay = (thr: any) => {
     const members = Array.isArray(thr.members) ? thr.members : [];
-    const title = thr.title || readableThreadTitle(members, meId);
+    const community = thr?.community;
+    const title = community?.title || thr.title || readableThreadTitle(members, meId);
 
-    let avatar = members?.[0]?.avatarThumbUrl || members?.[0]?.avatarUrl || null;
+    let avatar = community?.imageThumbUrl || community?.imageUrl || members?.[0]?.avatarThumbUrl || members?.[0]?.avatarUrl || null;
 
-    if (members.length === 2 && meId) {
+    if (!community && members.length === 2 && meId) {
       const other = members.find((m: any) => m?.id !== meId);
       avatar = other?.avatarThumbUrl || other?.avatarUrl || avatar;
     }

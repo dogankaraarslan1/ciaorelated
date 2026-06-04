@@ -22,6 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import { useNavigation, useRoute } from "@react-navigation/native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import Svg, { Rect } from "react-native-svg";
 import { captureRef } from "react-native-view-shot";
@@ -217,6 +218,7 @@ export default function CommunitySpaceScreen() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const C = theme.colors as any;
+  const insets = useSafeAreaInsets();
   const s = useMemo(() => styles(C), [C]);
 
   const { data, loading, error, refetch } = useQuery(COMMUNITY_SPACE, {
@@ -255,6 +257,7 @@ export default function CommunitySpaceScreen() {
   const link = inviteUrl(group?.slug);
   const groupAvatarThumb = group?.imageThumbUrl ?? group?.owner?.avatarThumbUrl ?? null;
   const groupAvatarFull = group?.imageUrl ?? group?.owner?.avatarUrl ?? null;
+  const heroImageSource = group?.imageUrl || group?.imageThumbUrl ? { uri: group.imageUrl || group.imageThumbUrl } : heroBackground;
   const communityThread = threadData?.communityThread;
   const isOwner = Boolean(group?.viewerIsOwner);
   const qrShareRef = useRef<View>(null);
@@ -444,8 +447,8 @@ export default function CommunitySpaceScreen() {
   const Header = (
     <View>
       <View style={s.hero}>
-        <Image source={heroBackground} style={s.heroImage} />
-        <TouchableOpacity onPress={() => nav.goBack()} hitSlop={12} style={s.backBtn}>
+        <Image source={heroImageSource} style={s.heroImage} />
+        <TouchableOpacity onPress={() => nav.goBack()} hitSlop={12} style={[s.backBtn, { top: Math.max(insets.top + 8, 12) }]}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
         <View style={s.heroShade} />
@@ -474,7 +477,7 @@ export default function CommunitySpaceScreen() {
                 {groupSaving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Ionicons name="pencil-outline" size={18} color="#fff" />
+                  <Ionicons name="create-outline" size={15} color="rgba(255,255,255,0.82)" />
                 )}
               </TouchableOpacity>
             ) : null}
@@ -561,7 +564,7 @@ export default function CommunitySpaceScreen() {
   }
 
   return (
-    <Screen scroll={false} edges={["top", "left", "right"]}>
+    <Screen scroll={false} edges={["left", "right"]} barStyle="light-content">
       <FlatList
         data={posts}
         keyExtractor={(item: any) => String(item.id)}
@@ -824,7 +827,6 @@ const styles = (C: any) =>
     },
     backBtn: {
       position: "absolute",
-      top: 12,
       left: 12,
       zIndex: 2,
       width: 42,
@@ -832,7 +834,7 @@ const styles = (C: any) =>
       borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "rgba(255,255,255,0.16)",
+      backgroundColor: "rgba(0,0,0,0.18)",
     },
     heroContent: { padding: 18, gap: 8 },
     pill: {
@@ -861,9 +863,9 @@ const styles = (C: any) =>
     },
     title: { flexShrink: 1, color: "#fff", fontSize: 34, fontWeight: "900", letterSpacing: 0 },
     titleEditBtn: {
-      width: 30,
-      height: 30,
-      borderRadius: 15,
+      width: 26,
+      height: 26,
+      borderRadius: 13,
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "transparent",
