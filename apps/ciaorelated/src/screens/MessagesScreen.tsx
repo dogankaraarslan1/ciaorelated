@@ -313,8 +313,8 @@ export default function MessagesScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header (Theme) */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={22} color={C.text} />
+        <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={12} activeOpacity={0.78}>
+          <Ionicons name="chevron-back" size={28} color={C.text} />
         </TouchableOpacity>
 
         <Text style={styles.headerTitle}>{t("messages.news")}</Text>
@@ -325,9 +325,10 @@ export default function MessagesScreen() {
             // (TextInput ist sowieso oben)
           }}
           style={styles.headerBtn}
-          hitSlop={8}
+          hitSlop={12}
+          activeOpacity={0.78}
         >
-          <Ionicons name="create-outline" size={20} color={C.text} />
+          <Ionicons name="create-outline" size={24} color={C.text} />
         </TouchableOpacity>
       </View>
 
@@ -507,14 +508,12 @@ const makeStyles = (C: {
       gap: 10,
     },
     headerBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: C.card,
-      borderWidth: 1,
-      borderColor: C.border,
+      backgroundColor: "transparent",
     },
     headerTitle: {
       flex: 1,

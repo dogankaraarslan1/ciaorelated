@@ -839,8 +839,8 @@ const renderCustomView = useCallback(
       return (
         <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: Math.max(insets.bottom, 8) }]}>
           {!hasText && (
-            <TouchableOpacity style={[styles.camBtn, { backgroundColor: C.accent }]} onPress={pickImage} activeOpacity={0.9}>
-              <Ionicons name="camera-outline" size={18} color="#fff" />
+            <TouchableOpacity style={styles.camBtn} onPress={pickImage} activeOpacity={0.78} hitSlop={10}>
+              <Ionicons name="camera-outline" size={24} color={C.text} />
             </TouchableOpacity>
           )}
 
@@ -855,8 +855,8 @@ const renderCustomView = useCallback(
             />
 
             {hasText ? (
-              <TouchableOpacity style={[styles.sendBtn, { backgroundColor: C.accent }]} onPress={handlePressSend} activeOpacity={0.9}>
-                <Ionicons name="send" size={16} color="#fff" />
+              <TouchableOpacity style={styles.sendBtn} onPress={handlePressSend} activeOpacity={0.78} hitSlop={10}>
+                <Ionicons name="send" size={20} color={C.accent} />
               </TouchableOpacity>
             ) : (
               <View style={{ width: 8 }} />
@@ -873,11 +873,12 @@ const renderCustomView = useCallback(
       {/* Header */}
       <View style={[styles.header, { paddingTop: 10 }]}>
         <TouchableOpacity
-          style={[styles.headerBtn, { backgroundColor: C.card, borderColor: C.border }]}
+          style={styles.headerBtn}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.85}
+          activeOpacity={0.78}
+          hitSlop={12}
         >
-          <Ionicons name="chevron-back" size={22} color={C.text} />
+          <Ionicons name="chevron-back" size={28} color={C.text} />
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: C.text }]} numberOfLines={1}>
@@ -886,12 +887,13 @@ const renderCustomView = useCallback(
 
         {threadCommunity?.id ? (
           <TouchableOpacity
-            style={[styles.headerBtn, { backgroundColor: C.card, borderColor: C.border }]}
+            style={styles.headerBtn}
             onPress={openCommunityLiveFeed}
-            activeOpacity={0.85}
+            activeOpacity={0.78}
+            hitSlop={12}
             accessibilityLabel={t("chat.openLiveFeed")}
           >
-            <Ionicons name="aperture-outline" size={20} color={C.text} />
+            <Ionicons name="aperture-outline" size={24} color={C.text} />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 38 }} />
@@ -972,12 +974,12 @@ const makeStyles = (C: any) =>
       gap: 10,
     },
     headerBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      borderWidth: 1,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: "transparent",
     },
     headerTitle: {
       flex: 1,
@@ -1026,12 +1028,13 @@ const makeStyles = (C: any) =>
       paddingTop: 6,
     },
     camBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
       marginRight: 8,
+      backgroundColor: "transparent",
     },
     pill: {
       flex: 1,
@@ -1051,12 +1054,13 @@ const makeStyles = (C: any) =>
       paddingBottom: 8,
     },
     sendBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       marginLeft: 4,
+      backgroundColor: "transparent",
     },
     image: {
       width: 220,
