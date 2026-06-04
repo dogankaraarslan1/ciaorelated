@@ -9,6 +9,7 @@ import {
   Bubble,
   Time,
 } from "react-native-gifted-chat";
+import "dayjs/locale/de";
 import { Ionicons } from "@expo/vector-icons";
 import { gql, useMutation, useQuery, useSubscription } from "@apollo/client";
 import * as ImagePicker from "expo-image-picker";
@@ -222,7 +223,7 @@ type MsgNode = {
 };
 
 export default function ChatScreen({ route, navigation }: any) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { theme } = useTheme();
   const C = useMemo(() => {
@@ -239,6 +240,19 @@ export default function ChatScreen({ route, navigation }: any) {
 
   const styles = useMemo(() => makeStyles(C), [C]);
   const insets = useSafeAreaInsets();
+  const chatLanguage = useMemo(() => {
+    const language = String(i18n.resolvedLanguage ?? i18n.language ?? "en").toLowerCase();
+    return language.startsWith("de") ? "de" : "en";
+  }, [i18n.language, i18n.resolvedLanguage]);
+  const chatTimeFormat = chatLanguage === "de" ? "HH:mm" : "h:mm A";
+  const chatDateFormat = chatLanguage === "de" ? "D. MMMM YYYY" : "MMMM D, YYYY";
+  const chatDateFormatCalendar = useMemo(
+    () =>
+      chatLanguage === "de"
+        ? { sameDay: "[Heute]", lastDay: "[Gestern]", sameElse: chatDateFormat }
+        : { sameDay: "[Today]", lastDay: "[Yesterday]", sameElse: chatDateFormat },
+    [chatDateFormat, chatLanguage]
+  );
   const storyCardWidth = useMemo(() => {
     const w = Dimensions.get("window")?.width ?? 375;
     return Math.min(300, Math.max(220, Math.floor(w * 0.72)));
@@ -913,6 +927,10 @@ const renderCustomView = useCallback(
         renderCustomView={renderCustomView}
         renderInputToolbar={renderPillToolbar}
         renderMessageImage={renderMessageImage}
+        locale={chatLanguage}
+        timeFormat={chatTimeFormat}
+        dateFormat={chatDateFormat}
+        dateFormatCalendar={chatDateFormatCalendar}
         messageIdGenerator={() => `${Date.now()}-${Math.random().toString(36).slice(2)}`}
         onLongPress={(_ctx, message) => setActionMsg(message)}
         // ✅ AVATAR wirklich aktivieren:
@@ -1025,7 +1043,7 @@ const makeStyles = (C: any) =>
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 10,
-      paddingTop: 10,
+      paddingTop: 18,
     },
     camBtn: {
       width: 42,
