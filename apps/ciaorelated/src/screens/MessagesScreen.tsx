@@ -14,10 +14,13 @@ import { useQuery, useMutation, gql, useSubscription } from "@apollo/client";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "../theme/ThemeProvider";
 import { useFocusEffect } from "@react-navigation/native";
 import { avatarPlaceholder } from "../../assets/placeholders";
 import GroupLinkSheet from "./GroupLinkSheet";
+import { apollo } from "../apollo";
+import { uploadToS3 } from "../lib/uploadToS3";
 
 import { useTranslation } from "react-i18next";
 
@@ -32,6 +35,7 @@ const THREADS = gql`
     threads {
       id
       title
+      imageUrl
       lastMessageAt
       unreadCount
       kind
@@ -68,10 +72,11 @@ const SEARCH_USERS = gql`
 `;
 
 const CREATE_THREAD = gql`
-  mutation CreateThread($memberUserIds: [ID!]!, $title: String) {
-    createThread(memberUserIds: $memberUserIds, title: $title) {
+  mutation CreateThread($memberUserIds: [ID!]!, $title: String, $imageKey: String) {
+    createThread(memberUserIds: $memberUserIds, title: $title, imageKey: $imageKey) {
       id
       title
+      imageUrl
       members {
         id
         username
@@ -134,6 +139,10 @@ export default function MessagesScreen() {
   const [q, setQ] = useState("");
   const [composeMode, setComposeMode] = useState<"group" | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [groupTitle, setGroupTitle] = useState("");
+  const [groupImageUri, setGroupImageUri] = useState<string | null>(null);
+  const [groupImageMime, setGroupImageMime] = useState<string>("image/jpeg");
+  const [groupImageName, setGroupImageName] = useState<string>("group-chat.jpg");
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
 
   // Threads laden
@@ -282,6 +291,10 @@ export default function MessagesScreen() {
         onPress: () => {
           setComposeMode("group");
           setSelectedUsers([]);
+          setGroupTitle("");
+          setGroupImageUri(null);
+          setGroupImageMime("image/jpeg");
+          setGroupImageName("group-chat.jpg");
           setQ("");
         },
       },
@@ -337,15 +350,55 @@ export default function MessagesScreen() {
 
   const createSelectedGroup = async () => {
     if (!selectedUsers.length) return;
-    const { data } = await createThread({
-      variables: { memberUserIds: selectedUsers.map((user: any) => user.id), title: null },
+    try {
+      let imageKey: string | null = null;
+      if (groupImageUri) {
+        const uploaded = await uploadToS3(apollo, {
+          uri: groupImageUri,
+          name: groupImageName,
+          type: groupImageMime,
+        });
+        imageKey = uploaded.key;
+      }
+
+      const { data } = await createThread({
+        variables: {
+          memberUserIds: selectedUsers.map((user: any) => user.id),
+          title: groupTitle.trim() || null,
+          imageKey,
+        },
+      });
+      const thread = data?.createThread;
+      if (thread?.id) {
+        setComposeMode(null);
+        setSelectedUsers([]);
+        setGroupTitle("");
+        setGroupImageUri(null);
+        setGroupImageMime("image/jpeg");
+        setGroupImageName("group-chat.jpg");
+        setQ("");
+        openThread(thread);
+      }
+    } catch (e: any) {
+      Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+    }
+  };
+
+  const pickGroupImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") {
+      Alert.alert(t("chat.permissionMissingTitle"), t("chat.photosPermissionBody"));
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
     });
-    const thread = data?.createThread;
-    if (thread?.id) {
-      setComposeMode(null);
-      setSelectedUsers([]);
-      setQ("");
-      openThread(thread);
+    const asset = res.assets?.[0];
+    if (!res.canceled && asset?.uri) {
+      setGroupImageUri(asset.uri);
+      setGroupImageMime(asset.mimeType ?? "image/jpeg");
+      setGroupImageName(asset.fileName ?? "group-chat.jpg");
     }
   };
 
@@ -355,7 +408,7 @@ export default function MessagesScreen() {
     const community = thr?.community;
     const title = community?.title || thr.title || readableThreadTitle(members, meId);
 
-    let avatar = community?.imageThumbUrl || community?.imageUrl || members?.[0]?.avatarThumbUrl || members?.[0]?.avatarUrl || null;
+    let avatar = community?.imageThumbUrl || community?.imageUrl || thr?.imageUrl || members?.[0]?.avatarThumbUrl || members?.[0]?.avatarUrl || null;
 
     if (!community && members.length === 2 && meId) {
       const other = members.find((m: any) => m?.id !== meId);
@@ -404,36 +457,63 @@ export default function MessagesScreen() {
 
       {composeMode === "group" ? (
         <View style={styles.composeBar}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.composeTitle}>{t("messages.newGroupChat")}</Text>
-            <Text style={styles.composeSub}>
-              {selectedUsers.length
-                ? t("messages.selectedPeople", { count: selectedUsers.length })
-                : t("messages.selectPeopleForGroup")}
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={[styles.composeCreateBtn, !selectedUsers.length && { opacity: 0.45 }]}
-            onPress={createSelectedGroup}
-            disabled={!selectedUsers.length || creating}
-            activeOpacity={0.82}
-          >
-            {creating ? (
-              <ActivityIndicator size="small" color={C.bg} />
+          <TouchableOpacity style={styles.groupImageBtn} onPress={pickGroupImage} activeOpacity={0.82}>
+            {groupImageUri ? (
+              <ExpoImage source={{ uri: groupImageUri }} style={styles.groupImagePreview} contentFit="cover" />
             ) : (
-              <Text style={styles.composeCreateText}>{t("messages.createGroup")}</Text>
+              <Ionicons name="camera-outline" size={22} color={C.subtext} />
             )}
           </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.composeCancelBtn}
-            onPress={() => {
-              setComposeMode(null);
-              setSelectedUsers([]);
-            }}
-            hitSlop={10}
-          >
-            <Ionicons name="close" size={20} color={C.subtext} />
-          </TouchableOpacity>
+
+          <View style={styles.composeMain}>
+            <View style={styles.composeHeaderRow}>
+              <Text style={styles.composeTitle}>{t("messages.newGroupChat")}</Text>
+              <TouchableOpacity
+                style={styles.composeCancelBtn}
+                onPress={() => {
+                  setComposeMode(null);
+                  setSelectedUsers([]);
+                  setGroupTitle("");
+                  setGroupImageUri(null);
+                  setGroupImageMime("image/jpeg");
+                  setGroupImageName("group-chat.jpg");
+                }}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={20} color={C.subtext} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.groupTitleInput}
+              placeholder={t("messages.groupNamePlaceholder")}
+              placeholderTextColor={C.subtext}
+              value={groupTitle}
+              onChangeText={setGroupTitle}
+              autoCorrect={false}
+              maxLength={48}
+            />
+
+            <View style={styles.composeFooterRow}>
+              <Text style={styles.composeSub}>
+                {selectedUsers.length
+                  ? t("messages.selectedPeople", { count: selectedUsers.length })
+                  : t("messages.selectPeopleForGroup")}
+              </Text>
+              <TouchableOpacity
+                style={[styles.composeCreateBtn, !selectedUsers.length && { opacity: 0.45 }]}
+                onPress={createSelectedGroup}
+                disabled={!selectedUsers.length || creating}
+                activeOpacity={0.82}
+              >
+                {creating ? (
+                  <ActivityIndicator size="small" color={C.bg} />
+                ) : (
+                  <Text style={styles.composeCreateText}>{t("messages.createGroup")}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
         </View>
       ) : null}
 
@@ -478,7 +558,7 @@ export default function MessagesScreen() {
 
                 <View style={{ flex: 1, minWidth: 0 }}>
                   <View style={styles.itemTopRow}>
-                    <Text style={[styles.itemTitle, styles.itemTitleInRow]} numberOfLines={1}>
+                    <Text style={[styles.itemTitle, styles.itemTitleInRow]} numberOfLines={2}>
                       {title}
                     </Text>
                     {!!threadLabel && (
@@ -666,11 +746,50 @@ const makeStyles = (C: {
       borderColor: C.border,
       backgroundColor: C.card,
       flexDirection: "row",
-      alignItems: "center",
+      alignItems: "flex-start",
       gap: 10,
     },
     composeTitle: { color: C.text, fontSize: 14, fontWeight: "900" },
-    composeSub: { color: C.subtext, fontSize: 12, fontWeight: "600", marginTop: 2 },
+    composeSub: { flex: 1, color: C.subtext, fontSize: 12, fontWeight: "600", marginTop: 2 },
+    composeMain: { flex: 1, minWidth: 0, gap: 8 },
+    composeHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    composeFooterRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    groupImageBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.bg,
+      overflow: "hidden",
+    },
+    groupImagePreview: {
+      width: "100%",
+      height: "100%",
+    },
+    groupTitleInput: {
+      minHeight: 36,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.border,
+      color: C.text,
+      paddingHorizontal: 10,
+      fontSize: 14,
+      fontWeight: "700",
+      backgroundColor: C.bg,
+    },
     composeCreateBtn: {
       height: 34,
       paddingHorizontal: 12,

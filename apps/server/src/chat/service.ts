@@ -108,6 +108,7 @@ export async function listThreads(prisma: PrismaClient, userId: string) {
       return {
         id: t.id,
         title: t.title,
+        imageKey: (t as any).imageKey ?? null,
         groupKey: t.groupKey,
         kind: (t as any).kind ?? (t.groupKey ? "GROUP" : "DM"),
         isGroupChat: ((t as any).kind ?? (t.groupKey ? "GROUP" : "DM")) !== "DM",
@@ -380,7 +381,8 @@ export async function createThread(
   prisma: PrismaClient,
   requesterId: string,
   memberUserIds: string[],
-  title?: string
+  title?: string,
+  imageKey?: string | null
 ) {
   const members = uniqSorted(memberUserIds);
   if (members.length < 2) throw new Error("need at least 2 members");
@@ -418,7 +420,14 @@ export async function createThread(
   if (existing) return existing;
 
   return prisma.$transaction(async (tx) => {
-    const thread = await tx.thread.create({ data: { title: title ?? null, groupKey, kind: "GROUP" } });
+    const thread = await tx.thread.create({
+      data: {
+        title: title ?? null,
+        groupKey,
+        kind: "GROUP",
+        imageKey: imageKey ?? null,
+      } as any,
+    });
     await tx.threadMember.createMany({
       data: members.map((userId) => ({ threadId: thread.id, userId })),
     });

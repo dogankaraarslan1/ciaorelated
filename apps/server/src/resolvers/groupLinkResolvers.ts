@@ -436,6 +436,15 @@ export default {
         const profileId = ctx.profileId;
         if (!profileId) throw new Error("Not authenticated");
 
+        const group = await tx.groupLink.findUnique({
+          where: { id: groupId },
+          select: { ownerId: true },
+        });
+        if (!group) throw new Error("Group not found");
+        if (group.ownerId === profileId) {
+          throw new Error("Owner cannot leave the community before transferring ownership");
+        }
+
         // 1) Connections entfernen, die über diesen GroupLink laufen
         await tx.connection.deleteMany({
           where: {

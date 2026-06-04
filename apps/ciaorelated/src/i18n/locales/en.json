@@ -748,6 +748,7 @@
     "newCommunity": "Create community",
     "viewCommunities": "View communities",
     "selectPeopleForGroup": "Search and select people for a group chat.",
+    "groupNamePlaceholder": "Group name optional",
     "selectedPeople": "{{count}} selected",
     "createGroup": "Create group",
     "searchPeople": "Search people",

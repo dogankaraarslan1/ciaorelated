@@ -589,6 +589,7 @@ export default function CommunitySpaceScreen() {
         ListHeaderComponent={Header}
         refreshing={loading}
         onRefresh={() => refetch()}
+        progressViewOffset={96}
         contentContainerStyle={{ paddingBottom: 48 }}
         ListEmptyComponent={
           error ? (

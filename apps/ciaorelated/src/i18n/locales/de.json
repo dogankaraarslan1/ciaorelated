@@ -753,6 +753,7 @@
     "newCommunity": "Community erstellen",
     "viewCommunities": "Communities ansehen",
     "selectPeopleForGroup": "Suche und wähle Personen für eine Chatgruppe aus.",
+    "groupNamePlaceholder": "Gruppenname optional",
     "selectedPeople": "{{count}} ausgewählt",
     "createGroup": "Gruppe erstellen",
     "searchPeople": "Personen suchen",

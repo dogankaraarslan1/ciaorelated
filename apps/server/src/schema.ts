@@ -1005,6 +1005,7 @@ export const typeDefs = gql`
   type Thread {
     id: ID!
     title: String
+    imageUrl: String
     kind: ThreadKind!
     members: [User!]!         # nutzt euren bestehenden User-Typ
     lastMessageAt: DateTime
@@ -1098,7 +1099,7 @@ export const typeDefs = gql`
     sendMessage(input: SendMessageInput!): Message!
     markThreadRead(threadId: ID!): Boolean!
     signUpload(mime: String!, filename: String): SignedUpload!
-    createThread(memberUserIds: [ID!]!, title: String): Thread!
+    createThread(memberUserIds: [ID!]!, title: String, imageKey: String): Thread!
     setCommunityChatKind(groupId: ID!, kind: ThreadKind!): Thread!
     setTyping(threadId: ID!, typing: Boolean!): Boolean!
     toggleMessageLike(messageId: ID!): Message!

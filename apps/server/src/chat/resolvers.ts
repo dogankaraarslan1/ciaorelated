@@ -5,7 +5,7 @@ import { pubsub } from "./pubsub";
 import { EVENTS } from "./events";
 import * as svc from "./service";
 import type { Ctx } from "../context";
-import { signPutForChat } from "../s3";
+import { getSignedGetUrl, signPutForChat } from "../s3";
 import { GetObjectCommand,S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { withFilter } from "graphql-subscriptions";
@@ -165,13 +165,13 @@ export const resolvers = {
 
     createThread: async (
       _: unknown,
-      { memberUserIds, title }: { memberUserIds: string[]; title?: string },
+      { memberUserIds, title, imageKey }: { memberUserIds: string[]; title?: string; imageKey?: string | null },
       ctx: Ctx
     ) => {
       requireAuth(ctx);
       const members = Array.isArray(memberUserIds) ? [...memberUserIds] : [];
       if (!members.includes(ctx.profileId)) members.push(ctx.profileId);
-      return svc.createThread(ctx.prisma as PrismaClient, ctx.profileId, members, title);
+      return svc.createThread(ctx.prisma as PrismaClient, ctx.profileId, members, title, imageKey);
     },
 
     setCommunityChatKind: async (_: unknown, { groupId, kind }: { groupId: string; kind: string }, ctx: Ctx) => {
@@ -328,6 +328,12 @@ export const resolvers = {
         include: { user: true },
       });
       return mems.map((m) => m.user);
+    },
+    imageUrl: async (t: any) => {
+      const key = typeof t?.imageKey === "string" ? t.imageKey : "";
+      if (!key) return null;
+      if (/^https?:\/\//i.test(key)) return key;
+      return getSignedGetUrl(key);
     },
     lastMessageAt: async (t: any, _a: unknown, ctx: Ctx) => {
       const last = await (ctx.prisma as PrismaClient).message.findFirst({
