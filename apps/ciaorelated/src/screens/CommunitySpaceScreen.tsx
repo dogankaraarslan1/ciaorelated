@@ -202,6 +202,8 @@ export default function CommunitySpaceScreen() {
   const members = data?.groupLinkMembers ?? [];
   const isEvent = group?.type === "EVENT";
   const link = inviteUrl(group?.slug);
+  const groupAvatarThumb = group?.imageThumbUrl ?? group?.owner?.avatarThumbUrl ?? null;
+  const groupAvatarFull = group?.imageUrl ?? group?.owner?.avatarUrl ?? null;
   const communityThread = threadData?.communityThread;
   const isOwner = Boolean(group?.viewerIsOwner);
   const qrShareRef = useRef<View>(null);
@@ -282,6 +284,10 @@ export default function CommunitySpaceScreen() {
     }
   };
 
+  const showCommunityEditPlaceholder = (target: string) => {
+    Alert.alert(target, t("communityspace.editComingSoonBody"));
+  };
+
   const openCommunitySettings = async () => {
     let currentThread = communityThread;
     if (!currentThread && groupId) {
@@ -300,6 +306,20 @@ export default function CommunitySpaceScreen() {
     ];
 
     if (isOwner) {
+      buttons.unshift(
+        {
+          text: t("communityspace.editName"),
+          onPress: () => showCommunityEditPlaceholder(t("communityspace.editName")),
+        },
+        {
+          text: t("communityspace.editImage"),
+          onPress: () => showCommunityEditPlaceholder(t("communityspace.editImage")),
+        },
+        {
+          text: t("communityspace.manageMembers"),
+          onPress: () => showCommunityEditPlaceholder(t("communityspace.manageMembers")),
+        }
+      );
       buttons.push({
         text: currentlyBroadcast ? t("communityspace.disableBroadcast") : t("communityspace.enableBroadcast"),
         onPress: () => setBroadcastMode(!currentlyBroadcast),
@@ -328,7 +348,31 @@ export default function CommunitySpaceScreen() {
             <Ionicons name={isEvent ? "flash" : "people"} size={14} color="#fff" />
             <Text style={s.pillText}>{isEvent ? t("communityspace.festivalFeed") : t("communityspace.communityLiveFeed")}</Text>
           </View>
-          <Text style={s.title} numberOfLines={2}>{group?.title ?? t("communityspace.communityFallback")}</Text>
+          <View style={s.titleRow}>
+            <AvatarImage
+              thumb={groupAvatarThumb}
+              full={groupAvatarFull}
+              style={s.groupAvatar}
+              recyclingKey={`community-space:${group?.id ?? groupId}`}
+            />
+            <Text style={s.title} numberOfLines={2}>{group?.title ?? t("communityspace.communityFallback")}</Text>
+            {isOwner ? (
+              <TouchableOpacity
+                style={s.titleEditBtn}
+                onPress={openCommunitySettings}
+                activeOpacity={0.78}
+                hitSlop={12}
+                accessibilityLabel={t("communityspace.settingsTitle")}
+                disabled={chatLoading || qrSharing || chatModeSaving}
+              >
+                {chatLoading || qrSharing || chatModeSaving ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Ionicons name="pencil-outline" size={22} color="#fff" />
+                )}
+              </TouchableOpacity>
+            ) : null}
+          </View>
           <Text style={s.sub} numberOfLines={2}>
             {isEvent ? t("communityspace.liveMomentsFromEvent") : t("communityspace.momentsFromCommunity")}
           </Text>
@@ -526,7 +570,28 @@ const styles = (C: any) =>
       backgroundColor: "rgba(255,255,255,0.18)",
     },
     pillText: { color: "#fff", fontWeight: "800", fontSize: 12 },
-    title: { color: "#fff", fontSize: 34, fontWeight: "900", letterSpacing: 0 },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    groupAvatar: {
+      width: 46,
+      height: 46,
+      borderRadius: 23,
+      borderWidth: 1,
+      borderColor: "rgba(255,255,255,0.34)",
+      backgroundColor: "rgba(255,255,255,0.14)",
+    },
+    title: { flex: 1, color: "#fff", fontSize: 34, fontWeight: "900", letterSpacing: 0 },
+    titleEditBtn: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(255,255,255,0.16)",
+    },
     sub: { color: "rgba(255,255,255,0.82)", fontSize: 15, fontWeight: "700" },
     metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
     meta: { color: "rgba(255,255,255,0.72)", fontSize: 13, fontWeight: "700" },
