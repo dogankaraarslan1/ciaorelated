@@ -8,11 +8,9 @@ Open-source Instagram-style social media app for groups, events, local communiti
 
 ## Try It
 
-An early test build is available for feedback. It may lag behind `main` while the open-source version is being cleaned up:
+An early iOS build is available for feedback. It is still published under the previous Beverly branding and may lag behind `main` while the open-source version is being cleaned up:
 
-```txt
-TestFlight / APK: add-your-current-test-build-link-here
-```
+<a href="https://apps.apple.com/at/app/beverly/id6751941066">Download the current Beverly iOS build on the App Store</a>
 
 If you are reviewing the project, this is the fastest way to feel the feed, profile, moments, chats, and group invite flow without setting up providers first.
 
