@@ -175,10 +175,27 @@ export async function sendMessage(
   }
 
   // Sicherheitscheck: gehört User zum Thread?
-  const membership = await prisma.threadMember.findUnique({
-    where: { threadId_userId: { threadId: input.threadId, userId } },
-  });
+  const [membership, thread] = await Promise.all([
+    prisma.threadMember.findUnique({
+      where: { threadId_userId: { threadId: input.threadId, userId } },
+    }),
+    prisma.thread.findUnique({
+      where: { id: input.threadId },
+      select: { id: true, kind: true, groupKey: true },
+    }),
+  ]);
   if (!membership) throw new Error("NO_ACCESS_TO_THREAD");
+  if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+
+  if (thread.kind === "BROADCAST") {
+    const groupId = thread.groupKey?.startsWith("community:") ? thread.groupKey.slice("community:".length) : null;
+    if (!groupId) throw new GraphQLError("BROADCAST_NOT_CONFIGURED");
+    const group = await prisma.groupLink.findUnique({
+      where: { id: groupId },
+      select: { ownerId: true, isActive: true },
+    });
+    if (!group?.isActive || group.ownerId !== userId) throw new GraphQLError("BROADCAST_ONLY");
+  }
 
   // Block-Safety: wenn irgendwer im Thread geblockt ist (in beide Richtungen) => nicht senden
   await assertThreadNotBlocked(prisma, userId, input.threadId);

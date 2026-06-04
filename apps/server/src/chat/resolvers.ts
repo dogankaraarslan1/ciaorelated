@@ -174,6 +174,26 @@ export const resolvers = {
       return svc.createThread(ctx.prisma as PrismaClient, ctx.profileId, members, title);
     },
 
+    setCommunityChatKind: async (_: unknown, { groupId, kind }: { groupId: string; kind: string }, ctx: Ctx) => {
+      requireAuth(ctx);
+      if (kind !== "COMMUNITY" && kind !== "BROADCAST") throw new GraphQLError("INVALID_THREAD_KIND");
+
+      const group = await (ctx.prisma as PrismaClient).groupLink.findUnique({
+        where: { id: groupId },
+        select: { id: true, ownerId: true, isActive: true },
+      });
+      if (!group || !group.isActive) throw new GraphQLError("GROUP_NOT_FOUND");
+      if (group.ownerId !== ctx.profileId) throw new GraphQLError("FORBIDDEN");
+
+      const thread = await svc.ensureCommunityThread(ctx.prisma as PrismaClient, group.id);
+      if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+
+      return (ctx.prisma as PrismaClient).thread.update({
+        where: { id: thread.id },
+        data: { kind: kind as any },
+      });
+    },
+
     setTyping: async (_: unknown, { threadId, typing }: { threadId: string; typing: boolean }, ctx: Ctx) => {
       if (!ctx.profileId) return false;
       await pubsub.publish(topicTyping(threadId), { isTyping: typing });

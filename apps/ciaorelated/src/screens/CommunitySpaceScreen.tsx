@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { gql, useLazyQuery, useQuery } from "@apollo/client";
+import { gql, useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
@@ -126,6 +126,16 @@ const COMMUNITY_THREAD = gql`
     communityThread(groupId: $groupId) {
       id
       title
+      kind
+    }
+  }
+`;
+
+const SET_COMMUNITY_CHAT_KIND = gql`
+  mutation SetCommunityChatKind($groupId: ID!, $kind: ThreadKind!) {
+    setCommunityChatKind(groupId: $groupId, kind: $kind) {
+      id
+      kind
     }
   }
 `;
@@ -169,6 +179,7 @@ export default function CommunitySpaceScreen() {
   const [loadCommunityThread, { data: threadData, loading: chatLoading }] = useLazyQuery(COMMUNITY_THREAD, {
     fetchPolicy: "network-only",
   });
+  const [setCommunityChatKind, { loading: chatModeSaving }] = useMutation(SET_COMMUNITY_CHAT_KIND);
 
   const fallbackGroup = {
     id: groupId,
@@ -192,6 +203,7 @@ export default function CommunitySpaceScreen() {
   const isEvent = group?.type === "EVENT";
   const link = inviteUrl(group?.slug);
   const communityThread = threadData?.communityThread;
+  const isOwner = Boolean(group?.viewerIsOwner);
   const qrShareRef = useRef<View>(null);
   const [qrSharing, setQrSharing] = useState(false);
   const qr = useMemo(() => createQrModules(link), [link]);
@@ -256,6 +268,53 @@ export default function CommunitySpaceScreen() {
     }
   };
 
+  const setBroadcastMode = async (enabled: boolean) => {
+    try {
+      await setCommunityChatKind({
+        variables: {
+          groupId: String(group?.id ?? groupId),
+          kind: enabled ? "BROADCAST" : "COMMUNITY",
+        },
+      });
+      await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
+    } catch {
+      Alert.alert(t("communityspace.chatModeFailedTitle"), t("communityspace.chatModeFailedBody"));
+    }
+  };
+
+  const openCommunitySettings = async () => {
+    let currentThread = communityThread;
+    if (!currentThread && groupId) {
+      try {
+        const result = await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
+        currentThread = result?.data?.communityThread;
+      } catch {}
+    }
+    const currentlyBroadcast = currentThread?.kind === "BROADCAST";
+
+    const buttons: any[] = [
+      { text: t("communityspace.openChat"), onPress: openCommunityChat },
+      { text: t("communityspace.shareLink"), onPress: shareLink },
+      { text: t("communityspace.copyLink"), onPress: copyLink },
+      { text: t("communityspace.shareQr"), onPress: shareQrCode },
+    ];
+
+    if (isOwner) {
+      buttons.push({
+        text: currentlyBroadcast ? t("communityspace.disableBroadcast") : t("communityspace.enableBroadcast"),
+        onPress: () => setBroadcastMode(!currentlyBroadcast),
+      });
+    }
+
+    buttons.push({ text: t("common.cancel"), style: "cancel" });
+
+    Alert.alert(
+      t("communityspace.settingsTitle"),
+      currentlyBroadcast ? t("communityspace.broadcastModeBody") : t("communityspace.chatModeBody"),
+      buttons
+    );
+  };
+
   const Header = (
     <View>
       <View style={s.hero}>
@@ -290,36 +349,17 @@ export default function CommunitySpaceScreen() {
           <Ionicons name="camera-outline" size={18} color={C.bg} />
           <Text style={s.primaryActionText}>{t("communityspace.createEventMoment")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.secondaryAction} onPress={shareLink} activeOpacity={0.9}>
-          <Ionicons name="share-outline" size={18} color={C.text} />
-        </TouchableOpacity>
-        <TouchableOpacity style={s.secondaryAction} onPress={copyLink} activeOpacity={0.9}>
-          <Ionicons name="link-outline" size={18} color={C.text} />
-        </TouchableOpacity>
         <TouchableOpacity
           style={s.secondaryAction}
-          onPress={openCommunityChat}
+          onPress={openCommunitySettings}
           activeOpacity={0.9}
-          accessibilityLabel={t("communityspace.openChat")}
-          disabled={chatLoading || !groupId}
+          accessibilityLabel={t("communityspace.settingsTitle")}
+          disabled={chatLoading || qrSharing || chatModeSaving}
         >
-          {chatLoading ? (
+          {chatLoading || qrSharing || chatModeSaving ? (
             <ActivityIndicator size="small" color={C.text} />
           ) : (
-            <Ionicons name="chatbubbles-outline" size={18} color={C.text} />
-          )}
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={s.secondaryAction}
-          onPress={shareQrCode}
-          activeOpacity={0.9}
-          accessibilityLabel={t("communityspace.shareQr")}
-          disabled={qrSharing || !link}
-        >
-          {qrSharing ? (
-            <ActivityIndicator size="small" color={C.text} />
-          ) : (
-            <Ionicons name="qr-code-outline" size={18} color={C.text} />
+            <Ionicons name="settings-outline" size={18} color={C.text} />
           )}
         </TouchableOpacity>
       </View>
