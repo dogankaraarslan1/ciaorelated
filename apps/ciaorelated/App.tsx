@@ -1055,6 +1055,14 @@ function ThemedRootNavigator({
       return;
     }
 
+    let appsFlyer: any;
+    try {
+      appsFlyer = require("react-native-appsflyer").default;
+    } catch (e) {
+      console.log("AppsFlyer skipped: native module is not available.", e);
+      return;
+    }
+
     appsFlyer.initSdk(
       {
         devKey: APPSFLYER_DEV_KEY,

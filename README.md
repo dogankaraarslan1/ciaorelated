@@ -8,11 +8,9 @@ Open-source Instagram-style social media app for groups, events, local communiti
 
 ## Try It
 
-An early test build is available for feedback. It may lag behind `main` while the open-source version is being cleaned up:
+An early iOS build is available for feedback. It is still published under the previous Beverly branding and may lag behind `main` while the open-source version is being cleaned up:
 
-```txt
-TestFlight / APK: add-your-current-test-build-link-here
-```
+<a href="https://apps.apple.com/at/app/beverly/id6751941066">Download the current Beverly iOS build on the App Store</a>
 
 If you are reviewing the project, this is the fastest way to feel the feed, profile, moments, chats, and group invite flow without setting up providers first.
 
@@ -34,7 +32,7 @@ In a second terminal, set `EXPO_PUBLIC_API_URL` in `apps/ciaorelated/.env` to yo
 pnpm --dir apps/ciaorelated start:device
 ```
 
-Local defaults are intentionally provider-light: SMS codes can be printed to the server console, email/S3/AppsFlyer can stay empty while you explore the core app.
+Local defaults are intentionally provider-light: SMS codes can be printed to the server console and AppsFlyer stays off. Media creation/upload flows need S3-compatible storage keys; without S3 configured you can still boot the app, authenticate, inspect the shell/navigation, and wire the backend before enabling uploads.
 
 ## Privacy By Default
 
