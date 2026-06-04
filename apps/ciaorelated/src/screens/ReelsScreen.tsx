@@ -40,7 +40,6 @@ import { gridPlaceholderDark, gridPlaceholderLight } from "../../assets/placehol
 import { hapticImpact } from "../lib/safeHaptics";
 import {
   CONTEXT_KIND_IMAGES,
-  communityImageForType,
   contextIconFor,
   contextImageFor,
   normalizeContextImageKey,
@@ -718,36 +717,23 @@ function CommunityLiveStrip({
               onPress={() => onOpen(item)}
               style={[
                 communityStripStyles.card,
-                { backgroundColor: C.card, borderColor: "rgba(255,255,255,0.22)" },
+                { backgroundColor: C.card, borderColor: C.border },
               ]}
               >
-                <ExpoImage
-                source={communityImageForType(item?.type)}
-                style={StyleSheet.absoluteFillObject}
-                contentFit="cover"
-                cachePolicy="memory-disk"
-                transition={80}
-              />
-              <LinearGradient
-                colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.64)"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
               <View
                 style={[
                   communityStripStyles.iconBubble,
-                  { backgroundColor: isEvent ? "rgba(255,184,77,0.22)" : "rgba(255,255,255,0.18)" },
+                  { backgroundColor: isEvent ? "rgba(255,184,77,0.18)" : "rgba(79,140,255,0.14)" },
                 ]}
               >
                 <Ionicons
                   name={isEvent ? "flash" : "people"}
                   size={14}
-                  color={isEvent ? "#FFB84D" : "#fff"}
+                  color={isEvent ? "#FFB84D" : (C.primary ?? C.text)}
                 />
               </View>
 
-              <Text style={[communityStripStyles.cardTitle, { color: "#fff" }]} numberOfLines={1}>
+              <Text style={[communityStripStyles.cardTitle, { color: C.text }]} numberOfLines={1}>
                 {item?.title ?? t("communityspace.communityFallback")}
               </Text>
             </TouchableOpacity>
