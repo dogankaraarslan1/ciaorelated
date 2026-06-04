@@ -95,6 +95,7 @@ const THREAD_INFO = gql`
   query ThreadInfo($threadId: ID!) {
     thread(threadId: $threadId) {
       id
+      kind
       isGroupChat
     }
   }

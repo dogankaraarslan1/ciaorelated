@@ -108,6 +108,8 @@ export async function listThreads(prisma: PrismaClient, userId: string) {
       return {
         id: t.id,
         title: t.title,
+        kind: (t as any).kind ?? (t.groupKey ? "GROUP" : "DM"),
+        isGroupChat: ((t as any).kind ?? (t.groupKey ? "GROUP" : "DM")) !== "DM",
         members: t.members.map((m) => m.user),
         lastMessageAt: t.messages[0]?.createdAt ?? t.createdAt,
         unreadCount: unread,
@@ -380,7 +382,7 @@ export async function createThread(
     if (existing) return existing;
 
     return prisma.$transaction(async (tx) => {
-      const thread = await tx.thread.create({ data: { title: title ?? null, dmKey } });
+      const thread = await tx.thread.create({ data: { title: title ?? null, dmKey, kind: "DM" } });
       await tx.threadMember.createMany({
         data: members.map((userId) => ({ threadId: thread.id, userId })),
       });
@@ -394,7 +396,7 @@ export async function createThread(
   if (existing) return existing;
 
   return prisma.$transaction(async (tx) => {
-    const thread = await tx.thread.create({ data: { title: title ?? null, groupKey } });
+    const thread = await tx.thread.create({ data: { title: title ?? null, groupKey, kind: "GROUP" } });
     await tx.threadMember.createMany({
       data: members.map((userId) => ({ threadId: thread.id, userId })),
     });
@@ -423,13 +425,14 @@ export async function ensureCommunityThread(prisma: PrismaClient, groupId: strin
         data: {
           title: group.title,
           groupKey,
+          kind: "COMMUNITY",
         },
       }));
 
-    if (thread.title !== group.title) {
+    if (thread.title !== group.title || (thread as any).kind !== "COMMUNITY") {
       await tx.thread.update({
         where: { id: thread.id },
-        data: { title: group.title },
+        data: { title: group.title, kind: "COMMUNITY" },
       });
     }
 

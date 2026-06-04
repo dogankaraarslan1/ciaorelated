@@ -984,9 +984,17 @@ export const typeDefs = gql`
 
   # WICHTIG: DateTime & User sind bereits definiert – NICHT erneut definieren.
 
+  enum ThreadKind {
+    DM
+    GROUP
+    COMMUNITY
+    BROADCAST
+  }
+
   type Thread {
     id: ID!
     title: String
+    kind: ThreadKind!
     members: [User!]!         # nutzt euren bestehenden User-Typ
     lastMessageAt: DateTime
     unreadCount: Int!

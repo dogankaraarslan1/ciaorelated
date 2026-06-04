@@ -904,11 +904,19 @@ model UserBlock {
 // Chat
 //////////////////////////////////////////////////////////
 
+enum ThreadKind {
+  DM
+  GROUP
+  COMMUNITY
+  BROADCAST
+}
+
 model Thread {
   id        String   @id @default(cuid())
   title     String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  kind      ThreadKind @default(DM)
 
   dmKey    String? @unique
   groupKey String? @unique

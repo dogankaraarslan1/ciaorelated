@@ -331,6 +331,7 @@ export const resolvers = {
         },
       });
     },
-    isGroupChat: (t: any) => Boolean(t?.groupKey),
+    kind: (t: any) => t?.kind ?? (t?.groupKey ? "GROUP" : "DM"),
+    isGroupChat: (t: any) => (t?.kind ? t.kind !== "DM" : Boolean(t?.groupKey)),
   },
 };
