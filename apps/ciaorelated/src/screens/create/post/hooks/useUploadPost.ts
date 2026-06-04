@@ -128,14 +128,16 @@ async function ensureJpegThumb(
  */
 async function waitUntilReady(
   postId: string,
-  opts?: { maxTries?: number; baseDelayMs?: number; maxDelayMs?: number; stopWhenBackground?: boolean }
+  opts?: { maxTries?: number; baseDelayMs?: number; maxDelayMs?: number; stopWhenBackground?: boolean; maxPollErrors?: number }
 ): Promise<boolean> {
   const maxTries = opts?.maxTries ?? 120;
   const baseDelayMs = opts?.baseDelayMs ?? 1500;
   const maxDelayMs = opts?.maxDelayMs ?? 6000;
   const stopWhenBackground = opts?.stopWhenBackground ?? true;
+  const maxPollErrors = opts?.maxPollErrors ?? 5;
 
   let delay = baseDelayMs;
+  let pollErrors = 0;
 
   for (let i = 0; i < maxTries; i++) {
     if (stopWhenBackground && AppState.currentState !== "active") {
@@ -143,11 +145,23 @@ async function waitUntilReady(
       return false;
     }
 
-    const { data } = await apollo.query({
-      query: POST_STATUS,
-      variables: { id: postId },
-      fetchPolicy: "network-only",
-    });
+    let data: any = null;
+    try {
+      const res = await apollo.query({
+        query: POST_STATUS,
+        variables: { id: postId },
+        fetchPolicy: "network-only",
+      });
+      data = res.data;
+      pollErrors = 0;
+    } catch (e) {
+      pollErrors += 1;
+      console.warn("[waitUntilReady] status poll failed:", (e as any)?.message ?? e);
+      if (pollErrors >= maxPollErrors) return false;
+      await sleep(delay);
+      delay = Math.min(maxDelayMs, Math.round(delay * 1.35));
+      continue;
+    }
 
     if (!data?.post) return false;
     if (!data.post.isProcessing) return true;
