@@ -97,6 +97,12 @@ const THREAD_INFO = gql`
       id
       kind
       isGroupChat
+      community {
+        id
+        title
+        type
+        slug
+      }
     }
   }
 `;
@@ -269,6 +275,17 @@ export default function ChatScreen({ route, navigation }: any) {
     fetchPolicy: "cache-first",
   });
   const isGroupChat = Boolean(threadInfo?.thread?.isGroupChat);
+  const threadCommunity = threadInfo?.thread?.community;
+
+  const openCommunityLiveFeed = useCallback(() => {
+    if (!threadCommunity?.id) return;
+    navigation.navigate("CommunitySpace", {
+      id: threadCommunity.id,
+      title: threadCommunity.title,
+      slug: threadCommunity.slug,
+      type: threadCommunity.type,
+    });
+  }, [navigation, threadCommunity?.id, threadCommunity?.slug, threadCommunity?.title, threadCommunity?.type]);
 
   const [deleteMessageMut] = useMutation(DELETE_MESSAGE);
   const [markThreadRead] = useMutation(MARK_THREAD_READ);
@@ -867,7 +884,18 @@ const renderCustomView = useCallback(
           {title}
         </Text>
 
-        <View style={{ width: 38 }} />
+        {threadCommunity?.id ? (
+          <TouchableOpacity
+            style={[styles.headerBtn, { backgroundColor: C.card, borderColor: C.border }]}
+            onPress={openCommunityLiveFeed}
+            activeOpacity={0.85}
+            accessibilityLabel={t("chat.openLiveFeed")}
+          >
+            <Ionicons name="aperture-outline" size={20} color={C.text} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 38 }} />
+        )}
       </View>
 
       <GiftedChat

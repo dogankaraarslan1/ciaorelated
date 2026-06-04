@@ -108,6 +108,7 @@ export async function listThreads(prisma: PrismaClient, userId: string) {
       return {
         id: t.id,
         title: t.title,
+        groupKey: t.groupKey,
         kind: (t as any).kind ?? (t.groupKey ? "GROUP" : "DM"),
         isGroupChat: ((t as any).kind ?? (t.groupKey ? "GROUP" : "DM")) !== "DM",
         members: t.members.map((m) => m.user),

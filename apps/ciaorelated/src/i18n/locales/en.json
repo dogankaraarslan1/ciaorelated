@@ -786,6 +786,7 @@
     "cancel": "Cancel",
     "storyNoLongerAvailable": "Story no longer available",
     "thisStoryHasExpired": "This story has expired.",
+    "openLiveFeed": "Open live feed",
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
     "deleteFailedTitle": "Delete failed",

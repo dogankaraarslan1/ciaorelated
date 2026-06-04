@@ -353,5 +353,16 @@ export const resolvers = {
     },
     kind: (t: any) => t?.kind ?? (t?.groupKey ? "GROUP" : "DM"),
     isGroupChat: (t: any) => (t?.kind ? t.kind !== "DM" : Boolean(t?.groupKey)),
+    community: async (t: any, _a: unknown, ctx: Ctx) => {
+      const groupKey = typeof t?.groupKey === "string" ? t.groupKey : "";
+      if (!groupKey.startsWith("community:")) return null;
+
+      const groupId = groupKey.slice("community:".length);
+      if (!groupId) return null;
+
+      return (ctx.prisma as PrismaClient).groupLink.findFirst({
+        where: { id: groupId, isActive: true },
+      });
+    },
   },
 };

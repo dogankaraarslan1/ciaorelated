@@ -999,6 +999,7 @@ export const typeDefs = gql`
     lastMessageAt: DateTime
     unreadCount: Int!
     isGroupChat: Boolean!
+    community: GroupLink
   }
 
   # Medienobjekt NUR für Chat (wegen Kollision mit PostMedia/MediaInput)
