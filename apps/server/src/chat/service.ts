@@ -109,6 +109,7 @@ export async function listThreads(prisma: PrismaClient, userId: string) {
         id: t.id,
         title: t.title,
         imageKey: (t as any).imageKey ?? null,
+        ownerId: (t as any).ownerId ?? null,
         groupKey: t.groupKey,
         kind: (t as any).kind ?? (t.groupKey ? "GROUP" : "DM"),
         isGroupChat: ((t as any).kind ?? (t.groupKey ? "GROUP" : "DM")) !== "DM",
@@ -414,6 +415,9 @@ export async function createThread(
     });
   }
 
+  const safeTitle = String(title ?? "").trim();
+  if (!safeTitle) throw new GraphQLError("GROUP_TITLE_REQUIRED");
+
   // Gruppen-Thread → via groupKey de-dupen
   const groupKey = groupKeyFor(members);
   const existing = await prisma.thread.findUnique({ where: { groupKey } });
@@ -422,9 +426,10 @@ export async function createThread(
   return prisma.$transaction(async (tx) => {
     const thread = await tx.thread.create({
       data: {
-        title: title ?? null,
+        title: safeTitle,
         groupKey,
         kind: "GROUP",
+        ownerId: requesterId,
         imageKey: imageKey ?? null,
       } as any,
     });

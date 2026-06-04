@@ -753,7 +753,8 @@
     "newCommunity": "Community erstellen",
     "viewCommunities": "Communities ansehen",
     "selectPeopleForGroup": "Suche und wähle Personen für eine Chatgruppe aus.",
-    "groupNamePlaceholder": "Gruppenname optional",
+    "groupNamePlaceholder": "Gruppenname",
+    "groupNameRequired": "Bitte gib einen Gruppennamen ein.",
     "selectedPeople": "{{count}} ausgewählt",
     "createGroup": "Gruppe erstellen",
     "searchPeople": "Personen suchen",
@@ -823,7 +824,14 @@
     "imageSendFailedBody": "Bitte später erneut versuchen.",
     "storyFallbackName": "Story",
     "storyBadgeVideo": "Video",
-    "storyBadgePhoto": "Story"
+    "storyBadgePhoto": "Story",
+    "groupSettings": "Gruppen-Einstellungen",
+    "groupMembers": "Gruppenmitglieder",
+    "you": "Du",
+    "thisMember": "dieses Mitglied",
+    "removeMemberTitle": "Mitglied entfernen?",
+    "removeMemberBody": "{{username}} aus dieser Gruppe entfernen?",
+    "removeMemberCta": "Entfernen"
   },
   "postactionsmenu": {
     "editPost": "Beitrag bearbeiten",

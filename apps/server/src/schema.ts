@@ -1011,6 +1011,7 @@ export const typeDefs = gql`
     lastMessageAt: DateTime
     unreadCount: Int!
     isGroupChat: Boolean!
+    viewerIsOwner: Boolean!
     community: GroupLink
   }
 
@@ -1100,6 +1101,8 @@ export const typeDefs = gql`
     markThreadRead(threadId: ID!): Boolean!
     signUpload(mime: String!, filename: String): SignedUpload!
     createThread(memberUserIds: [ID!]!, title: String, imageKey: String): Thread!
+    updateThreadSettings(threadId: ID!, title: String!, imageKey: String): Thread!
+    removeThreadMember(threadId: ID!, userId: ID!): Boolean!
     setCommunityChatKind(groupId: ID!, kind: ThreadKind!): Thread!
     setTyping(threadId: ID!, typing: Boolean!): Boolean!
     toggleMessageLike(messageId: ID!): Message!

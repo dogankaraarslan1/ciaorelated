@@ -748,7 +748,8 @@
     "newCommunity": "Create community",
     "viewCommunities": "View communities",
     "selectPeopleForGroup": "Search and select people for a group chat.",
-    "groupNamePlaceholder": "Group name optional",
+    "groupNamePlaceholder": "Group name",
+    "groupNameRequired": "Please enter a group name.",
     "selectedPeople": "{{count}} selected",
     "createGroup": "Create group",
     "searchPeople": "Search people",
@@ -817,7 +818,14 @@
     "imageSendFailedBody": "Please try again later.",
     "storyFallbackName": "Story",
     "storyBadgeVideo": "Video",
-    "storyBadgePhoto": "Story"
+    "storyBadgePhoto": "Story",
+    "groupSettings": "Group settings",
+    "groupMembers": "Group members",
+    "you": "You",
+    "thisMember": "this member",
+    "removeMemberTitle": "Remove member?",
+    "removeMemberBody": "Remove {{username}} from this group?",
+    "removeMemberCta": "Remove"
   },
   "postactionsmenu": {
     "editPost": "Edit post",

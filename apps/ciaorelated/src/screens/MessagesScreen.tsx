@@ -172,6 +172,7 @@ export default function MessagesScreen() {
 
   const [createThread, { loading: creating }] = useMutation(CREATE_THREAD);
   const selectedUserIds = useMemo(() => new Set(selectedUsers.map((user: any) => String(user.id))), [selectedUsers]);
+  const canCreateSelectedGroup = selectedUsers.length > 0 && groupTitle.trim().length > 0;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -350,6 +351,10 @@ export default function MessagesScreen() {
 
   const createSelectedGroup = async () => {
     if (!selectedUsers.length) return;
+    if (!groupTitle.trim()) {
+      Alert.alert(t("common.error"), t("messages.groupNameRequired"));
+      return;
+    }
     try {
       let imageKey: string | null = null;
       if (groupImageUri) {
@@ -501,9 +506,9 @@ export default function MessagesScreen() {
                   : t("messages.selectPeopleForGroup")}
               </Text>
               <TouchableOpacity
-                style={[styles.composeCreateBtn, !selectedUsers.length && { opacity: 0.45 }]}
+                style={[styles.composeCreateBtn, !canCreateSelectedGroup && { opacity: 0.45 }]}
                 onPress={createSelectedGroup}
-                disabled={!selectedUsers.length || creating}
+                disabled={!canCreateSelectedGroup || creating}
                 activeOpacity={0.82}
               >
                 {creating ? (

@@ -1,6 +1,6 @@
 // apps/ciaorelated/src/screens/ChatScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, TextInput, View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -96,8 +96,17 @@ const THREAD_INFO = gql`
   query ThreadInfo($threadId: ID!) {
     thread(threadId: $threadId) {
       id
+      title
+      imageUrl
       kind
       isGroupChat
+      viewerIsOwner
+      members {
+        id
+        username
+        avatarThumbUrl
+        avatarUrl
+      }
       community {
         id
         title
@@ -108,6 +117,22 @@ const THREAD_INFO = gql`
         }
       }
     }
+  }
+`;
+
+const UPDATE_THREAD_SETTINGS = gql`
+  mutation UpdateThreadSettings($threadId: ID!, $title: String!, $imageKey: String) {
+    updateThreadSettings(threadId: $threadId, title: $title, imageKey: $imageKey) {
+      id
+      title
+      imageUrl
+    }
+  }
+`;
+
+const REMOVE_THREAD_MEMBER = gql`
+  mutation RemoveThreadMember($threadId: ID!, $userId: ID!) {
+    removeThreadMember(threadId: $threadId, userId: $userId)
   }
 `;
 
@@ -238,6 +263,7 @@ export default function ChatScreen({ route, navigation }: any) {
       sub: x.subtext ?? "#9CA3AF",
       border: x.border ?? "#23262B",
       accent: x.primary ?? "#4f46e5",
+      danger: x.danger ?? "#ef4444",
     };
   }, [theme]);
 
@@ -286,13 +312,17 @@ export default function ChatScreen({ route, navigation }: any) {
     skip: !threadId,
     fetchPolicy: "cache-and-network",
   });
-  const { data: threadInfo } = useQuery(THREAD_INFO, {
+  const { data: threadInfo, refetch: refetchThreadInfo } = useQuery(THREAD_INFO, {
     variables: { threadId },
     skip: !threadId,
     fetchPolicy: "cache-and-network",
   });
   const isGroupChat = Boolean(threadInfo?.thread?.isGroupChat);
   const threadCommunity = threadInfo?.thread?.community;
+  const isPlainGroupChat = isGroupChat && !threadCommunity?.id;
+  const groupMembers = threadInfo?.thread?.members ?? [];
+  const viewerIsThreadOwner = Boolean(threadInfo?.thread?.viewerIsOwner);
+  const headerTitle = threadInfo?.thread?.title || title;
   const isBroadcastOnly = threadInfo?.thread?.kind === "BROADCAST";
   const isChatDisabled = threadInfo?.thread?.kind === "DISABLED";
   const canSendChatMessages =
@@ -315,6 +345,21 @@ export default function ChatScreen({ route, navigation }: any) {
   const [deleteMessageMut] = useMutation(DELETE_MESSAGE);
   const [markThreadRead] = useMutation(MARK_THREAD_READ);
   const [sendMessage] = useMutation(SEND_MESSAGE);
+  const [updateThreadSettings, { loading: groupSettingsSaving }] = useMutation(UPDATE_THREAD_SETTINGS);
+  const [removeThreadMember, { loading: memberRemoving }] = useMutation(REMOVE_THREAD_MEMBER);
+  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
+  const [editGroupTitle, setEditGroupTitle] = useState("");
+  const [editGroupImageUri, setEditGroupImageUri] = useState<string | null>(null);
+  const [editGroupImageMime, setEditGroupImageMime] = useState("image/jpeg");
+  const [editGroupImageName, setEditGroupImageName] = useState("group-chat.jpg");
+
+  const openGroupSettings = useCallback(() => {
+    setEditGroupTitle(String(threadInfo?.thread?.title ?? ""));
+    setEditGroupImageUri(threadInfo?.thread?.imageUrl ?? null);
+    setEditGroupImageMime("image/jpeg");
+    setEditGroupImageName("group-chat.jpg");
+    setGroupSettingsOpen(true);
+  }, [threadInfo?.thread?.imageUrl, threadInfo?.thread?.title]);
 
   const lastReadPing = useRef(0);
   const markRead = useCallback(() => {
@@ -698,6 +743,82 @@ export default function ChatScreen({ route, navigation }: any) {
     }
   }, [apollo, threadId, canSendChatMessages, sendMessage, myId, myAvatar, t]);
 
+  const pickGroupImage = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") {
+      Alert.alert(t("chat.permissionMissingTitle"), t("chat.photosPermissionBody"));
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+    });
+    const asset = res.assets?.[0];
+    if (!res.canceled && asset?.uri) {
+      setEditGroupImageUri(asset.uri);
+      setEditGroupImageMime(asset.mimeType ?? "image/jpeg");
+      setEditGroupImageName(asset.fileName ?? "group-chat.jpg");
+    }
+  }, [t]);
+
+  const saveGroupSettings = useCallback(async () => {
+    const nextTitle = editGroupTitle.trim();
+    if (!nextTitle) {
+      Alert.alert(t("common.error"), t("messages.groupNameRequired"));
+      return;
+    }
+
+    try {
+      let imageKey: string | undefined;
+      if (editGroupImageUri && !/^https?:\/\//i.test(editGroupImageUri)) {
+        const uploaded = await uploadToS3(apollo, {
+          uri: editGroupImageUri,
+          name: editGroupImageName,
+          type: editGroupImageMime,
+        });
+        imageKey = uploaded.key;
+      }
+
+      await updateThreadSettings({
+        variables: {
+          threadId,
+          title: nextTitle,
+          imageKey,
+        },
+      });
+      await refetchThreadInfo();
+      setGroupSettingsOpen(false);
+    } catch (e: any) {
+      Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+    }
+  }, [editGroupImageMime, editGroupImageName, editGroupImageUri, editGroupTitle, refetchThreadInfo, t, threadId, updateThreadSettings]);
+
+  const confirmRemoveMember = useCallback(
+    (member: any) => {
+      if (!viewerIsThreadOwner || !member?.id || member.id === myId) return;
+      Alert.alert(
+        t("chat.removeMemberTitle"),
+        t("chat.removeMemberBody", { username: member.username ?? t("chat.thisMember") }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("chat.removeMemberCta"),
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await removeThreadMember({ variables: { threadId, userId: member.id } });
+                await refetchThreadInfo();
+              } catch (e: any) {
+                Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+              }
+            },
+          },
+        ]
+      );
+    },
+    [myId, refetchThreadInfo, removeThreadMember, t, threadId, viewerIsThreadOwner]
+  );
+
   const renderMessageImage = useCallback(
     (props: any) => {
       const uri = props?.currentMessage?.image;
@@ -923,7 +1044,7 @@ const renderCustomView = useCallback(
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: C.text }]} numberOfLines={1}>
-          {title}
+          {headerTitle}
         </Text>
 
         {threadCommunity?.id ? (
@@ -935,6 +1056,16 @@ const renderCustomView = useCallback(
             accessibilityLabel={t("chat.openLiveFeed")}
           >
             <Ionicons name="aperture-outline" size={24} color={C.text} />
+          </TouchableOpacity>
+        ) : isPlainGroupChat ? (
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={openGroupSettings}
+            activeOpacity={0.78}
+            hitSlop={12}
+            accessibilityLabel={t("chat.groupSettings")}
+          >
+            <Ionicons name="settings-outline" size={23} color={C.text} />
           </TouchableOpacity>
         ) : (
           <View style={{ width: 38 }} />
@@ -970,6 +1101,86 @@ const renderCustomView = useCallback(
           if (userId) openUserProfile(userId);
         }}
       />
+
+      <Modal visible={groupSettingsOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setGroupSettingsOpen(false)}>
+        <SafeAreaView style={[styles.modalRoot, { backgroundColor: C.bg }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: C.border }]}>
+            <TouchableOpacity style={styles.modalIconBtn} onPress={() => setGroupSettingsOpen(false)} hitSlop={12}>
+              <Ionicons name="close" size={24} color={C.text} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: C.text }]}>{t("chat.groupSettings")}</Text>
+            <View style={styles.modalIconBtn} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+            {viewerIsThreadOwner ? (
+              <View style={[styles.settingsCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                <TouchableOpacity style={styles.groupImageEditBtn} onPress={pickGroupImage} activeOpacity={0.82}>
+                  {editGroupImageUri ? (
+                    <ExpoImage source={{ uri: editGroupImageUri }} style={styles.groupImageEditPreview} contentFit="cover" />
+                  ) : (
+                    <Ionicons name="camera-outline" size={26} color={C.sub} />
+                  )}
+                </TouchableOpacity>
+
+                <TextInput
+                  style={[styles.groupNameInput, { color: C.text, borderColor: C.border, backgroundColor: C.bg }]}
+                  placeholder={t("messages.groupNamePlaceholder")}
+                  placeholderTextColor={C.sub}
+                  value={editGroupTitle}
+                  onChangeText={setEditGroupTitle}
+                  maxLength={48}
+                  autoCorrect={false}
+                />
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, { backgroundColor: C.text }, (!editGroupTitle.trim() || groupSettingsSaving) && { opacity: 0.45 }]}
+                  onPress={saveGroupSettings}
+                  disabled={!editGroupTitle.trim() || groupSettingsSaving}
+                  activeOpacity={0.82}
+                >
+                  {groupSettingsSaving ? (
+                    <ActivityIndicator size="small" color={C.bg} />
+                  ) : (
+                    <Text style={[styles.saveBtnText, { color: C.bg }]}>{t("common.save")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <Text style={[styles.membersTitle, { color: C.sub }]}>{t("chat.groupMembers")}</Text>
+            <View style={[styles.settingsCard, { backgroundColor: C.card, borderColor: C.border }]}>
+              {groupMembers.map((member: any) => {
+                const isMe = member.id === myId;
+                return (
+                  <View key={member.id} style={[styles.memberRow, { borderBottomColor: C.border }]}>
+                    <ExpoImage
+                      source={member.avatarThumbUrl || member.avatarUrl ? { uri: member.avatarThumbUrl || member.avatarUrl } : avatarPlaceholder}
+                      style={styles.memberAvatar}
+                      contentFit="cover"
+                      cachePolicy="disk"
+                    />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.memberName, { color: C.text }]} numberOfLines={1}>@{member.username}</Text>
+                      {isMe ? <Text style={[styles.memberSub, { color: C.sub }]}>{t("chat.you")}</Text> : null}
+                    </View>
+                    {viewerIsThreadOwner && !isMe ? (
+                      <TouchableOpacity
+                        style={styles.removeMemberBtn}
+                        onPress={() => confirmRemoveMember(member)}
+                        disabled={memberRemoving}
+                        hitSlop={10}
+                      >
+                        <Ionicons name="remove-circle-outline" size={22} color={C.danger ?? "#ef4444"} />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       <ActionSheet />
     </SafeAreaView>
@@ -1031,6 +1242,104 @@ const makeStyles = (C: any) =>
       textAlign: "center",
       fontWeight: "800",
       fontSize: 16,
+    },
+    modalRoot: {
+      flex: 1,
+    },
+    modalHeader: {
+      height: 56,
+      paddingHorizontal: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    modalIconBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: "900",
+    },
+    modalBody: {
+      padding: 16,
+      gap: 14,
+    },
+    settingsCard: {
+      borderWidth: 1,
+      borderRadius: 18,
+      padding: 12,
+      gap: 12,
+    },
+    groupImageEditBtn: {
+      alignSelf: "center",
+      width: 86,
+      height: 86,
+      borderRadius: 43,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    groupImageEditPreview: {
+      width: "100%",
+      height: "100%",
+    },
+    groupNameInput: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderRadius: 14,
+      paddingHorizontal: 12,
+      fontSize: 16,
+      fontWeight: "800",
+    },
+    saveBtn: {
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    saveBtnText: {
+      fontSize: 14,
+      fontWeight: "900",
+    },
+    membersTitle: {
+      fontSize: 12,
+      fontWeight: "900",
+      textTransform: "uppercase",
+      letterSpacing: 0,
+      marginTop: 4,
+    },
+    memberRow: {
+      minHeight: 54,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    memberAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+    memberName: {
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    memberSub: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 1,
+    },
+    removeMemberBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
     },
 
     avatar: {

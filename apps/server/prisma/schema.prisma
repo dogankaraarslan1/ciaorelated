@@ -917,6 +917,7 @@ model Thread {
   id        String   @id @default(cuid())
   title     String?
   imageKey  String?
+  ownerId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   kind      ThreadKind @default(DM)
