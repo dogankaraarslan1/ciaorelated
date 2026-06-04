@@ -250,8 +250,10 @@ export default function MessagesScreen() {
     for (const t of sorted) {
       const members = Array.isArray(t.members) ? t.members : [];
 
-      // 1:1 Thread?
-      if (members.length === 2) {
+      // Nur echte 1:1-DMs deduplizieren. Community-/Gruppen-Chats mit zwei
+      // Mitgliedern dürfen nicht verschwinden, nur weil es einen DM mit
+      // derselben Person gibt.
+      if ((t?.kind ?? "DM") === "DM" && members.length === 2) {
         const other = members.find((m: any) => m?.id && m.id !== meId)?.id;
         if (other) {
           // keep newest per other user

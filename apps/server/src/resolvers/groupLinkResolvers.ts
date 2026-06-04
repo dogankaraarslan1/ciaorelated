@@ -385,10 +385,13 @@ export default {
         data.imageKey = imageKey || null;
       }
 
-      return ctx.prisma.groupLink.update({
+      const updated = await ctx.prisma.groupLink.update({
         where: { id },
         data,
       });
+
+      await ensureCommunityThread(ctx.prisma as any, id);
+      return updated;
     },
 
     removeGroupLinkMember: async (_: any, { groupId, profileId }: { groupId: string; profileId: string }, ctx: Ctx) => {
