@@ -179,7 +179,7 @@ export function FeedHeader({
               accessibilityRole="button"
               accessibilityLabel="Search"
             >
-              <Ionicons name="search" size={26} color={C.text} />
+              <Ionicons name="search" size={23} color={C.text} />
             </TouchableOpacity>
           </View>
           </View>

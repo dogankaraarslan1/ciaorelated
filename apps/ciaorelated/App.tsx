@@ -680,7 +680,17 @@ function Tabs() {
                     marginTop: 6,
                   }}
                 >
-                  <Ionicons name="add" size={s + 3} color="#fff" />
+                  <Text
+                    style={{
+                      color: "#fff",
+                      fontSize: s + 8,
+                      fontWeight: "600",
+                      lineHeight: s + 10,
+                      marginTop: -2,
+                    }}
+                  >
+                    +
+                  </Text>
                 </View>
               );
             case "MessagesTab":
@@ -1184,8 +1194,7 @@ function ThemedRootNavigator({
           component={CreateMediaRoot}
           options={{
             headerShown: false,
-            presentation: "fullScreenModal",
-            contentStyle: { backgroundColor: C.bg }, // ✅ wichtig für Modals
+            contentStyle: { backgroundColor: C.bg },
           }}
         />
 
