@@ -577,7 +577,7 @@ Expected development log format:
 
 ## Media Uploads
 
-The backend is designed for S3-compatible object storage.
+The backend is designed for S3-compatible object storage. Configure this before testing photo/video posts, profile avatars, chat media, or any flow that requests signed upload URLs.
 
 Typical variables:
 
@@ -591,6 +591,8 @@ S3_PUBLIC_BASE=
 ```
 
 Use a provider such as AWS S3, DigitalOcean Spaces, Cloudflare R2, MinIO, or another S3-compatible storage service.
+
+For a minimal local smoke test you can leave S3 empty, but upload mutations will fail until these values point to a real bucket/container.
 
 ## Development Checks
 
