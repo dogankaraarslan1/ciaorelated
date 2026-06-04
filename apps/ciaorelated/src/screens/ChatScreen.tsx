@@ -24,7 +24,7 @@ import * as Sharing from "expo-sharing";
 
 import "react-native-gifted-chat";
 
-import { CommonActions, useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { setActiveChatThreadId } from "../lib/chatPresence";
 import { avatarPlaceholder } from "../../assets/placeholders";
 
@@ -323,26 +323,10 @@ export default function ChatScreen({ route, navigation }: any) {
   }, []);
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
-  const goToProfileTab = useCallback(
+  const openUserProfile = useCallback(
     (userId: string) => {
       if (!userId) return;
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [
-            {
-              name: "AppTabs",
-              params: {
-                screen: "Profile",
-                params: {
-                  screen: "ProfileMain",
-                  params: { userId },
-                },
-              },
-            },
-          ],
-        })
-      );
+      navigation.navigate("UserProfile", { userId });
     },
     [navigation]
   );
@@ -867,7 +851,7 @@ const renderCustomView = useCallback(
         // falls du trotzdem onPressAvatar willst:
         onPressAvatar={(user) => {
           const userId = String((user as any)?._id);
-          if (userId) goToProfileTab(userId);
+          if (userId) openUserProfile(userId);
         }}
       />
 
