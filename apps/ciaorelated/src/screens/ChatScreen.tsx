@@ -837,7 +837,7 @@ const renderCustomView = useCallback(
       };
 
       return (
-        <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: Math.max(insets.bottom - 14, 2) }]}>
           {!hasText && (
             <TouchableOpacity style={styles.camBtn} onPress={pickImage} activeOpacity={0.78} hitSlop={10}>
               <Ionicons name="camera-outline" size={24} color={C.text} />
@@ -1025,7 +1025,7 @@ const makeStyles = (C: any) =>
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 10,
-      paddingTop: 6,
+      paddingTop: 4,
     },
     camBtn: {
       width: 42,

@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useCallback } from "react";
 import {
+  Alert,
   View,
   Text,
   FlatList,
@@ -16,6 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../theme/ThemeProvider";
 import { useFocusEffect } from "@react-navigation/native";
 import { avatarPlaceholder } from "../../assets/placeholders";
+import GroupLinkSheet from "./GroupLinkSheet";
 
 import { useTranslation } from "react-i18next";
 
@@ -130,6 +132,9 @@ export default function MessagesScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const [q, setQ] = useState("");
+  const [composeMode, setComposeMode] = useState<"group" | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [showCreateCommunity, setShowCreateCommunity] = useState(false);
 
   // Threads laden
   const {
@@ -148,6 +153,7 @@ export default function MessagesScreen() {
   // Suche (aktiv ab 2 Zeichen)
   const trimmedQ = q.trim();
   const doSearch = trimmedQ.length >= 2;
+  const showingSearch = composeMode === "group" || doSearch;
 
   const { data: sData, loading: sLoading } = useQuery(SEARCH_USERS, {
     variables: { q: trimmedQ, limit: 30 },
@@ -156,6 +162,7 @@ export default function MessagesScreen() {
   });
 
   const [createThread, { loading: creating }] = useMutation(CREATE_THREAD);
+  const selectedUserIds = useMemo(() => new Set(selectedUsers.map((user: any) => String(user.id))), [selectedUsers]);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -268,8 +275,27 @@ export default function MessagesScreen() {
     return list;
   }, [sData?.searchUsers, doSearch, trimmedQ]);
 
-  // Navigation
-  const goBack = () => nav.goBack();
+  const openCreateMenu = () => {
+    Alert.alert(t("messages.createTitle"), undefined, [
+      {
+        text: t("messages.newGroupChat"),
+        onPress: () => {
+          setComposeMode("group");
+          setSelectedUsers([]);
+          setQ("");
+        },
+      },
+      {
+        text: t("messages.newCommunity"),
+        onPress: () => setShowCreateCommunity(true),
+      },
+      {
+        text: t("messages.viewCommunities"),
+        onPress: () => nav.navigate("Groups"),
+      },
+      { text: t("common.cancel"), style: "cancel" },
+    ]);
+  };
 
   const openThread = (thr: any) =>
     nav.navigate("Chat", {
@@ -299,6 +325,30 @@ export default function MessagesScreen() {
     if (thr?.id) openThread(thr);
   };
 
+  const toggleSelectedUser = (user: any) => {
+    setSelectedUsers((prev) => {
+      const id = String(user.id);
+      if (prev.some((item: any) => String(item.id) === id)) {
+        return prev.filter((item: any) => String(item.id) !== id);
+      }
+      return [...prev, user];
+    });
+  };
+
+  const createSelectedGroup = async () => {
+    if (!selectedUsers.length) return;
+    const { data } = await createThread({
+      variables: { memberUserIds: selectedUsers.map((user: any) => user.id), title: null },
+    });
+    const thread = data?.createThread;
+    if (thread?.id) {
+      setComposeMode(null);
+      setSelectedUsers([]);
+      setQ("");
+      openThread(thread);
+    }
+  };
+
   // Anzeige-Infos für Thread (Titel/Avatar): bei 1:1 "anderer" User
   const getThreadDisplay = (thr: any) => {
     const members = Array.isArray(thr.members) ? thr.members : [];
@@ -322,13 +372,11 @@ export default function MessagesScreen() {
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header (Theme) */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={12} activeOpacity={0.78}>
-          <Ionicons name="chevron-back" size={28} color={C.text} />
+        <Text style={styles.headerTitle}>{t("messages.chats")}</Text>
+
+        <TouchableOpacity onPress={openCreateMenu} style={styles.headerBtn} hitSlop={12} activeOpacity={0.78}>
+          <Ionicons name="add" size={28} color={C.text} />
         </TouchableOpacity>
-
-        <Text style={styles.headerTitle}>{t("messages.news")}</Text>
-
-        <View style={styles.headerBtn} />
       </View>
 
       {/* Suche (inline) */}
@@ -347,8 +395,43 @@ export default function MessagesScreen() {
         />
       </View>
 
+      {composeMode === "group" ? (
+        <View style={styles.composeBar}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.composeTitle}>{t("messages.newGroupChat")}</Text>
+            <Text style={styles.composeSub}>
+              {selectedUsers.length
+                ? t("messages.selectedPeople", { count: selectedUsers.length })
+                : t("messages.selectPeopleForGroup")}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[styles.composeCreateBtn, !selectedUsers.length && { opacity: 0.45 }]}
+            onPress={createSelectedGroup}
+            disabled={!selectedUsers.length || creating}
+            activeOpacity={0.82}
+          >
+            {creating ? (
+              <ActivityIndicator size="small" color={C.bg} />
+            ) : (
+              <Text style={styles.composeCreateText}>{t("messages.createGroup")}</Text>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.composeCancelBtn}
+            onPress={() => {
+              setComposeMode(null);
+              setSelectedUsers([]);
+            }}
+            hitSlop={10}
+          >
+            <Ionicons name="close" size={20} color={C.subtext} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
       {/* Inhalt */}
-      {!doSearch ? (
+      {!showingSearch ? (
         <FlatList
           data={threads}
           keyExtractor={(i: any) => i.id}
@@ -416,7 +499,12 @@ export default function MessagesScreen() {
             ) : null
           }
           ListEmptyComponent={
-            !sLoading && doSearch ? (
+            composeMode === "group" && !doSearch ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>{t("messages.searchPeople")}</Text>
+                <Text style={styles.emptyText}>{t("messages.searchPeopleForGroup")}</Text>
+              </View>
+            ) : !sLoading && doSearch ? (
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyTitle}>{t("messages.noResultsFound")}</Text>
                 <Text style={styles.emptyText}>
@@ -427,7 +515,7 @@ export default function MessagesScreen() {
           renderItem={({ item: u }: any) => (
             <TouchableOpacity
               style={styles.item}
-              onPress={() => startWithUser(u)}
+              onPress={() => (composeMode === "group" ? toggleSelectedUser(u) : startWithUser(u))}
               activeOpacity={0.9}
             >
               <ExpoImage
@@ -448,11 +536,26 @@ export default function MessagesScreen() {
                   {t("messages.sendMessage")}</Text>
               </View>
 
-              <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              {composeMode === "group" ? (
+                <View style={[styles.selectCircle, selectedUserIds.has(String(u.id)) && styles.selectCircleActive]}>
+                  {selectedUserIds.has(String(u.id)) ? <Ionicons name="checkmark" size={16} color={C.bg} /> : null}
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              )}
             </TouchableOpacity>
           )}
         />
       )}
+      {showCreateCommunity ? (
+        <GroupLinkSheet
+          onClose={() => setShowCreateCommunity(false)}
+          onCreated={() => {
+            setShowCreateCommunity(false);
+            refetchThreads().catch(() => {});
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -517,9 +620,9 @@ const makeStyles = (C: {
     headerTitle: {
       flex: 1,
       color: C.text,
-      fontSize: 20,
-      fontWeight: "800",
-      textAlign: "center",
+      fontSize: 28,
+      fontWeight: "900",
+      textAlign: "left",
     },
 
     searchRow: {
@@ -536,6 +639,37 @@ const makeStyles = (C: {
       gap: 8,
     },
     searchInput: { flex: 1, color: C.text, fontSize: 16 },
+    composeBar: {
+      marginHorizontal: 16,
+      marginBottom: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: C.border,
+      backgroundColor: C.card,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    composeTitle: { color: C.text, fontSize: 14, fontWeight: "900" },
+    composeSub: { color: C.subtext, fontSize: 12, fontWeight: "600", marginTop: 2 },
+    composeCreateBtn: {
+      height: 34,
+      paddingHorizontal: 12,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.text,
+    },
+    composeCreateText: { color: C.bg, fontSize: 12, fontWeight: "900" },
+    composeCancelBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
     sep: { height: 1, backgroundColor: C.border, opacity: 0.6 },
 
@@ -574,5 +708,18 @@ const makeStyles = (C: {
       color: C.subtext,
       fontSize: 12,
       fontWeight: "600",
+    },
+    selectCircle: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      borderWidth: 1.5,
+      borderColor: C.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    selectCircleActive: {
+      borderColor: C.text,
+      backgroundColor: C.text,
     },
   });
