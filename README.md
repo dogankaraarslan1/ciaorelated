@@ -34,7 +34,7 @@ pnpm --dir apps/ciaorelated start:device
 
 Run `pnpm install` from the repository root. You do not need a separate install inside `apps/ciaorelated`; pnpm installs all workspace dependencies from the root.
 
-If Expo asks to install `@types/react-native` or shows the deprecated global `expo-cli` warning, make sure dependencies were installed from the root and start the app through pnpm scripts or `pnpm --dir apps/ciaorelated exec expo start -c`, not a globally installed `expo` binary.
+If Expo asks to install `@types/react-native` or shows the deprecated global `expo-cli` warning, make sure dependencies were installed from the root and start the app through pnpm scripts. From `apps/ciaorelated`, the local Expo CLI is available at `../../node_modules/.bin/expo`; avoid a globally installed `expo` binary.
 
 Local defaults are intentionally provider-light: SMS codes can be printed to the server console and AppsFlyer stays off. Media creation/upload flows need S3-compatible storage keys; without S3 configured you can still boot the app, authenticate, inspect the shell/navigation, and wire the backend before enabling uploads.
 

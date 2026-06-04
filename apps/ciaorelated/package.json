@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
-    "start": "pnpm exec expo start",
-    "start:local": "EXPO_PUBLIC_API_URL=http://localhost:4000/graphql pnpm exec expo start -c",
-    "start:device": "EXPO_PUBLIC_API_URL=http://192.168.100.145:4000/graphql pnpm exec expo start -c",
-    "android": "pnpm exec expo run:android",
-    "ios": "pnpm exec expo run:ios",
-    "web": "pnpm exec expo start --web",
+    "start": "../../node_modules/.bin/expo start",
+    "start:local": "EXPO_PUBLIC_API_URL=http://localhost:4000/graphql ../../node_modules/.bin/expo start -c",
+    "start:device": "EXPO_PUBLIC_API_URL=http://192.168.100.145:4000/graphql ../../node_modules/.bin/expo start -c",
+    "android": "../../node_modules/.bin/expo run:android",
+    "ios": "../../node_modules/.bin/expo run:ios",
+    "web": "../../node_modules/.bin/expo start --web",
     "eas-build-pre-install": "bash ./eas-build-pre-install.sh",
     "postinstall": "echo skip"
   },
