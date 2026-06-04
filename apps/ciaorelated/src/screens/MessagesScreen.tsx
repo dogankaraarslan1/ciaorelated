@@ -452,7 +452,7 @@ export default function MessagesScreen() {
         <Text style={styles.headerTitle}>{t("messages.chats")}</Text>
 
         <TouchableOpacity onPress={openCreateMenu} style={styles.headerBtn} hitSlop={12} activeOpacity={0.78}>
-          <Ionicons name="add" size={28} color={C.text} />
+          <Text style={styles.headerPlus}>+</Text>
         </TouchableOpacity>
       </View>
 
@@ -730,6 +730,12 @@ const makeStyles = (C: {
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "transparent",
+    },
+    headerPlus: {
+      color: C.text,
+      fontSize: 30,
+      fontWeight: "800",
+      lineHeight: 34,
     },
     headerTitle: {
       flex: 1,
