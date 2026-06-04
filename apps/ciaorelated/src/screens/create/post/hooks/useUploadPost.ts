@@ -366,7 +366,7 @@ export function useUploadPost() {
         })
       );
 
-      await createCarouselMutation({
+      const res = await createCarouselMutation({
         variables: {
           input: {
             caption: caption ?? null,
@@ -388,6 +388,11 @@ export function useUploadPost() {
           },
         },
       });
+
+      const postId = res.data?.createCarouselPost?.id;
+      if (postId) {
+        await waitUntilReady(postId);
+      }
 
       return true;
     } catch (e) {

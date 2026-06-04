@@ -302,6 +302,12 @@ export const cache = new InMemoryCache({
           },
         },
 
+        uploadQueue: {
+          merge(_existing, incoming) {
+            return incoming;
+          },
+        },
+
         // dein Feed etc. (belassene Beispiele)
         feed: {
           keyArgs: ["filter", "sort", "vlogId", "search", "tab"],
