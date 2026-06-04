@@ -35,7 +35,6 @@ import { AlignableSquare, type AlignState } from "./components/AlignableSquare";
 
 
 import { useTheme } from "../../../theme/ThemeProvider"; // ⚠️ ggf. Pfad anpassen
-import { gql } from "@apollo/client";
 import { LargePreview } from "./components/LargePreview";
 import { MediaGrid, type GridAsset } from "./components/MediaGrid";
 import { PublishForm } from "./components/PublishForm";
@@ -268,20 +267,22 @@ import { pushUploadQueue, removeUploadQueue } from "../../../lib/uploadQueue"; /
 import MinimalVideoEditor from "./components/MinimalVideoEditor";
 import { useTranslation } from "react-i18next";
 
-const FEED_QUERY = gql`
-  query Feed($offset: Int, $limit: Int) {
-    feed(offset: $offset, limit: $limit) {
-      id
-      kind
-      imageUrl
-      videoUrl
-      thumbUrl
-      createdAt
-      isProcessing
-      author { id username avatarUrl }
-    }
-  }
-`;
+function refreshFeedAfterUpload() {
+  apollo.cache.evict({ fieldName: "homeFeed" });
+  apollo.cache.evict({ fieldName: "feed" });
+  apollo.cache.gc();
+
+  return apollo.refetchQueries({
+    include: "active",
+    onQueryUpdated(query) {
+      const name = (query as any).queryName;
+      if (name === "HomeFeed" || name === "Feed" || name === "ExploreFeed" || name === "ReelsFeed") {
+        return true;
+      }
+      return false;
+    },
+  });
+}
 
 
 
@@ -1603,9 +1604,7 @@ const onShare = useCallback(async () => {
       taggedUserIds: selectedUserIds ?? [],
     });
 
-    if (ok) {
-      apollo.refetchQueries({ include: [FEED_QUERY] });
-    } else {
+    if (!ok) {
       Alert.alert(t("postwizard.shareFailed.title"), t("postwizard.shareFailed.body"));
     }
   } catch (e) {
@@ -1615,9 +1614,7 @@ const onShare = useCallback(async () => {
     // ✅ pending IMMER entfernen, falls es inserted wurde
     if (pendingInserted) {
       removeUploadQueue(pendingId);
-      apollo.cache.evict({ fieldName: "feed" });
-      apollo.cache.gc();
-      apollo.refetchQueries({ include: [FEED_QUERY] });
+      refreshFeedAfterUpload().catch(() => {});
 
     }
     setUploading(false);
