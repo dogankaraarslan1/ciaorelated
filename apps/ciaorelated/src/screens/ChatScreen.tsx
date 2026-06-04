@@ -91,6 +91,15 @@ const MESSAGES = gql`
   }
 `;
 
+const THREAD_INFO = gql`
+  query ThreadInfo($threadId: ID!) {
+    thread(threadId: $threadId) {
+      id
+      isGroupChat
+    }
+  }
+`;
+
 const SEND_MESSAGE = gql`
   mutation Send($input: SendMessageInput!) {
     sendMessage(input: $input) {
@@ -253,6 +262,12 @@ export default function ChatScreen({ route, navigation }: any) {
     skip: !threadId,
     fetchPolicy: "cache-and-network",
   });
+  const { data: threadInfo } = useQuery(THREAD_INFO, {
+    variables: { threadId },
+    skip: !threadId,
+    fetchPolicy: "cache-first",
+  });
+  const isGroupChat = Boolean(threadInfo?.thread?.isGroupChat);
 
   const [deleteMessageMut] = useMutation(DELETE_MESSAGE);
   const [markThreadRead] = useMutation(MARK_THREAD_READ);
@@ -685,7 +700,7 @@ const renderCustomView = useCallback(
     const userId = String(m?.user?._id ?? "");
     const isMine = !!userId && userId === String(myId);
     const name = typeof m?.user?.name === "string" ? m.user.name.trim() : "";
-    const senderName = !isMine && name ? (
+    const senderName = isGroupChat && !isMine && name ? (
       <Text style={[styles.senderName, { color: nameColorForUser(userId) }]} numberOfLines={1}>
         {name}
       </Text>
@@ -784,7 +799,7 @@ const renderCustomView = useCallback(
       </View>
     );
   },
-  [C, myId, openStoryFromMsg, styles, storyCardWidth, t]
+  [C, isGroupChat, myId, openStoryFromMsg, styles, storyCardWidth, t]
 );
 
 

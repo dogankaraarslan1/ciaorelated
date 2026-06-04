@@ -58,6 +58,16 @@ export const resolvers = {
       return svc.listThreads(ctx.prisma as PrismaClient, ctx.profileId);
     },
 
+    thread: async (_: unknown, { threadId }: { threadId: string }, ctx: Ctx) => {
+      requireAuth(ctx);
+      const membership = await (ctx.prisma as PrismaClient).threadMember.findUnique({
+        where: { threadId_userId: { threadId, userId: ctx.profileId } },
+        select: { id: true },
+      });
+      if (!membership) throw new GraphQLError("FORBIDDEN");
+      return (ctx.prisma as PrismaClient).thread.findUnique({ where: { id: threadId } });
+    },
+
     messages: async (
       _: unknown,
       args: { threadId: string; cursor?: string; take?: number },
@@ -321,5 +331,6 @@ export const resolvers = {
         },
       });
     },
+    isGroupChat: (t: any) => Boolean(t?.groupKey),
   },
 };

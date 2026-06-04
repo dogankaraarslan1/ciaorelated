@@ -990,6 +990,7 @@ export const typeDefs = gql`
     members: [User!]!         # nutzt euren bestehenden User-Typ
     lastMessageAt: DateTime
     unreadCount: Int!
+    isGroupChat: Boolean!
   }
 
   # Medienobjekt NUR für Chat (wegen Kollision mit PostMedia/MediaInput)
@@ -1067,6 +1068,7 @@ export const typeDefs = gql`
   # --------- Queries (neu) ---------
   extend type Query {
     threads: [Thread!]
+    thread(threadId: ID!): Thread
     messages(threadId: ID!, cursor: ID, take: Int = 30): MessageConnection!
     unreadCount: UnreadCount!
   }
