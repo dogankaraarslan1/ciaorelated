@@ -472,23 +472,23 @@ npx uri-scheme open "ciaorelated://join/GROUP_SLUG" --android
 npx uri-scheme open "ciaorelated://join?slug=GROUP_SLUG" --android
 ```
 
-If you use Expo Go, use Expo's local deep-link format instead of the custom scheme:
+Expo Go support for custom invite deep links can vary by SDK, network mode, and client. If you still want to try it, start the app through the normal Expo QR code first, then use Expo's local deep-link format:
 
 ```txt
 exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG
 ```
 
-Example:
+Example with documentation-only placeholder values:
 
 ```txt
-exp://192.168.100.145:8081/--/join/GROUP_SLUG
+exp://192.0.2.10:8081/--/join/GROUP_SLUG
 ```
 
 In other words:
 
 - `https://your-domain.example/join?slug=GROUP_SLUG` tests your website / Universal Link fallback.
 - `ciaorelated://join/GROUP_SLUG` tests the installed app scheme in a development build.
-- `exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG` tests the same route through Expo Go.
+- `exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG` may work in Expo Go, but a development build is the reliable local path for custom scheme testing.
 
 When AppsFlyer is disabled, the app still accepts regular links such as `ciaorelated://join?slug=GROUP_SLUG` and `https://your-domain.example/join?slug=GROUP_SLUG`.
 
