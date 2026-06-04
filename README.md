@@ -692,4 +692,6 @@ Follow the project on social media:
 
 ## License
 
-MIT
+The source code in this repository is licensed under the MIT License. See [LICENSE](./LICENSE).
+
+Brand assets are separate from the code license. The `ciaorelated` name, logo, screenshots, App Store assets, social media handles, domains, and other brand materials are not automatically granted for trademark, commercial branding, or app-store identity use. Forks and derivative apps should use their own name, icons, store listings, domains, screenshots, and brand identity unless explicit permission is granted.
