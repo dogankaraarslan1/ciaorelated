@@ -329,22 +329,8 @@ export default function ChatScreen({ route, navigation }: any) {
   /* ───────────────── KEY warning fix ───────────────── */
   const renderMessage = useCallback((props: any) => {
     const { key: _ignore, ...rest } = props ?? {};
-    const msg = props?.currentMessage as any;
-    const userId = String(msg?.user?._id ?? "");
-    const isMine = !!userId && userId === String(myId);
-    const name = typeof msg?.user?.name === "string" ? msg.user.name.trim() : "";
-
-    if (isMine || !name) return <Message {...rest} />;
-
-    return (
-      <View>
-        <Text style={[styles.senderName, { color: nameColorForUser(userId) }]} numberOfLines={1}>
-          {name}
-        </Text>
-        <Message {...rest} />
-      </View>
-    );
-  }, [myId, styles.senderName]);
+    return <Message {...rest} />;
+  }, []);
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
   const openUserProfile = useCallback(
@@ -696,21 +682,33 @@ const renderCustomView = useCallback(
     const m = props?.currentMessage as any;
     if (!m) return null;
 
+    const userId = String(m?.user?._id ?? "");
+    const isMine = !!userId && userId === String(myId);
+    const name = typeof m?.user?.name === "string" ? m.user.name.trim() : "";
+    const senderName = !isMine && name ? (
+      <Text style={[styles.senderName, { color: nameColorForUser(userId) }]} numberOfLines={1}>
+        {name}
+      </Text>
+    ) : null;
+
     const story = m.story;
     const expired = !!m.storyExpired;
 
-    if (!story && !expired) return null;
+    if (!story && !expired) return senderName;
 
     // ───────────────── Expired ─────────────────
     if (expired || !story?.mediaUrl) {
       return (
-        <View style={[styles.storyExpiredCard, { backgroundColor: C.card, borderColor: C.border,width: storyCardWidth, alignSelf: "flex-start", }]}>
-          <Ionicons name="time-outline" size={18} color={C.sub} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.storyExpiredTitle, { color: C.text }]}>
-              {t("chat.storyNoLongerAvailable")}</Text>
-            <Text style={[styles.storyExpiredSub, { color: C.sub }]}>
-              {t("chat.thisStoryHasExpired")}</Text>
+        <View>
+          {senderName}
+          <View style={[styles.storyExpiredCard, { backgroundColor: C.card, borderColor: C.border,width: storyCardWidth, alignSelf: "flex-start", }]}>
+            <Ionicons name="time-outline" size={18} color={C.sub} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.storyExpiredTitle, { color: C.text }]}>
+                {t("chat.storyNoLongerAvailable")}</Text>
+              <Text style={[styles.storyExpiredSub, { color: C.sub }]}>
+                {t("chat.thisStoryHasExpired")}</Text>
+            </View>
           </View>
         </View>
       );
@@ -731,6 +729,8 @@ const renderCustomView = useCallback(
       null;
 
     return (
+      <View>
+      {senderName}
       <Container
         activeOpacity={isOpenable ? 0.9 : undefined}
         onPress={isOpenable ? () => openStoryFromMsg(m) : undefined}
@@ -781,6 +781,7 @@ const renderCustomView = useCallback(
           <Ionicons name="chevron-forward" size={18} color={C.sub} />
         </View>
       </Container>
+      </View>
     );
   },
   [C, myId, openStoryFromMsg, styles, storyCardWidth, t]
@@ -950,8 +951,9 @@ const makeStyles = (C: any) =>
       borderColor: "rgba(255,255,255,0.08)",
     },
     senderName: {
-      marginLeft: 54,
-      marginBottom: 3,
+      marginHorizontal: 10,
+      marginTop: 7,
+      marginBottom: 2,
       fontSize: 12,
       fontWeight: "800",
     },
