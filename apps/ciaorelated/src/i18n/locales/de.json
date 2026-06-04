@@ -1559,7 +1559,9 @@
       "title": "Gruppe verlassen?",
       "body": "Willst du \"{{title}}\" verlassen?",
       "confirm": "Verlassen",
-      "failed": "Konnte Gruppe nicht verlassen."
+      "failed": "Konnte Gruppe nicht verlassen.",
+      "ownerTitle": "Adminrechte zuerst übertragen",
+      "ownerBody": "Du bist aktuell Admin dieser Community. Übertrage die Adminrechte zuerst an ein anderes Mitglied, bevor du die Community verlassen kannst."
     }
   },
   "joingroup": {

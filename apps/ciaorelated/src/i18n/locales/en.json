@@ -1555,7 +1555,9 @@
       "title": "Leave group?",
       "body": "Do you want to leave \"{{title}}\"?",
       "confirm": "Leave",
-      "failed": "Couldn't leave the group."
+      "failed": "Couldn't leave the group.",
+      "ownerTitle": "Transfer admin rights first",
+      "ownerBody": "You are currently the admin of this community. Transfer admin rights to another member before leaving the community."
     }
   },
   "joingroup": {
