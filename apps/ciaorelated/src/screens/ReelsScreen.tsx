@@ -2494,55 +2494,6 @@ const EndFooter = useMemo(() => {
   const hasSnap = snapOffsets.length > 0;
   return (
     <SafeAreaView style={s.screen}>
-      {inHeader && (
-      <View pointerEvents="none" style={s.brushBackgroundWrap}>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            s.brushBackground,
-            {
-              opacity: inHeader
-                ? miniContextAnim.interpolate({
-                    inputRange: [0, 0.12, 1],
-                    outputRange: [0.38, 0, 0],
-                  })
-                : 0,
-            },
-          ]}
-        >
-          <ExpoImage
-            source={require("../../assets/moments-brush-bg-bw.png")}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-          />
-        </Animated.View>
-        <Animated.View
-          pointerEvents="none"
-          style={[
-            s.brushBackgroundVeil,
-            {
-              opacity: inHeader
-                ? miniContextAnim.interpolate({
-                    inputRange: [0, 0.12, 1],
-                    outputRange: [1, 0, 0],
-                  })
-                : 0,
-            },
-          ]}
-        >
-          <LinearGradient
-            colors={[
-              "rgba(0,0,0,0.14)",
-              "rgba(0,0,0,0.04)",
-              "rgba(0,0,0,0.24)",
-            ]}
-            locations={[0, 0.48, 1]}
-            style={StyleSheet.absoluteFill}
-          />
-        </Animated.View>
-      </View>
-      )}
       <FlashList
         ref={feedListRef}
         data={listData}
@@ -2875,24 +2826,6 @@ const styles = (C: any, isDark = true) => {
     actionBackdrop: {
       flex: 1,
     },
-    brushBackgroundWrap: {
-      position: "absolute",
-      left: 0,
-      right: 0,
-      top: 0,
-      bottom: 0,
-      overflow: "hidden",
-      zIndex: 0,
-    },
-    brushBackground: {
-      ...StyleSheet.absoluteFillObject,
-    },
-    brushBackgroundVeil: {
-      ...StyleSheet.absoluteFillObject,
-    },
-
-
-
     // Floating Tinder-like action buttons
     actionOverlay: {
       position: "absolute",
