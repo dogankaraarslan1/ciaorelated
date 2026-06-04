@@ -94,6 +94,15 @@ async function copyToCacheUnique(src: string, key: string, extFallback: string) 
   }
 }
 
+async function exportPhotoToJpegUnique(src: string, key: string) {
+  const clean = stripHash(src);
+  const out = await ImageManipulator.manipulateAsync(clean, [], {
+    compress: 0.95,
+    format: ImageManipulator.SaveFormat.JPEG,
+  });
+  return copyToCacheUnique(out.uri, key, "jpg");
+}
+
 /* Concurrency limit (Favorites) */
 async function mapLimit<T, R>(arr: T[], limit: number, fn: (t: T) => Promise<R>) {
   const out: R[] = new Array(arr.length) as any;
@@ -567,27 +576,26 @@ const loadAssets = useCallback(async () => {
       } catch {}
 
       if (Platform.OS === "ios") {
-        if (isPh(uri)) {
-          if (asset.mediaType === "photo") {
+        if (asset.mediaType === "photo") {
+          const key = asset.id || fileNameFrom(uri, "photo");
+
+          try {
+            return await exportPhotoToJpegUnique(uri, key);
+          } catch {
             try {
-              return await copyToCacheStable(uri, "jpg");
-            } catch {
-              try {
-                const out = await ImageManipulator.manipulateAsync(uri, [], {
-                  compress: 1,
-                  format: ImageManipulator.SaveFormat.JPEG,
-                });
-                return out.uri;
-              } catch {
-                return stripHash(uri);
-              }
-            }
-          } else {
-            try {
-              return await copyToCacheStable(uri, "mov");
+              const stable = await copyToCacheStable(uri, "jpg");
+              return await exportPhotoToJpegUnique(stable, `${key}_stable`);
             } catch {
               return stripHash(uri);
             }
+          }
+        }
+
+        if (isPh(uri)) {
+          try {
+            return await copyToCacheStable(uri, "mov");
+          } catch {
+            return stripHash(uri);
           }
         }
 
@@ -629,16 +637,12 @@ const loadAssets = useCallback(async () => {
           if (mediaType === "photo") {
             // export -> unique
             try {
-              const out = await ImageManipulator.manipulateAsync(uri, [], {
-                compress: 1,
-                format: ImageManipulator.SaveFormat.JPEG,
-              });
-              return await copyToCacheUnique(out.uri, key, "jpg");
+              return await exportPhotoToJpegUnique(uri, key);
             } catch {
               // fallback: stable -> unique
               try {
                 const stable = await copyToCacheStable(uri, "jpg");
-                return await copyToCacheUnique(stable, key, "jpg");
+                return await exportPhotoToJpegUnique(stable, `${key}_stable`);
               } catch {
                 return uri;
               }
@@ -654,6 +658,13 @@ const loadAssets = useCallback(async () => {
         }
 
         if (isFile(uri)) {
+          if (mediaType === "photo") {
+            try {
+              return await exportPhotoToJpegUnique(uri, key);
+            } catch {
+              return await copyToCacheUnique(uri, key, "jpg");
+            }
+          }
           return await copyToCacheUnique(uri, key, mediaType === "video" ? "mov" : "jpg");
         }
 
