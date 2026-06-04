@@ -176,7 +176,7 @@ export const resolvers = {
 
     setCommunityChatKind: async (_: unknown, { groupId, kind }: { groupId: string; kind: string }, ctx: Ctx) => {
       requireAuth(ctx);
-      if (kind !== "COMMUNITY" && kind !== "BROADCAST") throw new GraphQLError("INVALID_THREAD_KIND");
+      if (kind !== "COMMUNITY" && kind !== "BROADCAST" && kind !== "DISABLED") throw new GraphQLError("INVALID_THREAD_KIND");
 
       const group = await (ctx.prisma as PrismaClient).groupLink.findUnique({
         where: { id: groupId },

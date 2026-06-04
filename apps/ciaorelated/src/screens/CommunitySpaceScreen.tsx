@@ -258,6 +258,7 @@ export default function CommunitySpaceScreen() {
   const groupAvatarThumb = group?.imageThumbUrl ?? group?.owner?.avatarThumbUrl ?? null;
   const groupAvatarFull = group?.imageUrl ?? group?.owner?.avatarUrl ?? null;
   const communityThread = threadData?.communityThread;
+  const isChatDisabled = communityThread?.kind === "DISABLED";
   const isOwner = Boolean(group?.viewerIsOwner);
   const qrShareRef = useRef<View>(null);
   const [qrSharing, setQrSharing] = useState(false);
@@ -287,6 +288,10 @@ export default function CommunitySpaceScreen() {
       const threadId = thread?.id;
       if (!threadId) {
         Alert.alert(t("communityspace.chatUnavailableTitle"), t("communityspace.chatUnavailableBody"));
+        return;
+      }
+      if (thread?.kind === "DISABLED") {
+        Alert.alert(t("communityspace.chatDisabledTitle"), t("communityspace.chatDisabledBody"));
         return;
       }
 
@@ -333,6 +338,20 @@ export default function CommunitySpaceScreen() {
         variables: {
           groupId: String(group?.id ?? groupId),
           kind: enabled ? "BROADCAST" : "COMMUNITY",
+        },
+      });
+      await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
+    } catch {
+      Alert.alert(t("communityspace.chatModeFailedTitle"), t("communityspace.chatModeFailedBody"));
+    }
+  };
+
+  const setChatDisabledMode = async (enabled: boolean) => {
+    try {
+      await setCommunityChatKind({
+        variables: {
+          groupId: String(group?.id ?? groupId),
+          kind: enabled ? "DISABLED" : "COMMUNITY",
         },
       });
       await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
@@ -696,13 +715,22 @@ export default function CommunitySpaceScreen() {
 
           <ScrollView contentContainerStyle={s.settingsBody}>
             <View style={s.settingsCard}>
-              <TouchableOpacity style={s.settingsRow} onPress={openCommunityChat} activeOpacity={0.78}>
+              <TouchableOpacity
+                style={[s.settingsRow, isChatDisabled && { opacity: 0.55 }]}
+                onPress={openCommunityChat}
+                activeOpacity={0.78}
+                disabled={isChatDisabled}
+              >
                 <Ionicons name="chatbubbles-outline" size={22} color={C.text} />
                 <View style={s.settingsRowText}>
-                  <Text style={s.settingsRowTitle}>{t("communityspace.openChat")}</Text>
-                  <Text style={s.settingsRowSub}>{t("communityspace.chatModeBody")}</Text>
+                  <Text style={s.settingsRowTitle}>
+                    {isChatDisabled ? t("communityspace.chatDisabledTitle") : t("communityspace.openChat")}
+                  </Text>
+                  <Text style={s.settingsRowSub}>
+                    {isChatDisabled ? t("communityspace.chatDisabledBody") : t("communityspace.chatModeBody")}
+                  </Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+                {!isChatDisabled ? <Ionicons name="chevron-forward" size={18} color={C.subtext} /> : null}
               </TouchableOpacity>
 
               {isOwner ? (
@@ -744,6 +772,26 @@ export default function CommunitySpaceScreen() {
               </TouchableOpacity>
 
               {isOwner ? (
+                <TouchableOpacity
+                  style={s.settingsRow}
+                  onPress={() => setChatDisabledMode(!isChatDisabled)}
+                  activeOpacity={0.78}
+                  disabled={chatModeSaving}
+                >
+                  <Ionicons name={isChatDisabled ? "chatbox-ellipses-outline" : "chatbox-ellipses"} size={22} color={C.text} />
+                  <View style={s.settingsRowText}>
+                    <Text style={s.settingsRowTitle}>
+                      {isChatDisabled ? t("communityspace.enableChat") : t("communityspace.disableChat")}
+                    </Text>
+                    <Text style={s.settingsRowSub}>
+                      {isChatDisabled ? t("communityspace.enableChatSub") : t("communityspace.disableChatSub")}
+                    </Text>
+                  </View>
+                  {chatModeSaving ? <ActivityIndicator size="small" color={C.text} /> : <Ionicons name="chevron-forward" size={18} color={C.subtext} />}
+                </TouchableOpacity>
+              ) : null}
+
+              {isOwner && !isChatDisabled ? (
                 <TouchableOpacity
                   style={s.settingsRow}
                   onPress={() => setBroadcastMode(communityThread?.kind !== "BROADCAST")}

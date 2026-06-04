@@ -294,8 +294,9 @@ export default function ChatScreen({ route, navigation }: any) {
   const isGroupChat = Boolean(threadInfo?.thread?.isGroupChat);
   const threadCommunity = threadInfo?.thread?.community;
   const isBroadcastOnly = threadInfo?.thread?.kind === "BROADCAST";
+  const isChatDisabled = threadInfo?.thread?.kind === "DISABLED";
   const canSendChatMessages =
-    !isBroadcastOnly || (!!threadCommunity?.owner?.id && String(threadCommunity.owner.id) === String(myId));
+    !isChatDisabled && (!isBroadcastOnly || (!!threadCommunity?.owner?.id && String(threadCommunity.owner.id) === String(myId)));
 
   useEffect(() => {
     if (!canSendChatMessages) setInputText("");
@@ -867,9 +868,9 @@ const renderCustomView = useCallback(
         return (
           <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: 0 }]}>
             <View style={[styles.broadcastNotice, { backgroundColor: C.card, borderColor: C.border }]}>
-              <Ionicons name="megaphone-outline" size={18} color={C.sub} />
+              <Ionicons name={isChatDisabled ? "chatbubbles-outline" : "megaphone-outline"} size={18} color={C.sub} />
               <Text style={[styles.broadcastNoticeText, { color: C.sub }]}>
-                {t("chat.broadcastOnlyNotice")}
+                {isChatDisabled ? t("chat.chatDisabledNotice") : t("chat.broadcastOnlyNotice")}
               </Text>
             </View>
           </View>
@@ -905,7 +906,7 @@ const renderCustomView = useCallback(
         </View>
       );
     },
-    [C.bg, C.card, C.border, C.text, C.sub, C.accent, canSendChatMessages, hasText, inputText, myId, pickImage, t]
+    [C.bg, C.card, C.border, C.text, C.sub, C.accent, canSendChatMessages, hasText, inputText, isChatDisabled, myId, pickImage, t]
   );
 
   return (

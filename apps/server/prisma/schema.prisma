@@ -910,6 +910,7 @@ enum ThreadKind {
   GROUP
   COMMUNITY
   BROADCAST
+  DISABLED
 }
 
 model Thread {

@@ -188,7 +188,11 @@ export async function sendMessage(
   if (!membership) throw new Error("NO_ACCESS_TO_THREAD");
   if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
 
-  if (thread.kind === "BROADCAST") {
+  if (String(thread.kind) === "DISABLED") {
+    throw new GraphQLError("CHAT_DISABLED");
+  }
+
+  if (String(thread.kind) === "BROADCAST") {
     const groupId = thread.groupKey?.startsWith("community:") ? thread.groupKey.slice("community:".length) : null;
     if (!groupId) throw new GraphQLError("BROADCAST_NOT_CONFIGURED");
     const group = await prisma.groupLink.findUnique({

@@ -999,6 +999,7 @@ export const typeDefs = gql`
     GROUP
     COMMUNITY
     BROADCAST
+    DISABLED
   }
 
   type Thread {
