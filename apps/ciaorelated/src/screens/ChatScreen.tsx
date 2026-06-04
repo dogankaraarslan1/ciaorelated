@@ -346,7 +346,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
       return (
         <TouchableOpacity
-          onPress={() => goToProfileTab(uid)}
+          onPress={() => openUserProfile(uid)}
           activeOpacity={0.9}
           style={{ marginLeft: 6, marginRight: 6 }}
         >
@@ -360,7 +360,7 @@ export default function ChatScreen({ route, navigation }: any) {
         </TouchableOpacity>
       );
     },
-    [goToProfileTab, myId, styles.avatar]
+    [openUserProfile, myId, styles.avatar]
   );
 
 

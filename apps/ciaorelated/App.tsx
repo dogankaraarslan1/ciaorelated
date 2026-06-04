@@ -1154,7 +1154,7 @@ function ThemedRootNavigator({
         <Root.Screen
           name="JoinGroup"
           component={JoinGroupScreen}
-          options={{ headerShown: false, presentation: "card" }}
+          options={{ headerShown: false, presentation: "modal" }}
         />
 
 
