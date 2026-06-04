@@ -799,6 +799,7 @@
     "openLiveFeed": "Open live feed",
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
+    "broadcastOnlyNotice": "Only admins can send messages in this broadcast chat.",
     "deleteFailedTitle": "Delete failed",
     "sendFailedTitle": "Send failed",
     "savedTitle": "Saved",

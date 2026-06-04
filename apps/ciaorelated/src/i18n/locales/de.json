@@ -805,6 +805,7 @@
     "openLiveFeed": "Live Feed öffnen",
     "replyToStory": "Antwort auf Story",
     "sendAMessage": "Nachricht schreiben…",
+    "broadcastOnlyNotice": "Nur Admins können in diesem Broadcast-Chat Nachrichten senden.",
     "deleteFailedTitle": "Löschen fehlgeschlagen",
     "sendFailedTitle": "Senden fehlgeschlagen",
     "savedTitle": "Gespeichert",

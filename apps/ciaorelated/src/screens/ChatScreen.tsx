@@ -103,6 +103,9 @@ const THREAD_INFO = gql`
         title
         type
         slug
+        owner {
+          id
+        }
       }
     }
   }
@@ -286,10 +289,17 @@ export default function ChatScreen({ route, navigation }: any) {
   const { data: threadInfo } = useQuery(THREAD_INFO, {
     variables: { threadId },
     skip: !threadId,
-    fetchPolicy: "cache-first",
+    fetchPolicy: "cache-and-network",
   });
   const isGroupChat = Boolean(threadInfo?.thread?.isGroupChat);
   const threadCommunity = threadInfo?.thread?.community;
+  const isBroadcastOnly = threadInfo?.thread?.kind === "BROADCAST";
+  const canSendChatMessages =
+    !isBroadcastOnly || (!!threadCommunity?.owner?.id && String(threadCommunity.owner.id) === String(myId));
+
+  useEffect(() => {
+    if (!canSendChatMessages) setInputText("");
+  }, [canSendChatMessages]);
 
   const openCommunityLiveFeed = useCallback(() => {
     if (!threadCommunity?.id) return;
@@ -536,6 +546,7 @@ export default function ChatScreen({ route, navigation }: any) {
   const onSend = useCallback(
     async (out: IMessage[] = []) => {
       if (!threadId) return;
+      if (!canSendChatMessages) return;
 
       for (const m of out) {
         const text = m.text?.trim();
@@ -587,7 +598,7 @@ export default function ChatScreen({ route, navigation }: any) {
       setInputText("");
       markRead();
     },
-    [threadId, sendMessage, myId, myAvatar, markRead, t]
+    [threadId, canSendChatMessages, sendMessage, myId, myAvatar, markRead, t]
   );
 
   async function downloadAndShare(url: string, suggestedName?: string) {
@@ -615,6 +626,7 @@ export default function ChatScreen({ route, navigation }: any) {
   const pickImage = useCallback(async () => {
     try {
       if (!threadId) return;
+      if (!canSendChatMessages) return;
 
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (perm.status !== "granted") {
@@ -683,7 +695,7 @@ export default function ChatScreen({ route, navigation }: any) {
       console.warn("[Chat] pickImage failed:", e?.message || e);
       Alert.alert(t("chat.imageSendFailedTitle"), e?.message || t("chat.imageSendFailedBody"));
     }
-  }, [apollo, threadId, sendMessage, myId, myAvatar, t]);
+  }, [apollo, threadId, canSendChatMessages, sendMessage, myId, myAvatar, t]);
 
   const renderMessageImage = useCallback(
     (props: any) => {
@@ -839,6 +851,7 @@ const renderCustomView = useCallback(
   const renderPillToolbar = useCallback(
     (props: any) => {
       const handlePressSend = () => {
+        if (!canSendChatMessages) return;
         const text = inputText.trim();
         if (!text) return;
 
@@ -849,6 +862,19 @@ const renderCustomView = useCallback(
 
         setInputText("");
       };
+
+      if (!canSendChatMessages) {
+        return (
+          <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: 0 }]}>
+            <View style={[styles.broadcastNotice, { backgroundColor: C.card, borderColor: C.border }]}>
+              <Ionicons name="megaphone-outline" size={18} color={C.sub} />
+              <Text style={[styles.broadcastNoticeText, { color: C.sub }]}>
+                {t("chat.broadcastOnlyNotice")}
+              </Text>
+            </View>
+          </View>
+        );
+      }
 
       return (
         <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: 0 }]}>
@@ -879,7 +905,7 @@ const renderCustomView = useCallback(
         </View>
       );
     },
-    [C.bg, C.card, C.border, C.text, C.sub, C.accent, hasText, inputText, myId, pickImage, insets.bottom]
+    [C.bg, C.card, C.border, C.text, C.sub, C.accent, canSendChatMessages, hasText, inputText, myId, pickImage, t]
   );
 
   return (
@@ -1044,6 +1070,23 @@ const makeStyles = (C: any) =>
       alignItems: "center",
       paddingHorizontal: 10,
       paddingTop: 18,
+    },
+    broadcastNotice: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: 21,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    broadcastNoticeText: {
+      flexShrink: 1,
+      fontSize: 13,
+      fontWeight: "700",
+      textAlign: "center",
     },
     camBtn: {
       width: 42,
