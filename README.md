@@ -472,26 +472,23 @@ npx uri-scheme open "ciaorelated://join/GROUP_SLUG" --android
 npx uri-scheme open "ciaorelated://join?slug=GROUP_SLUG" --android
 ```
 
-If you use Expo Go, use the exact local Expo URL printed by `expo start` and append `/--/join/GROUP_SLUG`. Do not keep `YOUR_LAN_IP` or `GROUP_SLUG` literally in the URL.
+If you use Expo Go, use Expo's local deep-link format instead of the custom scheme:
 
 ```txt
-EXPO_GO_URL/--/join/GROUP_SLUG
+exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG
 ```
 
-Examples:
+Example:
 
 ```txt
 exp://192.168.100.145:8081/--/join/GROUP_SLUG
-exp://192.168.100.145:8082/--/join/GROUP_SLUG
 ```
 
 In other words:
 
 - `https://your-domain.example/join?slug=GROUP_SLUG` tests your website / Universal Link fallback.
 - `ciaorelated://join/GROUP_SLUG` tests the installed app scheme in a development build.
-- `EXPO_GO_URL/--/join/GROUP_SLUG` tests the same route through Expo Go.
-
-If Expo Go shows `There was a problem running the requested app`, first open the app by scanning the normal Expo QR code from the terminal. Then build the invite URL from that same Expo URL and add `/--/join/GROUP_SLUG`.
+- `exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG` tests the same route through Expo Go.
 
 When AppsFlyer is disabled, the app still accepts regular links such as `ciaorelated://join?slug=GROUP_SLUG` and `https://your-domain.example/join?slug=GROUP_SLUG`.
 

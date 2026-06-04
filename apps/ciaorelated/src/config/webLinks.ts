@@ -1,5 +1,4 @@
 import Constants from "expo-constants";
-import * as Linking from "expo-linking";
 
 type LegalLanguage = "de" | "en";
 
@@ -38,11 +37,9 @@ function joinUrl(base: string, path: string) {
 export const appScheme = envValue("EXPO_PUBLIC_APP_SCHEME") || "ciaorelated";
 export const websiteBaseUrl = normalizeBaseUrl(envValue("EXPO_PUBLIC_WEBSITE_URL")) || "https://example.com";
 export const oneLinkBaseUrl = normalizeBaseUrl(envValue("EXPO_PUBLIC_ONELINK_URL"));
-export const expoDevelopmentBaseUrl = __DEV__ ? Linking.createURL("/") : "";
 
 export const linkingPrefixes = [
   `${appScheme}://`,
-  expoDevelopmentBaseUrl,
   websiteBaseUrl,
   oneLinkBaseUrl,
 ].filter(Boolean);
