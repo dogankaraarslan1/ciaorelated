@@ -713,8 +713,7 @@ function firstQueryValue(value: unknown) {
   return null;
 }
 
-function setPendingDeepLinkFromUrl(url: string) {
-  console.log("DEEPLINK IN:", url);
+function joinSlugFromUrl(url: string) {
   try {
     const parsed = Linking.parse(url);
     const path = parsed.path ?? "";
@@ -731,7 +730,17 @@ function setPendingDeepLinkFromUrl(url: string) {
       (qSlug ? qSlug : null) ??
       (parts[i] === "join" && parts[i + 1] ? parts[i + 1] : null);
 
-    if (slug) {
+    return slug;
+  } catch (e) {
+    console.log("DeepLink parse failed:", e);
+    return null;
+  }
+}
+
+function setPendingDeepLinkFromUrl(url: string) {
+  console.log("DEEPLINK IN:", url);
+  const slug = joinSlugFromUrl(url);
+  if (slug) {
       // ✅ Dedup: Expo sendet initial + event fast hintereinander
       if (__DEV__) {
         const now = Date.now();
@@ -743,9 +752,6 @@ function setPendingDeepLinkFromUrl(url: string) {
       pendingDeepLink = { route: "JoinGroup", params: { slug } };
       void persistPendingJoinSlug(slug);
       return;
-    }
-  } catch (e) {
-    console.log("DeepLink parse failed:", e);
   }
 }
 
@@ -928,8 +934,9 @@ async function shouldAcceptInitialUrl(initialUrl: string) {
   if (isTrustedWebUrl(initialUrl)) return true;
 
 
-  // ✅ DEV exp:// initialUrl NIE akzeptieren (Expo Go sticky)
-  if (__DEV__ && initialUrl.startsWith("exp://")) return false;
+  // Expo Go can start with sticky exp:// URLs. Only accept them when they
+  // explicitly carry a local invite route such as /--/join/GROUP_SLUG.
+  if (__DEV__ && initialUrl.startsWith("exp://")) return !!joinSlugFromUrl(initialUrl);
 
   return false;
 }
