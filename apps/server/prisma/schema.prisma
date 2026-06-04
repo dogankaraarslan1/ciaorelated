@@ -37,6 +37,7 @@ model GroupLink {
   title String
   type  GroupLinkType @default(OTHER)
   slug  String?       @unique
+  imageKey String?
 
   ownerId String
   owner   Profile @relation("GroupLinkOwner", fields: [ownerId], references: [id], onDelete: Cascade)

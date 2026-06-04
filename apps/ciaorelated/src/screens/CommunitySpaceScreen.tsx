@@ -4,14 +4,21 @@ import {
   Alert,
   FlatList,
   Image,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
   Share,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { gql, useLazyQuery, useMutation, useQuery } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
+import * as FileSystem from "expo-file-system/legacy";
+import * as ImagePicker from "expo-image-picker";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
 import { useNavigation, useRoute } from "@react-navigation/native";
@@ -48,6 +55,8 @@ const COMMUNITY_SPACE = gql`
       title
       type
       slug
+      imageUrl
+      imageThumbUrl
       memberCount
       viewerIsOwner
       viewerIsMember
@@ -58,7 +67,7 @@ const COMMUNITY_SPACE = gql`
         avatarThumbUrl
       }
     }
-    groupLinkMembers(groupId: $id, limit: 18) {
+    groupLinkMembers(groupId: $id, limit: 60) {
       id
       username
       name
@@ -140,8 +149,47 @@ const SET_COMMUNITY_CHAT_KIND = gql`
   }
 `;
 
+const UPDATE_GROUP_LINK = gql`
+  mutation UpdateGroupLink($id: ID!, $input: UpdateGroupLinkInput!) {
+    updateGroupLink(id: $id, input: $input) {
+      id
+      title
+      imageUrl
+      imageThumbUrl
+      viewerIsOwner
+      viewerIsMember
+    }
+  }
+`;
+
+const GET_SIGNED_GROUP_IMAGE_UPLOAD = gql`
+  mutation GetSignedGroupLinkImageUpload($groupId: ID!, $mime: String!, $size: Int!) {
+    getSignedGroupLinkImageUpload(groupId: $groupId, mime: $mime, size: $size) {
+      key
+      putUrl
+    }
+  }
+`;
+
+const REMOVE_GROUP_LINK_MEMBER = gql`
+  mutation RemoveGroupLinkMember($groupId: ID!, $profileId: ID!) {
+    removeGroupLinkMember(groupId: $groupId, profileId: $profileId)
+  }
+`;
+
 function inviteUrl(slug?: string | null) {
   return slug ? buildJoinUrl(slug) : "";
+}
+
+function isLocalUri(uri?: string | null) {
+  return !!uri && /^(file|ph|content|assets):\/\//i.test(uri);
+}
+
+function mimeFromUri(uri: string) {
+  const lower = uri.toLowerCase();
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".webp")) return "image/webp";
+  return "image/jpeg";
 }
 
 function createQrModules(value: string): { modules: QrModule[]; size: number } {
@@ -180,6 +228,9 @@ export default function CommunitySpaceScreen() {
     fetchPolicy: "network-only",
   });
   const [setCommunityChatKind, { loading: chatModeSaving }] = useMutation(SET_COMMUNITY_CHAT_KIND);
+  const [updateGroupLink, { loading: groupSaving }] = useMutation(UPDATE_GROUP_LINK);
+  const [getSignedGroupImageUpload] = useMutation(GET_SIGNED_GROUP_IMAGE_UPLOAD);
+  const [removeGroupLinkMember, { loading: memberRemoving }] = useMutation(REMOVE_GROUP_LINK_MEMBER);
 
   const fallbackGroup = {
     id: groupId,
@@ -208,6 +259,10 @@ export default function CommunitySpaceScreen() {
   const isOwner = Boolean(group?.viewerIsOwner);
   const qrShareRef = useRef<View>(null);
   const [qrSharing, setQrSharing] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editImageUri, setEditImageUri] = useState<string | null>(null);
   const qr = useMemo(() => createQrModules(link), [link]);
 
   const shareLink = async () => {
@@ -284,54 +339,105 @@ export default function CommunitySpaceScreen() {
     }
   };
 
-  const showCommunityEditPlaceholder = (target: string) => {
-    Alert.alert(target, t("communityspace.editComingSoonBody"));
+  const openCommunityEdit = () => {
+    setEditTitle(String(group?.title ?? ""));
+    setEditImageUri(groupAvatarThumb ?? groupAvatarFull ?? null);
+    setSettingsOpen(false);
+    setEditOpen(true);
+  };
+
+  const pickCommunityImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(t("communityspace.permissionNeededTitle"), t("communityspace.permissionNeededBody"));
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.9,
+    });
+
+    if (!result.canceled && result.assets?.[0]?.uri) {
+      setEditImageUri(result.assets[0].uri);
+    }
+  };
+
+  const saveCommunityEdit = async () => {
+    const nextTitle = editTitle.trim();
+    if (!nextTitle) {
+      Alert.alert(t("common.error"), t("communityspace.titleRequired"));
+      return;
+    }
+
+    try {
+      const input: any = { title: nextTitle };
+      if (isLocalUri(editImageUri)) {
+        const info = await FileSystem.getInfoAsync(editImageUri!);
+        if (!info.exists) throw new Error(t("communityspace.imageMissing"));
+
+        const mime = mimeFromUri(editImageUri!);
+        const signed = await getSignedGroupImageUpload({
+          variables: {
+            groupId: String(group?.id ?? groupId),
+            mime,
+            size: info.size ?? 0,
+          },
+        });
+        const { key, putUrl } = signed.data.getSignedGroupLinkImageUpload;
+        const upload = await FileSystem.uploadAsync(putUrl, editImageUri!, {
+          httpMethod: "PUT",
+          headers: { "Content-Type": mime },
+          uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+        });
+
+        if (upload.status !== 200 && upload.status !== 204) {
+          throw new Error(t("communityspace.uploadFailedStatus", { status: upload.status }));
+        }
+
+        input.imageKey = key;
+      }
+
+      await updateGroupLink({
+        variables: { id: String(group?.id ?? groupId), input },
+      });
+      await refetch();
+      setEditOpen(false);
+    } catch (e: any) {
+      Alert.alert(t("communityspace.editFailedTitle"), e?.message ?? t("communityspace.editFailedBody"));
+    }
   };
 
   const openCommunitySettings = async () => {
-    let currentThread = communityThread;
-    if (!currentThread && groupId) {
+    setSettingsOpen(true);
+    if (!communityThread && groupId) {
       try {
-        const result = await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
-        currentThread = result?.data?.communityThread;
+        await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
       } catch {}
     }
-    const currentlyBroadcast = currentThread?.kind === "BROADCAST";
+  };
 
-    const buttons: any[] = [
-      { text: t("communityspace.openChat"), onPress: openCommunityChat },
-      { text: t("communityspace.shareLink"), onPress: shareLink },
-      { text: t("communityspace.copyLink"), onPress: copyLink },
-      { text: t("communityspace.shareQr"), onPress: shareQrCode },
-    ];
-
-    if (isOwner) {
-      buttons.unshift(
-        {
-          text: t("communityspace.editName"),
-          onPress: () => showCommunityEditPlaceholder(t("communityspace.editName")),
-        },
-        {
-          text: t("communityspace.editImage"),
-          onPress: () => showCommunityEditPlaceholder(t("communityspace.editImage")),
-        },
-        {
-          text: t("communityspace.manageMembers"),
-          onPress: () => showCommunityEditPlaceholder(t("communityspace.manageMembers")),
-        }
-      );
-      buttons.push({
-        text: currentlyBroadcast ? t("communityspace.disableBroadcast") : t("communityspace.enableBroadcast"),
-        onPress: () => setBroadcastMode(!currentlyBroadcast),
-      });
-    }
-
-    buttons.push({ text: t("common.cancel"), style: "cancel" });
-
+  const removeMember = (profileId: string, username?: string | null) => {
     Alert.alert(
-      t("communityspace.settingsTitle"),
-      currentlyBroadcast ? t("communityspace.broadcastModeBody") : t("communityspace.chatModeBody"),
-      buttons
+      t("communityspace.removeMemberTitle"),
+      t("communityspace.removeMemberBody", { username: username ? `@${username}` : t("communityspace.thisMember") }),
+      [
+        { text: t("common.cancel"), style: "cancel" },
+        {
+          text: t("communityspace.removeMemberCta"),
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await removeGroupLinkMember({ variables: { groupId: String(group?.id ?? groupId), profileId } });
+              await refetch();
+            } catch (e: any) {
+              Alert.alert(t("common.error"), e?.message ?? t("communityspace.removeMemberFailed"));
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -359,16 +465,16 @@ export default function CommunitySpaceScreen() {
             {isOwner ? (
               <TouchableOpacity
                 style={s.titleEditBtn}
-                onPress={openCommunitySettings}
+                onPress={openCommunityEdit}
                 activeOpacity={0.78}
                 hitSlop={12}
-                accessibilityLabel={t("communityspace.settingsTitle")}
-                disabled={chatLoading || qrSharing || chatModeSaving}
+                accessibilityLabel={t("communityspace.editCommunity")}
+                disabled={groupSaving}
               >
-                {chatLoading || qrSharing || chatModeSaving ? (
+                {groupSaving ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Ionicons name="pencil-outline" size={22} color="#fff" />
+                  <Ionicons name="pencil-outline" size={18} color="#fff" />
                 )}
               </TouchableOpacity>
             ) : null}
@@ -523,6 +629,176 @@ export default function CommunitySpaceScreen() {
           <Text style={s.qrCenterText}>ciaorelated</Text>
         </View>
       </View>
+
+      <Modal visible={editOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setEditOpen(false)}>
+        <KeyboardAvoidingView
+          style={s.modalRoot}
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+          <View style={s.modalHeader}>
+            <TouchableOpacity style={s.modalIconBtn} onPress={() => setEditOpen(false)} hitSlop={12}>
+              <Ionicons name="close" size={24} color={C.text} />
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>{t("communityspace.editCommunity")}</Text>
+            <TouchableOpacity
+              style={s.modalSaveBtn}
+              onPress={saveCommunityEdit}
+              disabled={groupSaving}
+              activeOpacity={0.82}
+            >
+              {groupSaving ? (
+                <ActivityIndicator size="small" color={C.bg} />
+              ) : (
+                <Text style={s.modalSaveText}>{t("common.save")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView contentContainerStyle={s.editBody} keyboardShouldPersistTaps="handled">
+            <TouchableOpacity style={s.editImageWrap} onPress={pickCommunityImage} activeOpacity={0.86}>
+              <AvatarImage
+                thumb={editImageUri}
+                full={editImageUri}
+                style={s.editImage}
+                recyclingKey={`community-edit:${group?.id ?? groupId}:${editImageUri ?? "empty"}`}
+              />
+              <View style={s.editImageBadge}>
+                <Ionicons name="camera-outline" size={18} color="#fff" />
+              </View>
+            </TouchableOpacity>
+
+            <Text style={s.inputLabel}>{t("communityspace.communityName")}</Text>
+            <TextInput
+              value={editTitle}
+              onChangeText={setEditTitle}
+              placeholder={t("communityspace.communityNamePlaceholder")}
+              placeholderTextColor={C.subtext}
+              style={s.textInput}
+              maxLength={80}
+              autoCapitalize="words"
+              returnKeyType="done"
+            />
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </Modal>
+
+      <Modal visible={settingsOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setSettingsOpen(false)}>
+        <Screen scroll={false} edges={["top", "left", "right"]}>
+          <View style={s.modalHeader}>
+            <TouchableOpacity style={s.modalIconBtn} onPress={() => setSettingsOpen(false)} hitSlop={12}>
+              <Ionicons name="close" size={24} color={C.text} />
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>{t("communityspace.settingsTitle")}</Text>
+            <View style={s.modalIconBtn} />
+          </View>
+
+          <ScrollView contentContainerStyle={s.settingsBody}>
+            <View style={s.settingsCard}>
+              <TouchableOpacity style={s.settingsRow} onPress={openCommunityChat} activeOpacity={0.78}>
+                <Ionicons name="chatbubbles-outline" size={22} color={C.text} />
+                <View style={s.settingsRowText}>
+                  <Text style={s.settingsRowTitle}>{t("communityspace.openChat")}</Text>
+                  <Text style={s.settingsRowSub}>{t("communityspace.chatModeBody")}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              </TouchableOpacity>
+
+              {isOwner ? (
+                <TouchableOpacity style={s.settingsRow} onPress={openCommunityEdit} activeOpacity={0.78}>
+                  <Ionicons name="create-outline" size={22} color={C.text} />
+                  <View style={s.settingsRowText}>
+                    <Text style={s.settingsRowTitle}>{t("communityspace.editCommunity")}</Text>
+                    <Text style={s.settingsRowSub}>{t("communityspace.editCommunitySub")}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+                </TouchableOpacity>
+              ) : null}
+
+              <TouchableOpacity style={s.settingsRow} onPress={shareLink} activeOpacity={0.78}>
+                <Ionicons name="share-outline" size={22} color={C.text} />
+                <View style={s.settingsRowText}>
+                  <Text style={s.settingsRowTitle}>{t("communityspace.shareLink")}</Text>
+                  <Text style={s.settingsRowSub}>{link}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.settingsRow} onPress={copyLink} activeOpacity={0.78}>
+                <Ionicons name="copy-outline" size={22} color={C.text} />
+                <View style={s.settingsRowText}>
+                  <Text style={s.settingsRowTitle}>{t("communityspace.copyLink")}</Text>
+                  <Text style={s.settingsRowSub}>{t("communityspace.copyLinkSub")}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              </TouchableOpacity>
+
+              <TouchableOpacity style={s.settingsRow} onPress={shareQrCode} activeOpacity={0.78}>
+                <Ionicons name="qr-code-outline" size={22} color={C.text} />
+                <View style={s.settingsRowText}>
+                  <Text style={s.settingsRowTitle}>{t("communityspace.shareQr")}</Text>
+                  <Text style={s.settingsRowSub}>{t("communityspace.shareQrSub")}</Text>
+                </View>
+                {qrSharing ? <ActivityIndicator size="small" color={C.text} /> : <Ionicons name="chevron-forward" size={18} color={C.subtext} />}
+              </TouchableOpacity>
+
+              {isOwner ? (
+                <TouchableOpacity
+                  style={s.settingsRow}
+                  onPress={() => setBroadcastMode(communityThread?.kind !== "BROADCAST")}
+                  activeOpacity={0.78}
+                  disabled={chatModeSaving}
+                >
+                  <Ionicons name={communityThread?.kind === "BROADCAST" ? "megaphone" : "megaphone-outline"} size={22} color={C.text} />
+                  <View style={s.settingsRowText}>
+                    <Text style={s.settingsRowTitle}>
+                      {communityThread?.kind === "BROADCAST" ? t("communityspace.disableBroadcast") : t("communityspace.enableBroadcast")}
+                    </Text>
+                    <Text style={s.settingsRowSub}>
+                      {communityThread?.kind === "BROADCAST" ? t("communityspace.broadcastModeBody") : t("communityspace.broadcastModeSub")}
+                    </Text>
+                  </View>
+                  {chatModeSaving ? <ActivityIndicator size="small" color={C.text} /> : <Ionicons name="chevron-forward" size={18} color={C.subtext} />}
+                </TouchableOpacity>
+              ) : null}
+            </View>
+
+            {isOwner ? (
+              <View style={s.settingsSection}>
+                <Text style={s.settingsSectionTitle}>{t("communityspace.manageMembers")}</Text>
+                <View style={s.settingsCard}>
+                  {members.map((member: any) => {
+                    const isGroupOwner = member.id === group?.owner?.id;
+                    return (
+                      <View key={member.id} style={s.memberRow}>
+                        <AvatarImage
+                          thumb={member.avatarThumbUrl}
+                          full={member.avatarUrl}
+                          style={s.memberAvatar}
+                          recyclingKey={`settings-member:${member.id}`}
+                        />
+                        <View style={s.settingsRowText}>
+                          <Text style={s.settingsRowTitle} numberOfLines={1}>@{member.username}</Text>
+                          <Text style={s.settingsRowSub}>{isGroupOwner ? t("communityspace.owner") : t("communityspace.member")}</Text>
+                        </View>
+                        {!isGroupOwner ? (
+                          <TouchableOpacity
+                            style={s.removeMemberBtn}
+                            onPress={() => removeMember(member.id, member.username)}
+                            disabled={memberRemoving}
+                            activeOpacity={0.78}
+                          >
+                            <Ionicons name="remove-circle-outline" size={22} color={C.danger ?? "#ef4444"} />
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                    );
+                  })}
+                </View>
+              </View>
+            ) : null}
+          </ScrollView>
+        </Screen>
+      </Modal>
     </Screen>
   );
 }
@@ -583,14 +859,14 @@ const styles = (C: any) =>
       borderColor: "rgba(255,255,255,0.34)",
       backgroundColor: "rgba(255,255,255,0.14)",
     },
-    title: { flex: 1, color: "#fff", fontSize: 34, fontWeight: "900", letterSpacing: 0 },
+    title: { flexShrink: 1, color: "#fff", fontSize: 34, fontWeight: "900", letterSpacing: 0 },
     titleEditBtn: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: "rgba(255,255,255,0.16)",
+      backgroundColor: "transparent",
     },
     sub: { color: "rgba(255,255,255,0.82)", fontSize: 15, fontWeight: "700" },
     metaRow: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -687,5 +963,163 @@ const styles = (C: any) =>
       lineHeight: 156,
       fontWeight: "400",
       letterSpacing: 0,
+    },
+    modalRoot: {
+      flex: 1,
+      backgroundColor: C.bg,
+    },
+    modalHeader: {
+      minHeight: 56,
+      paddingHorizontal: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.border,
+      backgroundColor: C.bg,
+    },
+    modalIconBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalTitle: {
+      flex: 1,
+      color: C.text,
+      fontSize: 18,
+      fontWeight: "900",
+      textAlign: "center",
+    },
+    modalSaveBtn: {
+      minWidth: 64,
+      height: 36,
+      paddingHorizontal: 14,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.text,
+    },
+    modalSaveText: {
+      color: C.bg,
+      fontWeight: "900",
+      fontSize: 14,
+    },
+    editBody: {
+      padding: 18,
+      gap: 12,
+    },
+    editImageWrap: {
+      alignSelf: "center",
+      marginBottom: 14,
+    },
+    editImage: {
+      width: 108,
+      height: 108,
+      borderRadius: 54,
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.card,
+    },
+    editImageBadge: {
+      position: "absolute",
+      right: 4,
+      bottom: 4,
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(0,0,0,0.72)",
+      borderWidth: 2,
+      borderColor: C.bg,
+    },
+    inputLabel: {
+      color: C.subtext,
+      fontSize: 12,
+      fontWeight: "800",
+      textTransform: "uppercase",
+      letterSpacing: 0,
+    },
+    textInput: {
+      minHeight: 48,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.card,
+      color: C.text,
+      paddingHorizontal: 14,
+      fontSize: 16,
+      fontWeight: "700",
+    },
+    settingsBody: {
+      padding: 14,
+      paddingBottom: 36,
+      gap: 18,
+    },
+    settingsCard: {
+      borderRadius: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: C.border,
+      backgroundColor: C.card,
+      overflow: "hidden",
+    },
+    settingsRow: {
+      minHeight: 68,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.border,
+    },
+    settingsRowText: {
+      flex: 1,
+      minWidth: 0,
+    },
+    settingsRowTitle: {
+      color: C.text,
+      fontSize: 15,
+      fontWeight: "800",
+    },
+    settingsRowSub: {
+      color: C.subtext,
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 3,
+    },
+    settingsSection: {
+      gap: 8,
+    },
+    settingsSectionTitle: {
+      color: C.text,
+      fontSize: 16,
+      fontWeight: "900",
+      paddingHorizontal: 2,
+    },
+    memberRow: {
+      minHeight: 64,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: C.border,
+    },
+    memberAvatar: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      backgroundColor: C.border,
+    },
+    removeMemberBtn: {
+      width: 38,
+      height: 38,
+      borderRadius: 19,
+      alignItems: "center",
+      justifyContent: "center",
     },
   });

@@ -595,6 +595,8 @@ export const typeDefs = gql`
     code: String!
     title: String!
     type: GroupLinkType!
+    imageUrl: String
+    imageThumbUrl: String
     owner: User!
     memberCount: Int!
     viewerIsOwner: Boolean!
@@ -603,6 +605,11 @@ export const typeDefs = gql`
     createdAt: DateTime!
     expiresAt: DateTime
     slug: String
+  }
+
+  input UpdateGroupLinkInput {
+    title: String
+    imageKey: String
   }
 
   type FeedSource {
@@ -801,6 +808,9 @@ export const typeDefs = gql`
   type Mutation {
     leaveGroup(groupId: ID!): Boolean!
     createGroupLink(title: String!, type: GroupLinkType!): GroupLink!
+    updateGroupLink(id: ID!, input: UpdateGroupLinkInput!): GroupLink!
+    getSignedGroupLinkImageUpload(groupId: ID!, mime: String!, size: Int!): SignedUpload!
+    removeGroupLinkMember(groupId: ID!, profileId: ID!): Boolean!
     joinGroupLink(slug: String!): JoinGroupResult!
 
     updateOnboarding(input: OnboardingInput!): User!
