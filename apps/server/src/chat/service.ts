@@ -11,11 +11,11 @@ function uniqSorted(ids: string[]) {
 function dmKeyFor(a: string, b: string) {
   return [a, b].sort().join(":");
 }
-function groupKeyFor(ids: string[]) {
-  return uniqSorted(ids).join(":");
-}
 function communityGroupKey(groupId: string) {
   return `community:${groupId}`;
+}
+function newGroupThreadKey() {
+  return `group:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 }
 
 // ----------------- Blocks (Chat Safety) -----------------
@@ -418,10 +418,8 @@ export async function createThread(
   const safeTitle = String(title ?? "").trim();
   if (!safeTitle) throw new GraphQLError("GROUP_TITLE_REQUIRED");
 
-  // Gruppen-Thread → via groupKey de-dupen
-  const groupKey = groupKeyFor(members);
-  const existing = await prisma.thread.findUnique({ where: { groupKey } });
-  if (existing) return existing;
+  // Gruppen-Threads werden nicht dedupliziert: gleiche Mitglieder dürfen mehrere Gruppen haben.
+  const groupKey = newGroupThreadKey();
 
   return prisma.$transaction(async (tx) => {
     const thread = await tx.thread.create({
