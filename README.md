@@ -454,6 +454,42 @@ For local development, keep AppsFlyer disabled:
 EXPO_PUBLIC_APPSFLYER_ENABLED=false
 ```
 
+### Testing Invite Links Locally
+
+You do not need AppsFlyer or a public website to test community invite links during local development.
+
+If you use a development build with the app scheme installed, open the invite directly with the local scheme:
+
+```bash
+npx uri-scheme open "ciaorelated://join/GROUP_SLUG" --ios
+npx uri-scheme open "ciaorelated://join?slug=GROUP_SLUG" --ios
+```
+
+For Android development builds, use the same URLs with `--android`:
+
+```bash
+npx uri-scheme open "ciaorelated://join/GROUP_SLUG" --android
+npx uri-scheme open "ciaorelated://join?slug=GROUP_SLUG" --android
+```
+
+If you use Expo Go, use Expo's local deep-link format instead of the custom scheme:
+
+```txt
+exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG
+```
+
+Example:
+
+```txt
+exp://192.168.100.145:8081/--/join/GROUP_SLUG
+```
+
+In other words:
+
+- `https://your-domain.example/join?slug=GROUP_SLUG` tests your website / Universal Link fallback.
+- `ciaorelated://join/GROUP_SLUG` tests the installed app scheme in a development build.
+- `exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG` tests the same route through Expo Go.
+
 When AppsFlyer is disabled, the app still accepts regular links such as `ciaorelated://join?slug=GROUP_SLUG` and `https://your-domain.example/join?slug=GROUP_SLUG`.
 
 The mobile parser also accepts AppsFlyer-style slug parameters:
