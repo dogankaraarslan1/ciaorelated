@@ -176,6 +176,16 @@ const MARK_THREAD_READ = gql`
   }
 `;
 
+const NAME_COLORS = ["#2563eb", "#0891b2", "#059669", "#7c3aed", "#db2777", "#ea580c", "#0f766e", "#4f46e5"];
+
+function nameColorForUser(userId: string) {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i += 1) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+  return NAME_COLORS[hash % NAME_COLORS.length];
+}
+
 type MsgNode = {
   id: string;
   createdAt: string;
@@ -319,8 +329,22 @@ export default function ChatScreen({ route, navigation }: any) {
   /* ───────────────── KEY warning fix ───────────────── */
   const renderMessage = useCallback((props: any) => {
     const { key: _ignore, ...rest } = props ?? {};
-    return <Message {...rest} />;
-  }, []);
+    const msg = props?.currentMessage as any;
+    const userId = String(msg?.user?._id ?? "");
+    const isMine = !!userId && userId === String(myId);
+    const name = typeof msg?.user?.name === "string" ? msg.user.name.trim() : "";
+
+    if (isMine || !name) return <Message {...rest} />;
+
+    return (
+      <View>
+        <Text style={[styles.senderName, { color: nameColorForUser(userId) }]} numberOfLines={1}>
+          {name}
+        </Text>
+        <Message {...rest} />
+      </View>
+    );
+  }, [myId, styles.senderName]);
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
   const openUserProfile = useCallback(
@@ -924,6 +948,12 @@ const makeStyles = (C: any) =>
       backgroundColor: C.card,
       borderWidth: 1,
       borderColor: "rgba(255,255,255,0.08)",
+    },
+    senderName: {
+      marginLeft: 54,
+      marginBottom: 3,
+      fontSize: 12,
+      fontWeight: "800",
     },
 
     timeRow: {
