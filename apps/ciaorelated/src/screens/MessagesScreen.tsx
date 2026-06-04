@@ -734,8 +734,8 @@ const makeStyles = (C: {
     headerPlus: {
       color: C.text,
       fontSize: 30,
-      fontWeight: "800",
-      lineHeight: 34,
+      fontWeight: "500",
+      lineHeight: 42,
     },
     headerTitle: {
       flex: 1,
