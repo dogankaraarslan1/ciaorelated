@@ -395,9 +395,19 @@ export default {
       const group = await assertOwnsGroup(ctx, groupId);
       if (profileId === group.ownerId) throw new Error("Owner cannot be removed");
 
-      await ctx.prisma.groupLinkMember.deleteMany({
-        where: { groupLinkId: groupId, profileId },
+      await ctx.prisma.$transaction(async (tx) => {
+        await tx.connection.deleteMany({
+          where: {
+            groupLinkId: groupId,
+            OR: [{ fromId: profileId }, { toId: profileId }],
+          },
+        });
+
+        await tx.groupLinkMember.deleteMany({
+          where: { groupLinkId: groupId, profileId },
+        });
       });
+
       await removeCommunityThreadMember(ctx.prisma as any, groupId, profileId);
       return true;
     },
