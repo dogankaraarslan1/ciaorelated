@@ -113,7 +113,17 @@ export default function JoinGroupScreen() {
         <Text style={s.title}>
         {t("joingroup.youWereAddedToTheGroup")}{state.title}{t("joingroup.added")}</Text>
 
-        <TouchableOpacity onPress={() => navigation.navigate("CommunitySpace", { id: state.groupId, title: state.title, slug })}>
+        <TouchableOpacity
+        onPress={() =>
+            navigation.reset({
+            index: 1,
+            routes: [
+                { name: "AppTabs" },
+                { name: "CommunitySpace", params: { id: state.groupId, title: state.title, slug } },
+            ],
+            })
+        }
+        >
         <Text style={s.link}>{t("joingroup.openLiveFeed")}</Text>
         </TouchableOpacity>
 
