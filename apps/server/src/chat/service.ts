@@ -14,6 +14,9 @@ function dmKeyFor(a: string, b: string) {
 function groupKeyFor(ids: string[]) {
   return uniqSorted(ids).join(":");
 }
+function communityGroupKey(groupId: string) {
+  return `community:${groupId}`;
+}
 
 // ----------------- Blocks (Chat Safety) -----------------
 async function getHiddenUserIds(prisma: PrismaClient, meId: string) {
@@ -396,5 +399,71 @@ export async function createThread(
       data: members.map((userId) => ({ threadId: thread.id, userId })),
     });
     return thread;
+  });
+}
+
+export async function ensureCommunityThread(prisma: PrismaClient, groupId: string) {
+  const group = await prisma.groupLink.findUnique({
+    where: { id: groupId },
+    select: { id: true, title: true, ownerId: true, isActive: true },
+  });
+  if (!group || !group.isActive) throw new GraphQLError("GROUP_NOT_FOUND");
+
+  const rows = await prisma.groupLinkMember.findMany({
+    where: { groupLinkId: group.id },
+    select: { profileId: true },
+  });
+  const memberIds = uniqSorted([group.ownerId, ...rows.map((row) => row.profileId)]);
+  const groupKey = communityGroupKey(group.id);
+
+  return prisma.$transaction(async (tx) => {
+    const thread =
+      (await tx.thread.findUnique({ where: { groupKey } })) ??
+      (await tx.thread.create({
+        data: {
+          title: group.title,
+          groupKey,
+        },
+      }));
+
+    if (thread.title !== group.title) {
+      await tx.thread.update({
+        where: { id: thread.id },
+        data: { title: group.title },
+      });
+    }
+
+    if (memberIds.length) {
+      const existing = await tx.threadMember.findMany({
+        where: { threadId: thread.id },
+        select: { userId: true },
+      });
+      const existingIds = new Set(existing.map((member) => member.userId));
+      const missing = memberIds.filter((userId) => !existingIds.has(userId));
+
+      if (missing.length) {
+        await tx.threadMember.createMany({
+          data: missing.map((userId) => ({ threadId: thread.id, userId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    return tx.thread.findUnique({ where: { id: thread.id } });
+  });
+}
+
+export async function removeCommunityThreadMember(prisma: PrismaClient, groupId: string, profileId: string) {
+  const thread = await prisma.thread.findUnique({
+    where: { groupKey: communityGroupKey(groupId) },
+    select: { id: true },
+  });
+  if (!thread) return;
+
+  await prisma.threadMember.deleteMany({
+    where: {
+      threadId: thread.id,
+      userId: profileId,
+    },
   });
 }

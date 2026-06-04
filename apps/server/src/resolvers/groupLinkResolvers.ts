@@ -1,6 +1,7 @@
 import type { Ctx } from "../context";
 import crypto from "node:crypto";
 import { getBlockedSets } from "../lib/blocks";
+import { ensureCommunityThread, removeCommunityThreadMember } from "../chat/service";
 
 import { GroupLinkType } from "@prisma/client";
 function makeCode() {
@@ -118,6 +119,11 @@ export default {
 
       const owner = await ctx.prisma.profile.findUnique({ where: { id: group.ownerId } });
       return owner ? [owner, ...members] : members;
+    },
+
+    communityThread: async (_: any, { groupId }: { groupId: string }, ctx: Ctx) => {
+      await assertCanViewGroup(ctx, groupId);
+      return ensureCommunityThread(ctx.prisma as any, groupId);
     },
 
     communityMomentsFeed: async (_: any, { offset = 0, limit = 20 }: { offset?: number; limit?: number }, ctx: Ctx) => {
@@ -370,6 +376,8 @@ export default {
         });
       });
 
+      await removeCommunityThreadMember(ctx.prisma as any, groupId, ctx.profileId);
+
       return true;
     },
 
@@ -440,10 +448,13 @@ export default {
         });
       }
 
+      const chatThread = await ensureCommunityThread(ctx.prisma as any, link.id);
+
       // ✅ WICHTIG: Gruppe zurückgeben (für JoinGroupScreen)
       return {
         id: link.id,
         title: link.title,
+        chatThread,
       };
     },
 

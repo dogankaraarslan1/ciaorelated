@@ -693,6 +693,7 @@ export const typeDefs = gql`
   type JoinGroupResult {
     id: ID!
     title: String!
+    chatThread: Thread
   }
   # ---------- Queries ----------
   type Query {
@@ -701,6 +702,7 @@ export const typeDefs = gql`
     groupLink(id: ID!): GroupLink
     groupLinkPosts(groupId: ID!, offset: Int = 0, limit: Int = 20): [Post!]!
     groupLinkMembers(groupId: ID!, limit: Int = 24): [User!]!
+    communityThread(groupId: ID!): Thread
     vlogMembers(vlogId: ID!): [VlogMember!]!
   
     searchContexts(q: String!, limit: Int = 20, windowHours: Int = 168): [ContextSearchHit!]!

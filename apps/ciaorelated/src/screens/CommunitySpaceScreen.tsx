@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { gql, useQuery } from "@apollo/client";
+import { gql, useLazyQuery, useQuery } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import * as Clipboard from "expo-clipboard";
 import * as Sharing from "expo-sharing";
@@ -121,6 +121,15 @@ const COMMUNITY_SPACE = gql`
   }
 `;
 
+const COMMUNITY_THREAD = gql`
+  query CommunityThread($groupId: ID!) {
+    communityThread(groupId: $groupId) {
+      id
+      title
+    }
+  }
+`;
+
 function inviteUrl(slug?: string | null) {
   return slug ? buildJoinUrl(slug) : "";
 }
@@ -157,6 +166,9 @@ export default function CommunitySpaceScreen() {
     skip: !groupId,
     fetchPolicy: "cache-and-network",
   });
+  const [loadCommunityThread, { data: threadData, loading: chatLoading }] = useLazyQuery(COMMUNITY_THREAD, {
+    fetchPolicy: "network-only",
+  });
 
   const fallbackGroup = {
     id: groupId,
@@ -179,6 +191,7 @@ export default function CommunitySpaceScreen() {
   const members = data?.groupLinkMembers ?? [];
   const isEvent = group?.type === "EVENT";
   const link = inviteUrl(group?.slug);
+  const communityThread = threadData?.communityThread;
   const qrShareRef = useRef<View>(null);
   const [qrSharing, setQrSharing] = useState(false);
   const qr = useMemo(() => createQrModules(link), [link]);
@@ -192,6 +205,27 @@ export default function CommunitySpaceScreen() {
     if (!link) return;
     await Clipboard.setStringAsync(link);
     Alert.alert(t("communityspace.linkCopiedTitle"), t("communityspace.linkCopiedBody"));
+  };
+
+  const openCommunityChat = async () => {
+    try {
+      const result = communityThread
+        ? { data: { communityThread } }
+        : await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
+      const thread = result?.data?.communityThread;
+      const threadId = thread?.id;
+      if (!threadId) {
+        Alert.alert(t("communityspace.chatUnavailableTitle"), t("communityspace.chatUnavailableBody"));
+        return;
+      }
+
+      nav.navigate("Chat", {
+        threadId,
+        title: thread?.title ?? group?.title ?? t("communityspace.communityFallback"),
+      });
+    } catch {
+      Alert.alert(t("communityspace.chatUnavailableTitle"), t("communityspace.chatUnavailableBody"));
+    }
   };
 
   const shareQrCode = async () => {
@@ -261,6 +295,19 @@ export default function CommunitySpaceScreen() {
         </TouchableOpacity>
         <TouchableOpacity style={s.secondaryAction} onPress={copyLink} activeOpacity={0.9}>
           <Ionicons name="link-outline" size={18} color={C.text} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.secondaryAction}
+          onPress={openCommunityChat}
+          activeOpacity={0.9}
+          accessibilityLabel={t("communityspace.openChat")}
+          disabled={chatLoading || !groupId}
+        >
+          {chatLoading ? (
+            <ActivityIndicator size="small" color={C.text} />
+          ) : (
+            <Ionicons name="chatbubbles-outline" size={18} color={C.text} />
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           style={s.secondaryAction}
