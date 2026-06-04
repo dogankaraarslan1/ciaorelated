@@ -257,7 +257,6 @@ export default function CommunitySpaceScreen() {
   const link = inviteUrl(group?.slug);
   const groupAvatarThumb = group?.imageThumbUrl ?? group?.owner?.avatarThumbUrl ?? null;
   const groupAvatarFull = group?.imageUrl ?? group?.owner?.avatarUrl ?? null;
-  const heroImageSource = group?.imageUrl || group?.imageThumbUrl ? { uri: group.imageUrl || group.imageThumbUrl } : heroBackground;
   const communityThread = threadData?.communityThread;
   const isOwner = Boolean(group?.viewerIsOwner);
   const qrShareRef = useRef<View>(null);
@@ -447,7 +446,7 @@ export default function CommunitySpaceScreen() {
   const Header = (
     <View>
       <View style={s.hero}>
-        <Image source={heroImageSource} style={s.heroImage} />
+        <Image source={heroBackground} style={s.heroImage} />
         <TouchableOpacity onPress={() => nav.goBack()} hitSlop={12} style={[s.backBtn, { top: Math.max(insets.top + 8, 12) }]}>
           <Ionicons name="chevron-back" size={24} color="#fff" />
         </TouchableOpacity>
