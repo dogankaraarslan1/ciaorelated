@@ -34,7 +34,7 @@ In a second terminal, set `EXPO_PUBLIC_API_URL` in `apps/ciaorelated/.env` to yo
 pnpm --dir apps/ciaorelated start:device
 ```
 
-Local defaults are intentionally provider-light: SMS codes can be printed to the server console, email/S3/AppsFlyer can stay empty while you explore the core app.
+Local defaults are intentionally provider-light: SMS codes can be printed to the server console and AppsFlyer stays off. Media creation/upload flows need S3-compatible storage keys; without S3 configured you can still boot the app, authenticate, inspect the shell/navigation, and wire the backend before enabling uploads.
 
 ## Privacy By Default
 
