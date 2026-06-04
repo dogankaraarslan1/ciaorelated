@@ -680,7 +680,7 @@ function Tabs() {
                     marginTop: 6,
                   }}
                 >
-                  <Ionicons name={focused ? "scan" : "scan-outline"} size={s} color="#fff" />
+                  <Ionicons name="add" size={s + 3} color="#fff" />
                 </View>
               );
             case "MessagesTab":
@@ -698,7 +698,16 @@ function Tabs() {
     >
       <Tab.Screen name="Home" component={FeedScreen} />
       <Tab.Screen name="Vlogs" component={ReelsScreen} />
-      <Tab.Screen name="Explore" component={ExploreScreen} />
+      <Tab.Screen
+        name="Explore"
+        component={ExploreScreen}
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            navigation.getParent()?.navigate("CreateMedia", { initialMode: "BEITRAG", nonce: Date.now() });
+          },
+        })}
+      />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Profile" component={ProfileStackScreen} />
     </Tab.Navigator>

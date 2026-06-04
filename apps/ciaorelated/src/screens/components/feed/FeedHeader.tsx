@@ -13,6 +13,7 @@ import { useTheme } from "../../../theme/ThemeProvider";
 type RootStackParamList = {
   Activity: undefined;
   Messages: undefined;
+  Explore: undefined;
   CreateMedia: { initialMode?: "BEITRAG" | "STORY"; nonce?: number } | undefined;
 };
 
@@ -112,8 +113,8 @@ export function FeedHeader({
     setModeOpen(false);
   }, []);
 
-  const openCreateFlow = React.useCallback(() => {
-    navigation.navigate("CreateMedia", { initialMode: "BEITRAG", nonce: Date.now() });
+  const openExplore = React.useCallback(() => {
+    navigation.navigate("Explore");
   }, [navigation]);
 
   React.useEffect(() => {
@@ -173,14 +174,12 @@ export function FeedHeader({
           <View style={s.logoWrap}>
             <TouchableOpacity
               activeOpacity={0.78}
-              onPress={openCreateFlow}
+              onPress={openExplore}
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Create"
+              accessibilityLabel="Search"
             >
-              <Text style={s.createPlusText} numberOfLines={1}>
-                +
-              </Text>
+              <Ionicons name="search" size={26} color={C.text} />
             </TouchableOpacity>
           </View>
           </View>
