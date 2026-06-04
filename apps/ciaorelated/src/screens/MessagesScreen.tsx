@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
   Alert,
   View,
@@ -143,6 +143,8 @@ export default function MessagesScreen() {
   const [groupImageUri, setGroupImageUri] = useState<string | null>(null);
   const [groupImageMime, setGroupImageMime] = useState<string>("image/jpeg");
   const [groupImageName, setGroupImageName] = useState<string>("group-chat.jpg");
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const creatingGroupRef = useRef(false);
   const [showCreateCommunity, setShowCreateCommunity] = useState(false);
 
   // Threads laden
@@ -172,7 +174,7 @@ export default function MessagesScreen() {
 
   const [createThread, { loading: creating }] = useMutation(CREATE_THREAD);
   const selectedUserIds = useMemo(() => new Set(selectedUsers.map((user: any) => String(user.id))), [selectedUsers]);
-  const canCreateSelectedGroup = selectedUsers.length > 0 && groupTitle.trim().length > 0;
+  const canCreateSelectedGroup = selectedUsers.length > 0 && groupTitle.trim().length > 0 && !creatingGroup && !creating;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -233,7 +235,11 @@ export default function MessagesScreen() {
    * -> Dedupe nur, wenn meId existiert.
    */
   const threads = useMemo(() => {
-    const sorted = rawThreads.slice().sort(sortByLast);
+    const byId = new Map<string, any>();
+    for (const thread of rawThreads) {
+      if (thread?.id && !byId.has(String(thread.id))) byId.set(String(thread.id), thread);
+    }
+    const sorted = [...byId.values()].sort(sortByLast);
 
     // Wenn meId noch nicht da ist: NICHT dedupen, sonst verschwinden Threads.
     if (!meId) return sorted;
@@ -351,10 +357,13 @@ export default function MessagesScreen() {
 
   const createSelectedGroup = async () => {
     if (!selectedUsers.length) return;
+    if (creatingGroupRef.current) return;
     if (!groupTitle.trim()) {
       Alert.alert(t("common.error"), t("messages.groupNameRequired"));
       return;
     }
+    creatingGroupRef.current = true;
+    setCreatingGroup(true);
     try {
       let imageKey: string | null = null;
       if (groupImageUri) {
@@ -386,6 +395,9 @@ export default function MessagesScreen() {
       }
     } catch (e: any) {
       Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+    } finally {
+      creatingGroupRef.current = false;
+      setCreatingGroup(false);
     }
   };
 
@@ -508,10 +520,10 @@ export default function MessagesScreen() {
               <TouchableOpacity
                 style={[styles.composeCreateBtn, !canCreateSelectedGroup && { opacity: 0.45 }]}
                 onPress={createSelectedGroup}
-                disabled={!canCreateSelectedGroup || creating}
+                disabled={!canCreateSelectedGroup}
                 activeOpacity={0.82}
               >
-                {creating ? (
+                {creating || creatingGroup ? (
                   <ActivityIndicator size="small" color={C.bg} />
                 ) : (
                   <Text style={styles.composeCreateText}>{t("messages.createGroup")}</Text>
