@@ -24,7 +24,7 @@ function SupportPage() {
     >
       <LegalSection heading="Need a hand?">
         <p>
-          We're a small team. Reach out at <a className="text-primary underline" href="mailto:support@your-domain.example">support@your-domain.example</a> and
+          We're a small team. Reach out at <a className="text-primary underline" href="mailto:info@ciaorelated.com">info@ciaorelated.com</a> and
           we'll get back to you as soon as we can.
         </p>
       </LegalSection>
@@ -35,7 +35,7 @@ function SupportPage() {
       </LegalSection>
       <LegalSection heading="Press and partnerships">
         <p>
-          For press inquiries write to <a className="text-primary underline" href="mailto:press@your-domain.example">press@your-domain.example</a>.
+          For press inquiries write to <a className="text-primary underline" href="mailto:info@ciaorelated.com">info@ciaorelated.com</a>.
         </p>
       </LegalSection>
     </LegalPageLayout>

@@ -23,10 +23,10 @@ function PrivacyDePage() {
       ]}
     >
       <p className="text-muted-foreground">
-        Wir legen großen Wert auf den Schutz deiner Daten. Diese Erklärung erläutert, wie <strong>Beverly</strong> deine Informationen verarbeitet.
+        Wir legen großen Wert auf den Schutz deiner Daten. Diese Erklärung erläutert, wie <strong>ciaorelated</strong> deine Informationen verarbeitet.
       </p>
       <LegalSection heading="1. Verantwortlicher">
-        <p>Verantwortlich für die Datenverarbeitung ist das Team von Beverly. Bei Fragen kontaktiere uns über die <a href="/support.html" className="text-primary underline">Support-Seite</a>.</p>
+        <p>Verantwortlich für die Datenverarbeitung ist das Team von ciaorelated. Bei Fragen kontaktiere uns über die <a href="/support.html" className="text-primary underline">Support-Seite</a>.</p>
       </LegalSection>
       <LegalSection heading="2. Erhobene Daten">
         <ul className="list-disc space-y-1 pl-6">

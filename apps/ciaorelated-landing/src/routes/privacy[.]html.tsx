@@ -23,10 +23,10 @@ function PrivacyPage() {
       ]}
     >
       <p className="text-muted-foreground">
-        We value your privacy. This policy explains how <strong>Beverly</strong> processes your information.
+        We value your privacy. This policy explains how <strong>ciaorelated</strong> processes your information.
       </p>
       <LegalSection heading="1. Controller">
-        <p>The controller of your data is the Beverly team. For questions, please contact us via the <a href="/support.html" className="text-primary underline">Support page</a>.</p>
+        <p>The controller of your data is the ciaorelated team. For questions, please contact us via the <a href="/support.html" className="text-primary underline">Support page</a>.</p>
       </LegalSection>
       <LegalSection heading="2. Data Collected">
         <ul className="list-disc space-y-1 pl-6">

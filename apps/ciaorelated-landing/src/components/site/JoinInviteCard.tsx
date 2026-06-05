@@ -18,7 +18,7 @@ import { useI18n } from "@/lib/i18n";
 export function JoinInviteCard({ slug }: { slug: string }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [origin, setOrigin] = useState("https://your-domain.example");
+  const [origin, setOrigin] = useState("https://ciaorelated.com");
 
   useEffect(() => {
     if (typeof window !== "undefined") {

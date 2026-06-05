@@ -23,7 +23,7 @@ function GuidelinesDePage() {
       ]}
     >
       <p className="text-muted-foreground">
-        Damit <strong>Beverly</strong> für alle ein sicherer Ort bleibt, gelten folgende Regeln:
+        Damit <strong>ciaorelated</strong> für alle ein sicherer Ort bleibt, gelten folgende Regeln:
       </p>
       <LegalSection heading="1. Respekt & Sicherheit">
         <p>Behandle andere Nutzer:innen mit Respekt. Keine Belästigungen, Drohungen oder Hassrede.</p>
