@@ -804,7 +804,15 @@
     "openLiveFeed": "Open live feed",
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
-    "welcomeMessage": "Welcome to ciaorelated.\n\nStart with the feed to discover moments, use chats to stay close to people, join communities and events to share what is happening around you, and complete your profile so others can recognize you.",
+    "welcomeTitle": "Welcome to ciaorelated",
+    "welcomeMessage": "Use the feed to discover moments, chats to stay close to people, communities and events to share what is happening around you, and your profile so others can recognize you.",
+    "welcomeActions": {
+      "feed": "Feed",
+      "chats": "Chats",
+      "communities": "Communities",
+      "events": "Events",
+      "profile": "Profile"
+    },
     "broadcastOnlyNotice": "Only admins can send messages in this broadcast chat.",
     "chatDisabledNotice": "This community chat is currently disabled.",
     "deleteFailedTitle": "Delete failed",

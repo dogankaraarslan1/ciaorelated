@@ -52,6 +52,7 @@ declare module "react-native-gifted-chat" {
 
     // ✅ NEU: Story expired / gelöscht
     storyExpired?: boolean;
+    systemWelcome?: boolean;
   }
 }
 
@@ -223,6 +224,7 @@ const MARK_THREAD_READ = gql`
 
 const NAME_COLORS = ["#2563eb", "#0891b2", "#059669", "#7c3aed", "#db2777", "#ea580c", "#0f766e", "#4f46e5"];
 const WELCOME_MESSAGE_I18N_TOKEN = "system:welcome";
+const SCREEN_WIDTH = Dimensions.get("window")?.width ?? 375;
 
 function nameColorForUser(userId: string) {
   let hash = 0;
@@ -390,10 +392,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
     for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
 
-    const mapped = mapMessages(nodes, t);
+    const mapped = mapMessages(nodes);
     setMessages((prev) => mergeById(prev, mapped));
     markRead();
-  }, [data, markRead, t]);
+  }, [data, markRead]);
 
   useSubscription(SUB_MESSAGE_ADDED, {
     variables: { threadId },
@@ -407,7 +409,7 @@ export default function ChatScreen({ route, navigation }: any) {
       if (seenIds.current.has(id)) return;
       seenIds.current.add(id);
 
-      const incoming = mapMessages([msg], t);
+      const incoming = mapMessages([msg]);
       setMessages((prev) => {
         if (hasMessage(prev, id)) return prev;
         return mergeById(prev, incoming);
@@ -481,6 +483,21 @@ export default function ChatScreen({ route, navigation }: any) {
   const renderBubble = useCallback(
     (props: any) => {
       const m = props?.currentMessage as any;
+      if (m?.systemWelcome) {
+        return (
+          <Bubble
+            {...props}
+            wrapperStyle={{
+              left: { backgroundColor: "transparent", borderWidth: 0, padding: 0 },
+              right: { backgroundColor: "transparent", borderWidth: 0, padding: 0 },
+            }}
+            textStyle={{
+              left: { color: "transparent", fontSize: 0 },
+              right: { color: "transparent", fontSize: 0 },
+            }}
+          />
+        );
+      }
       const isStoryMsg = !!m?.story || !!m?.storyExpired;
       const hasText = typeof m?.text === "string" && m.text.trim().length > 0;
       const storyOnly = isStoryMsg && !hasText;
@@ -629,7 +646,7 @@ export default function ChatScreen({ route, navigation }: any) {
             setMessages((prev) => {
               const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
               if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg], t));
+              return mergeById(withoutTmp, mapMessages([serverMsg]));
             });
           } else {
             setMessages((prev) =>
@@ -731,7 +748,7 @@ export default function ChatScreen({ route, navigation }: any) {
         setMessages((prev) => {
           const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
           if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg], t));
+          return mergeById(withoutTmp, mapMessages([serverMsg]));
         });
       } else {
         setMessages((prev) =>
@@ -873,6 +890,41 @@ const renderCustomView = useCallback(
       </Text>
     ) : null;
 
+    if (m.systemWelcome) {
+      const actions = [
+        { key: "feed", icon: "home-outline", label: t("chat.welcomeActions.feed"), onPress: () => navigation.navigate("AppTabs", { screen: "Home" }) },
+        { key: "chats", icon: "chatbubbles-outline", label: t("chat.welcomeActions.chats"), onPress: () => navigation.navigate("AppTabs", { screen: "MessagesTab" }) },
+        { key: "communities", icon: "people-circle-outline", label: t("chat.welcomeActions.communities"), onPress: () => navigation.navigate("Groups") },
+        { key: "events", icon: "aperture-outline", label: t("chat.welcomeActions.events"), onPress: () => navigation.navigate("AppTabs", { screen: "Vlogs" }) },
+        { key: "profile", icon: "person-outline", label: t("chat.welcomeActions.profile"), onPress: () => navigation.navigate("AppTabs", { screen: "Profile" }) },
+      ] as const;
+
+      return (
+        <View style={[styles.welcomeCard, { backgroundColor: C.card, borderColor: C.border }]}>
+          <View style={[styles.welcomeIcon, { backgroundColor: C.accent }]}>
+            <Ionicons name="sparkles-outline" size={20} color="#fff" />
+          </View>
+          <Text style={[styles.welcomeTitle, { color: C.text }]}>{t("chat.welcomeTitle")}</Text>
+          <Text style={[styles.welcomeBody, { color: C.sub }]}>{t("chat.welcomeMessage")}</Text>
+          <View style={styles.welcomeActions}>
+            {actions.map((action) => (
+              <TouchableOpacity
+                key={action.key}
+                activeOpacity={0.86}
+                onPress={action.onPress}
+                style={[styles.welcomeAction, { borderColor: C.border, backgroundColor: C.bg }]}
+              >
+                <Ionicons name={action.icon as any} size={16} color={C.text} />
+                <Text style={[styles.welcomeActionText, { color: C.text }]} numberOfLines={1}>
+                  {action.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      );
+    }
+
     const story = m.story;
     const expired = !!m.storyExpired;
 
@@ -966,7 +1018,7 @@ const renderCustomView = useCallback(
       </View>
     );
   },
-  [C, isGroupChat, myId, openStoryFromMsg, styles, storyCardWidth, t]
+  [C, isGroupChat, myId, navigation, openStoryFromMsg, styles, storyCardWidth, t]
 );
 
 
@@ -1189,10 +1241,10 @@ const renderCustomView = useCallback(
 }
 
 /* ───────────────── Helpers ───────────────── */
-function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
+function mapMessages(nodes: MsgNode[]): IMessage[] {
   return nodes.map((n) => ({
     _id: n.id,
-    text: n.kind === "text" ? (n.text === WELCOME_MESSAGE_I18N_TOKEN ? t("chat.welcomeMessage") : n.text ?? "") : "",
+    text: n.kind === "text" ? (n.text === WELCOME_MESSAGE_I18N_TOKEN ? "" : n.text ?? "") : "",
     createdAt: new Date(n.createdAt),
     user: {
       _id: n.sender.id,
@@ -1204,6 +1256,7 @@ function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
     kind: n.kind,
     story: n.story ?? null,
     storyExpired: Boolean(n.storyExpired),
+    systemWelcome: n.text === WELCOME_MESSAGE_I18N_TOKEN,
   })) as any;
 }
 
@@ -1484,6 +1537,54 @@ const makeStyles = (C: any) =>
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(0,0,0,0.55)",
+    },
+
+    welcomeCard: {
+      marginTop: 8,
+      marginLeft: 12,
+      marginRight: 10,
+      borderWidth: 1,
+      borderRadius: 18,
+      padding: 14,
+      width: Math.min(320, SCREEN_WIDTH - 72),
+      alignSelf: "flex-start",
+    },
+    welcomeIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      marginBottom: 10,
+    },
+    welcomeTitle: {
+      fontSize: 16,
+      fontWeight: "900",
+      marginBottom: 6,
+    },
+    welcomeBody: {
+      fontSize: 13,
+      lineHeight: 19,
+      fontWeight: "600",
+    },
+    welcomeActions: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 8,
+      marginTop: 12,
+    },
+    welcomeAction: {
+      minHeight: 34,
+      borderRadius: 17,
+      borderWidth: 1,
+      paddingHorizontal: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    welcomeActionText: {
+      fontSize: 12,
+      fontWeight: "800",
     },
 
     storyCard: {

@@ -810,7 +810,15 @@
     "openLiveFeed": "Live Feed öffnen",
     "replyToStory": "Antwort auf Story",
     "sendAMessage": "Nachricht schreiben…",
-    "welcomeMessage": "Willkommen bei ciaorelated.\n\nStarte im Feed, um Momente zu entdecken, nutze Chats, um mit Menschen verbunden zu bleiben, tritt Communities und Events bei, um zu teilen, was um dich herum passiert, und vervollständige dein Profil, damit andere dich erkennen.",
+    "welcomeTitle": "Willkommen bei ciaorelated",
+    "welcomeMessage": "Nutze den Feed, um Momente zu entdecken, Chats, um mit Menschen verbunden zu bleiben, Communities und Events, um zu teilen, was um dich herum passiert, und dein Profil, damit andere dich erkennen.",
+    "welcomeActions": {
+      "feed": "Feed",
+      "chats": "Chats",
+      "communities": "Communities",
+      "events": "Events",
+      "profile": "Profil"
+    },
     "broadcastOnlyNotice": "Nur Admins können in diesem Broadcast-Chat Nachrichten senden.",
     "chatDisabledNotice": "Dieser Community-Chat ist derzeit deaktiviert.",
     "deleteFailedTitle": "Löschen fehlgeschlagen",
