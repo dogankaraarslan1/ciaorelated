@@ -222,6 +222,7 @@ const MARK_THREAD_READ = gql`
 `;
 
 const NAME_COLORS = ["#2563eb", "#0891b2", "#059669", "#7c3aed", "#db2777", "#ea580c", "#0f766e", "#4f46e5"];
+const WELCOME_MESSAGE_I18N_TOKEN = "system:welcome";
 
 function nameColorForUser(userId: string) {
   let hash = 0;
@@ -389,10 +390,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
     for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
 
-    const mapped = mapMessages(nodes);
+    const mapped = mapMessages(nodes, t);
     setMessages((prev) => mergeById(prev, mapped));
     markRead();
-  }, [data, markRead]);
+  }, [data, markRead, t]);
 
   useSubscription(SUB_MESSAGE_ADDED, {
     variables: { threadId },
@@ -406,7 +407,7 @@ export default function ChatScreen({ route, navigation }: any) {
       if (seenIds.current.has(id)) return;
       seenIds.current.add(id);
 
-      const incoming = mapMessages([msg]);
+      const incoming = mapMessages([msg], t);
       setMessages((prev) => {
         if (hasMessage(prev, id)) return prev;
         return mergeById(prev, incoming);
@@ -628,7 +629,7 @@ export default function ChatScreen({ route, navigation }: any) {
             setMessages((prev) => {
               const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
               if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg]));
+              return mergeById(withoutTmp, mapMessages([serverMsg], t));
             });
           } else {
             setMessages((prev) =>
@@ -730,7 +731,7 @@ export default function ChatScreen({ route, navigation }: any) {
         setMessages((prev) => {
           const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
           if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg]));
+          return mergeById(withoutTmp, mapMessages([serverMsg], t));
         });
       } else {
         setMessages((prev) =>
@@ -1188,10 +1189,10 @@ const renderCustomView = useCallback(
 }
 
 /* ───────────────── Helpers ───────────────── */
-function mapMessages(nodes: MsgNode[]): IMessage[] {
+function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
   return nodes.map((n) => ({
     _id: n.id,
-    text: n.kind === "text" ? (n.text ?? "") : "",
+    text: n.kind === "text" ? (n.text === WELCOME_MESSAGE_I18N_TOKEN ? t("chat.welcomeMessage") : n.text ?? "") : "",
     createdAt: new Date(n.createdAt),
     user: {
       _id: n.sender.id,

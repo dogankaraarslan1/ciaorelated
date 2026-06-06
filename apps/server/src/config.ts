@@ -31,16 +31,6 @@ const cleanCsvEnv = (value: string | undefined) =>
 export const ADMIN_USERNAMES = cleanCsvEnv(process.env.ADMIN_USERNAMES).map((username) =>
   username.toLowerCase()
 );
-export const ADMIN_PROFILE_IDS = cleanCsvEnv(process.env.ADMIN_PROFILE_IDS);
-export const WELCOME_MESSAGE_ADMIN_PROFILE_ID = cleanEnv(process.env.WELCOME_MESSAGE_ADMIN_PROFILE_ID);
-export const WELCOME_MESSAGE_TEXT = cleanEnv(
-  process.env.WELCOME_MESSAGE_TEXT,
-  [
-    "Welcome to ciaorelated.",
-    "",
-    "Start with the feed to discover moments, use chats to stay close to people, join communities and events to share what is happening around you, and complete your profile so others can recognize you.",
-  ].join("\\n")
-).replace(/\\n/g, "\n");
 
 //export const SMTP_HOST = process.env.SMTP_HOST || "";
 //export const SMTP_PORT = process.env.SMTP_PORT || "587";

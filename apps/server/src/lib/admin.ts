@@ -1,9 +1,8 @@
 import type { PrismaClient } from "@prisma/client";
-import { ADMIN_PROFILE_IDS, ADMIN_USERNAMES } from "../config";
+import { ADMIN_USERNAMES } from "../config";
 
 export function isConfiguredAdminProfile(profile?: { id?: string | null; username?: string | null } | null) {
   if (!profile) return false;
-  if (profile.id && ADMIN_PROFILE_IDS.includes(profile.id)) return true;
   const username = profile.username?.toLowerCase();
   return !!username && ADMIN_USERNAMES.includes(username);
 }
