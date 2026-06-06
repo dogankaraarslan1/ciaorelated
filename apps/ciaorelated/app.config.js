@@ -21,13 +21,6 @@ export default {
     userInterfaceStyle: 'light',
     entryPoint: './src/App.tsx',
     icon: './assets/cr.png',
-    splash: {
-      image: "./assets/splash-icon.png",
-      resizeMode: "contain",
-      backgroundColor: "#fefdfa"
-    },
-    
-
 
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
