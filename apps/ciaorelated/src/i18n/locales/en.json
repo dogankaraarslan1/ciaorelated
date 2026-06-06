@@ -805,12 +805,12 @@
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
     "welcomeTitle": "Welcome to ciaorelated",
-    "welcomeMessage": "Use the feed to discover moments, chats to stay close to people, communities and events to share what is happening around you, and your profile so others can recognize you.",
+    "welcomeMessage": "Discover real moments in the feed, keep conversations close in chats, join communities around groups and places, follow live moments from events, and complete your profile so people know who they are connecting with.",
     "welcomeActions": {
       "feed": "Feed",
       "chats": "Chats",
       "communities": "Communities",
-      "events": "Events",
+      "events": "Moments",
       "profile": "Profile"
     },
     "broadcastOnlyNotice": "Only admins can send messages in this broadcast chat.",

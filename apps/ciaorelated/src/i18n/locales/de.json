@@ -811,12 +811,12 @@
     "replyToStory": "Antwort auf Story",
     "sendAMessage": "Nachricht schreiben…",
     "welcomeTitle": "Willkommen bei ciaorelated",
-    "welcomeMessage": "Nutze den Feed, um Momente zu entdecken, Chats, um mit Menschen verbunden zu bleiben, Communities und Events, um zu teilen, was um dich herum passiert, und dein Profil, damit andere dich erkennen.",
+    "welcomeMessage": "Entdecke echte Momente im Feed, bleib in Chats nah an Menschen dran, tritt Communities rund um Gruppen und Orte bei, folge Live-Momenten aus Events und vervollständige dein Profil, damit andere wissen, mit wem sie sich verbinden.",
     "welcomeActions": {
       "feed": "Feed",
       "chats": "Chats",
       "communities": "Communities",
-      "events": "Events",
+      "events": "Momente",
       "profile": "Profil"
     },
     "broadcastOnlyNotice": "Nur Admins können in diesem Broadcast-Chat Nachrichten senden.",

@@ -488,8 +488,8 @@ export default function ChatScreen({ route, navigation }: any) {
           <Bubble
             {...props}
             wrapperStyle={{
-              left: { backgroundColor: "transparent", borderWidth: 0, padding: 0 },
-              right: { backgroundColor: "transparent", borderWidth: 0, padding: 0 },
+              left: { backgroundColor: "transparent", borderWidth: 0, padding: 0, marginLeft: 10 },
+              right: { backgroundColor: "transparent", borderWidth: 0, padding: 0, marginRight: 10 },
             }}
             textStyle={{
               left: { color: "transparent", fontSize: 0 },
@@ -1541,12 +1541,11 @@ const makeStyles = (C: any) =>
 
     welcomeCard: {
       marginTop: 8,
-      marginLeft: 12,
-      marginRight: 10,
+      marginHorizontal: 4,
       borderWidth: 1,
       borderRadius: 18,
       padding: 14,
-      width: Math.min(320, SCREEN_WIDTH - 72),
+      width: Math.min(312, SCREEN_WIDTH - 92),
       alignSelf: "flex-start",
     },
     welcomeIcon: {
