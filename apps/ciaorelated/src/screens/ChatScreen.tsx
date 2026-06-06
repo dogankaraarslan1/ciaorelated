@@ -224,7 +224,6 @@ const MARK_THREAD_READ = gql`
 
 const NAME_COLORS = ["#2563eb", "#0891b2", "#059669", "#7c3aed", "#db2777", "#ea580c", "#0f766e", "#4f46e5"];
 const WELCOME_MESSAGE_I18N_TOKEN = "system:welcome";
-const SCREEN_WIDTH = Dimensions.get("window")?.width ?? 375;
 
 function nameColorForUser(userId: string) {
   let hash = 0;
@@ -392,10 +391,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
     for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
 
-    const mapped = mapMessages(nodes, myId);
+    const mapped = mapMessages(nodes);
     setMessages((prev) => mergeById(prev, mapped));
     markRead();
-  }, [data, markRead, myId]);
+  }, [data, markRead]);
 
   useSubscription(SUB_MESSAGE_ADDED, {
     variables: { threadId },
@@ -409,7 +408,7 @@ export default function ChatScreen({ route, navigation }: any) {
       if (seenIds.current.has(id)) return;
       seenIds.current.add(id);
 
-      const incoming = mapMessages([msg], myId);
+      const incoming = mapMessages([msg]);
       setMessages((prev) => {
         if (hasMessage(prev, id)) return prev;
         return mergeById(prev, incoming);
@@ -432,11 +431,49 @@ export default function ChatScreen({ route, navigation }: any) {
 
   }, [messages]);
 
+  const renderWelcomeCard = useCallback(() => {
+    const actions = [
+      { key: "feed", icon: "home-outline", label: t("chat.welcomeActions.feed"), onPress: () => navigation.navigate("AppTabs", { screen: "Home" }) },
+      { key: "chats", icon: "chatbubbles-outline", label: t("chat.welcomeActions.chats"), onPress: () => navigation.navigate("AppTabs", { screen: "MessagesTab" }) },
+      { key: "communities", icon: "people-circle-outline", label: t("chat.welcomeActions.communities"), onPress: () => navigation.navigate("Groups") },
+      { key: "events", icon: "aperture-outline", label: t("chat.welcomeActions.events"), onPress: () => navigation.navigate("AppTabs", { screen: "Vlogs" }) },
+      { key: "profile", icon: "person-outline", label: t("chat.welcomeActions.profile"), onPress: () => navigation.navigate("AppTabs", { screen: "Profile" }) },
+    ] as const;
+
+    return (
+      <View style={[styles.welcomeCard, { backgroundColor: C.card, borderColor: C.border }]}>
+        <View style={[styles.welcomeIcon, { backgroundColor: C.accent }]}>
+          <Ionicons name="sparkles-outline" size={20} color="#fff" />
+        </View>
+        <Text style={[styles.welcomeTitle, { color: C.text }]}>{t("chat.welcomeTitle")}</Text>
+        <Text style={[styles.welcomeBody, { color: C.sub }]}>{t("chat.welcomeMessage")}</Text>
+        <View style={styles.welcomeActions}>
+          {actions.map((action) => (
+            <TouchableOpacity
+              key={action.key}
+              activeOpacity={0.86}
+              onPress={action.onPress}
+              style={[styles.welcomeAction, { borderColor: C.border, backgroundColor: C.bg }]}
+            >
+              <Ionicons name={action.icon as any} size={16} color={C.text} />
+              <Text style={[styles.welcomeActionText, { color: C.text }]} numberOfLines={1}>
+                {action.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+    );
+  }, [C.accent, C.bg, C.border, C.card, C.sub, C.text, navigation, styles, t]);
+
   /* ───────────────── KEY warning fix ───────────────── */
   const renderMessage = useCallback((props: any) => {
+    if (props?.currentMessage?.systemWelcome) {
+      return <View style={styles.welcomeMessageRow}>{renderWelcomeCard()}</View>;
+    }
     const { key: _ignore, ...rest } = props ?? {};
     return <Message {...rest} />;
-  }, []);
+  }, [renderWelcomeCard, styles.welcomeMessageRow]);
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
   const openUserProfile = useCallback(
@@ -483,21 +520,6 @@ export default function ChatScreen({ route, navigation }: any) {
   const renderBubble = useCallback(
     (props: any) => {
       const m = props?.currentMessage as any;
-      if (m?.systemWelcome) {
-        return (
-          <Bubble
-            {...props}
-            wrapperStyle={{
-              left: { backgroundColor: "transparent", borderWidth: 0, padding: 0, marginLeft: 10 },
-              right: { backgroundColor: "transparent", borderWidth: 0, padding: 0, marginRight: 10 },
-            }}
-            textStyle={{
-              left: { color: "transparent", fontSize: 0 },
-              right: { color: "transparent", fontSize: 0 },
-            }}
-          />
-        );
-      }
       const isStoryMsg = !!m?.story || !!m?.storyExpired;
       const hasText = typeof m?.text === "string" && m.text.trim().length > 0;
       const storyOnly = isStoryMsg && !hasText;
@@ -646,7 +668,7 @@ export default function ChatScreen({ route, navigation }: any) {
             setMessages((prev) => {
               const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
               if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg], myId));
+              return mergeById(withoutTmp, mapMessages([serverMsg]));
             });
           } else {
             setMessages((prev) =>
@@ -748,7 +770,7 @@ export default function ChatScreen({ route, navigation }: any) {
         setMessages((prev) => {
           const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
           if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg], myId));
+          return mergeById(withoutTmp, mapMessages([serverMsg]));
         });
       } else {
         setMessages((prev) =>
@@ -889,41 +911,6 @@ const renderCustomView = useCallback(
         {name}
       </Text>
     ) : null;
-
-    if (m.systemWelcome) {
-      const actions = [
-        { key: "feed", icon: "home-outline", label: t("chat.welcomeActions.feed"), onPress: () => navigation.navigate("AppTabs", { screen: "Home" }) },
-        { key: "chats", icon: "chatbubbles-outline", label: t("chat.welcomeActions.chats"), onPress: () => navigation.navigate("AppTabs", { screen: "MessagesTab" }) },
-        { key: "communities", icon: "people-circle-outline", label: t("chat.welcomeActions.communities"), onPress: () => navigation.navigate("Groups") },
-        { key: "events", icon: "aperture-outline", label: t("chat.welcomeActions.events"), onPress: () => navigation.navigate("AppTabs", { screen: "Vlogs" }) },
-        { key: "profile", icon: "person-outline", label: t("chat.welcomeActions.profile"), onPress: () => navigation.navigate("AppTabs", { screen: "Profile" }) },
-      ] as const;
-
-      return (
-        <View style={[styles.welcomeCard, { backgroundColor: C.card, borderColor: C.border }]}>
-          <View style={[styles.welcomeIcon, { backgroundColor: C.accent }]}>
-            <Ionicons name="sparkles-outline" size={20} color="#fff" />
-          </View>
-          <Text style={[styles.welcomeTitle, { color: C.text }]}>{t("chat.welcomeTitle")}</Text>
-          <Text style={[styles.welcomeBody, { color: C.sub }]}>{t("chat.welcomeMessage")}</Text>
-          <View style={styles.welcomeActions}>
-            {actions.map((action) => (
-              <TouchableOpacity
-                key={action.key}
-                activeOpacity={0.86}
-                onPress={action.onPress}
-                style={[styles.welcomeAction, { borderColor: C.border, backgroundColor: C.bg }]}
-              >
-                <Ionicons name={action.icon as any} size={16} color={C.text} />
-                <Text style={[styles.welcomeActionText, { color: C.text }]} numberOfLines={1}>
-                  {action.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-      );
-    }
 
     const story = m.story;
     const expired = !!m.storyExpired;
@@ -1241,16 +1228,13 @@ const renderCustomView = useCallback(
 }
 
 /* ───────────────── Helpers ───────────────── */
-function mapMessages(nodes: MsgNode[], myId?: string): IMessage[] {
+function mapMessages(nodes: MsgNode[]): IMessage[] {
   return nodes.map((n) => {
-    const isWelcomeForViewer =
-      n.kind === "text" &&
-      n.text === WELCOME_MESSAGE_I18N_TOKEN &&
-      String(n.sender.id) !== String(myId ?? "");
+    const isWelcome = n.kind === "text" && n.text === WELCOME_MESSAGE_I18N_TOKEN;
 
     return {
       _id: n.id,
-      text: n.kind === "text" ? (isWelcomeForViewer ? "" : n.text ?? "") : "",
+      text: n.kind === "text" ? (isWelcome ? "" : n.text ?? "") : "",
       createdAt: new Date(n.createdAt),
       user: {
         _id: n.sender.id,
@@ -1262,7 +1246,7 @@ function mapMessages(nodes: MsgNode[], myId?: string): IMessage[] {
       kind: n.kind,
       story: n.story ?? null,
       storyExpired: Boolean(n.storyExpired),
-      systemWelcome: isWelcomeForViewer,
+      systemWelcome: isWelcome,
     };
   }) as any;
 }
@@ -1548,12 +1532,18 @@ const makeStyles = (C: any) =>
 
     welcomeCard: {
       marginTop: 8,
-      marginHorizontal: 4,
       borderWidth: 1,
       borderRadius: 18,
       padding: 14,
-      width: Math.min(312, SCREEN_WIDTH - 92),
+      width: "100%",
+      maxWidth: 320,
       alignSelf: "flex-start",
+    },
+    welcomeMessageRow: {
+      width: "100%",
+      paddingHorizontal: 18,
+      paddingVertical: 4,
+      alignItems: "flex-start",
     },
     welcomeIcon: {
       width: 34,
