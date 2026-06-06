@@ -5,6 +5,7 @@ import {
   GiftedChat,
   IMessage,
   Message,
+  MessageText,
   Composer,
   Bubble,
   Time,
@@ -391,10 +392,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
     for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
 
-    const mapped = mapMessages(nodes);
+    const mapped = mapMessages(nodes, t);
     setMessages((prev) => mergeById(prev, mapped));
     markRead();
-  }, [data, markRead]);
+  }, [data, markRead, t]);
 
   useSubscription(SUB_MESSAGE_ADDED, {
     variables: { threadId },
@@ -408,7 +409,7 @@ export default function ChatScreen({ route, navigation }: any) {
       if (seenIds.current.has(id)) return;
       seenIds.current.add(id);
 
-      const incoming = mapMessages([msg]);
+      const incoming = mapMessages([msg], t);
       setMessages((prev) => {
         if (hasMessage(prev, id)) return prev;
         return mergeById(prev, incoming);
@@ -431,49 +432,52 @@ export default function ChatScreen({ route, navigation }: any) {
 
   }, [messages]);
 
-  const renderWelcomeCard = useCallback(() => {
-    const actions = [
-      { key: "feed", icon: "home-outline", label: t("chat.welcomeActions.feed"), onPress: () => navigation.navigate("AppTabs", { screen: "Home" }) },
-      { key: "chats", icon: "chatbubbles-outline", label: t("chat.welcomeActions.chats"), onPress: () => navigation.navigate("AppTabs", { screen: "MessagesTab" }) },
-      { key: "communities", icon: "people-circle-outline", label: t("chat.welcomeActions.communities"), onPress: () => navigation.navigate("Groups") },
-      { key: "events", icon: "aperture-outline", label: t("chat.welcomeActions.events"), onPress: () => navigation.navigate("AppTabs", { screen: "Vlogs" }) },
-      { key: "profile", icon: "person-outline", label: t("chat.welcomeActions.profile"), onPress: () => navigation.navigate("AppTabs", { screen: "Profile" }) },
-    ] as const;
-
-    return (
-      <View style={[styles.welcomeCard, { backgroundColor: C.card, borderColor: C.border }]}>
-        <View style={[styles.welcomeIcon, { backgroundColor: C.accent }]}>
-          <Ionicons name="sparkles-outline" size={20} color="#fff" />
-        </View>
-        <Text style={[styles.welcomeTitle, { color: C.text }]}>{t("chat.welcomeTitle")}</Text>
-        <Text style={[styles.welcomeBody, { color: C.sub }]}>{t("chat.welcomeMessage")}</Text>
-        <View style={styles.welcomeActions}>
-          {actions.map((action) => (
-            <TouchableOpacity
-              key={action.key}
-              activeOpacity={0.86}
-              onPress={action.onPress}
-              style={[styles.welcomeAction, { borderColor: C.border, backgroundColor: C.bg }]}
-            >
-              <Ionicons name={action.icon as any} size={16} color={C.text} />
-              <Text style={[styles.welcomeActionText, { color: C.text }]} numberOfLines={1}>
-                {action.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
-    );
-  }, [C.accent, C.bg, C.border, C.card, C.sub, C.text, navigation, styles, t]);
-
   /* ───────────────── KEY warning fix ───────────────── */
   const renderMessage = useCallback((props: any) => {
-    if (props?.currentMessage?.systemWelcome) {
-      return <View style={styles.welcomeMessageRow}>{renderWelcomeCard()}</View>;
-    }
     const { key: _ignore, ...rest } = props ?? {};
     return <Message {...rest} />;
-  }, [renderWelcomeCard, styles.welcomeMessageRow]);
+  }, []);
+
+  const renderMessageText = useCallback(
+    (props: any) => {
+      const m = props?.currentMessage as any;
+      if (!m?.systemWelcome) return <MessageText {...props} />;
+
+      const isMine = String(m?.user?._id ?? "") === String(myId);
+      const textColor = isMine ? "#fff" : C.text;
+      const linkColor = isMine ? "#fff" : C.accent;
+      const linkStyle = [styles.welcomeInlineLink, { color: linkColor }];
+
+      return (
+        <Text style={[styles.welcomeInlineText, { color: textColor }]}>
+          {t("chat.welcomeTitle")}
+          {"\n\n"}
+          {t("chat.welcomeMessage")}
+          {"\n\n"}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Home" })}>
+            {t("chat.welcomeActions.feed")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "MessagesTab" })}>
+            {t("chat.welcomeActions.chats")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("Groups")}>
+            {t("chat.welcomeActions.communities")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Vlogs" })}>
+            {t("chat.welcomeActions.events")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Profile" })}>
+            {t("chat.welcomeActions.profile")}
+          </Text>
+        </Text>
+      );
+    },
+    [C.accent, C.text, myId, navigation, styles.welcomeInlineLink, styles.welcomeInlineText, t]
+  );
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
   const openUserProfile = useCallback(
@@ -668,7 +672,7 @@ export default function ChatScreen({ route, navigation }: any) {
             setMessages((prev) => {
               const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
               if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg]));
+              return mergeById(withoutTmp, mapMessages([serverMsg], t));
             });
           } else {
             setMessages((prev) =>
@@ -770,7 +774,7 @@ export default function ChatScreen({ route, navigation }: any) {
         setMessages((prev) => {
           const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
           if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg]));
+          return mergeById(withoutTmp, mapMessages([serverMsg], t));
         });
       } else {
         setMessages((prev) =>
@@ -1122,6 +1126,7 @@ const renderCustomView = useCallback(
         messagesContainerStyle={{ backgroundColor: C.bg }}
         renderMessage={renderMessage}
         renderBubble={renderBubble}
+        renderMessageText={renderMessageText}
         renderCustomView={renderCustomView}
         renderInputToolbar={renderPillToolbar}
         renderMessageImage={renderMessageImage}
@@ -1228,13 +1233,17 @@ const renderCustomView = useCallback(
 }
 
 /* ───────────────── Helpers ───────────────── */
-function mapMessages(nodes: MsgNode[]): IMessage[] {
+function isWelcomeMessageNode(node?: MsgNode | null) {
+  return node?.kind === "text" && node.text === WELCOME_MESSAGE_I18N_TOKEN;
+}
+
+function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
   return nodes.map((n) => {
-    const isWelcome = n.kind === "text" && n.text === WELCOME_MESSAGE_I18N_TOKEN;
+    const isWelcome = isWelcomeMessageNode(n);
 
     return {
       _id: n.id,
-      text: n.kind === "text" ? (isWelcome ? "" : n.text ?? "") : "",
+      text: n.kind === "text" ? (isWelcome ? t("chat.welcomeMessage") : n.text ?? "") : "",
       createdAt: new Date(n.createdAt),
       user: {
         _id: n.sender.id,
@@ -1530,57 +1539,16 @@ const makeStyles = (C: any) =>
       backgroundColor: "rgba(0,0,0,0.55)",
     },
 
-    welcomeCard: {
-      marginTop: 8,
-      borderWidth: 1,
-      borderRadius: 18,
-      padding: 14,
-      width: "100%",
-      maxWidth: 320,
-      alignSelf: "flex-start",
-    },
-    welcomeMessageRow: {
-      width: "100%",
-      paddingHorizontal: 18,
-      paddingVertical: 4,
-      alignItems: "flex-start",
-    },
-    welcomeIcon: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 10,
-    },
-    welcomeTitle: {
-      fontSize: 16,
-      fontWeight: "900",
-      marginBottom: 6,
-    },
-    welcomeBody: {
-      fontSize: 13,
-      lineHeight: 19,
+    welcomeInlineText: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      fontSize: 15,
+      lineHeight: 21,
       fontWeight: "600",
     },
-    welcomeActions: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      gap: 8,
-      marginTop: 12,
-    },
-    welcomeAction: {
-      minHeight: 34,
-      borderRadius: 17,
-      borderWidth: 1,
-      paddingHorizontal: 10,
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    welcomeActionText: {
-      fontSize: 12,
-      fontWeight: "800",
+    welcomeInlineLink: {
+      fontWeight: "900",
+      textDecorationLine: "underline",
     },
 
     storyCard: {
