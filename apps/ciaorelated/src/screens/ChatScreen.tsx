@@ -392,10 +392,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
     for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
 
-    const mapped = mapMessages(nodes);
+    const mapped = mapMessages(nodes, myId);
     setMessages((prev) => mergeById(prev, mapped));
     markRead();
-  }, [data, markRead]);
+  }, [data, markRead, myId]);
 
   useSubscription(SUB_MESSAGE_ADDED, {
     variables: { threadId },
@@ -409,7 +409,7 @@ export default function ChatScreen({ route, navigation }: any) {
       if (seenIds.current.has(id)) return;
       seenIds.current.add(id);
 
-      const incoming = mapMessages([msg]);
+      const incoming = mapMessages([msg], myId);
       setMessages((prev) => {
         if (hasMessage(prev, id)) return prev;
         return mergeById(prev, incoming);
@@ -646,7 +646,7 @@ export default function ChatScreen({ route, navigation }: any) {
             setMessages((prev) => {
               const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
               if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg]));
+              return mergeById(withoutTmp, mapMessages([serverMsg], myId));
             });
           } else {
             setMessages((prev) =>
@@ -748,7 +748,7 @@ export default function ChatScreen({ route, navigation }: any) {
         setMessages((prev) => {
           const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
           if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg]));
+          return mergeById(withoutTmp, mapMessages([serverMsg], myId));
         });
       } else {
         setMessages((prev) =>
@@ -1241,23 +1241,30 @@ const renderCustomView = useCallback(
 }
 
 /* ───────────────── Helpers ───────────────── */
-function mapMessages(nodes: MsgNode[]): IMessage[] {
-  return nodes.map((n) => ({
-    _id: n.id,
-    text: n.kind === "text" ? (n.text === WELCOME_MESSAGE_I18N_TOKEN ? "" : n.text ?? "") : "",
-    createdAt: new Date(n.createdAt),
-    user: {
-      _id: n.sender.id,
-      name: n.sender.username,
-      avatar: n.sender.avatarThumbUrl ?? n.sender.avatarUrl ?? undefined,
-    },
-    image: n.kind === "image" ? n.media?.url : undefined,
-    video: n.kind === "video" ? n.media?.url : undefined,
-    kind: n.kind,
-    story: n.story ?? null,
-    storyExpired: Boolean(n.storyExpired),
-    systemWelcome: n.text === WELCOME_MESSAGE_I18N_TOKEN,
-  })) as any;
+function mapMessages(nodes: MsgNode[], myId?: string): IMessage[] {
+  return nodes.map((n) => {
+    const isWelcomeForViewer =
+      n.kind === "text" &&
+      n.text === WELCOME_MESSAGE_I18N_TOKEN &&
+      String(n.sender.id) !== String(myId ?? "");
+
+    return {
+      _id: n.id,
+      text: n.kind === "text" ? (isWelcomeForViewer ? "" : n.text ?? "") : "",
+      createdAt: new Date(n.createdAt),
+      user: {
+        _id: n.sender.id,
+        name: n.sender.username,
+        avatar: n.sender.avatarThumbUrl ?? n.sender.avatarUrl ?? undefined,
+      },
+      image: n.kind === "image" ? n.media?.url : undefined,
+      video: n.kind === "video" ? n.media?.url : undefined,
+      kind: n.kind,
+      story: n.story ?? null,
+      storyExpired: Boolean(n.storyExpired),
+      systemWelcome: isWelcomeForViewer,
+    };
+  }) as any;
 }
 
 function hasMessage(prev: IMessage[], id: string) {
