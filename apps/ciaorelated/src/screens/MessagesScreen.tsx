@@ -32,6 +32,9 @@ const UNREAD_Q = gql`query { unreadCount { total } }`;
 
 const THREADS = gql`
   query Threads {
+    me {
+      id
+    }
     threads {
       id
       title
@@ -159,7 +162,7 @@ export default function MessagesScreen() {
   const { refetch: refetchUnread } = useQuery(UNREAD_Q, {
     fetchPolicy: "cache-and-network",
   });
-  const meId = meData?.me?.id;
+  const meId = tData?.me?.id ?? meData?.me?.id;
 
   // Suche (aktiv ab 2 Zeichen)
   const trimmedQ = q.trim();
@@ -425,14 +428,15 @@ export default function MessagesScreen() {
   const getThreadDisplay = (thr: any) => {
     const members = Array.isArray(thr.members) ? thr.members : [];
     const community = thr?.community;
-    const title = community?.title || thr.title || readableThreadTitle(members, meId);
+    const isDirectMessage = !community && (thr?.kind ?? "DM") === "DM" && members.length === 2;
+    const otherMember = isDirectMessage && meId ? members.find((m: any) => m?.id && m.id !== meId) : null;
 
-    let avatar = community?.imageThumbUrl || community?.imageUrl || thr?.imageUrl || members?.[0]?.avatarThumbUrl || members?.[0]?.avatarUrl || null;
-
-    if (!community && members.length === 2 && meId) {
-      const other = members.find((m: any) => m?.id !== meId);
-      avatar = other?.avatarThumbUrl || other?.avatarUrl || avatar;
-    }
+    const title = community?.title || (isDirectMessage ? readableThreadTitle(members, meId) : thr.title || readableThreadTitle(members, meId));
+    const avatar = community
+      ? community.imageThumbUrl || community.imageUrl || null
+      : isDirectMessage
+        ? otherMember?.avatarThumbUrl || otherMember?.avatarUrl || null
+        : thr?.imageUrl || null;
 
     return {
       title,
