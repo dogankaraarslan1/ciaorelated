@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { pubsub } from "./pubsub";
 import { EVENTS } from "./events";
 import { GraphQLError } from "graphql";
@@ -162,6 +162,7 @@ export async function sendMessage(
   userId: string,
   input: {
     threadId: string;
+    clientId?: string;
     kind: string;
     text?: string;
     media?: any;
@@ -169,6 +170,8 @@ export async function sendMessage(
     storyId?: string; // ✅ NEU
   }
 ) {
+  const clientId = String(input.clientId ?? "").trim().slice(0, 120) || null;
+
   // Basic validation
   if (input.kind === "text" && !input.text?.trim()) throw new Error("Text required");
   if (input.kind !== "text") {
@@ -237,25 +240,44 @@ export async function sendMessage(
 
   const now = new Date();
 
-  // ✅ Wichtig: kein msg.sender mehr nötig
-  const msg = await prisma.message.create({
-    data: {
-      threadId: input.threadId,
-      senderId: userId,
-      kind: input.kind,
-      text: input.text ?? null,
-      s3Key: input.media?.key ?? null,
-      mime: input.media?.mime ?? null,
-      width: input.media?.width ?? null,
-      height: input.media?.height ?? null,
-      durationMs: input.media?.durationMs ?? null,
-      replyToId: input.replyToId ?? null,
+  if (clientId) {
+    const existing = await prisma.message.findFirst({
+      where: { threadId: input.threadId, senderId: userId, clientId },
+    });
+    if (existing) return existing;
+  }
 
-      // ✅ NEU: Story-Kontext speichern
-      storyId: safeStoryId,
-    },
-    // (du kannst include: { sender: true } drin lassen, aber wir brauchen es nicht)
-  });
+  let msg;
+  try {
+    // ✅ Wichtig: kein msg.sender mehr nötig
+    msg = await prisma.message.create({
+      data: {
+        threadId: input.threadId,
+        senderId: userId,
+        clientId,
+        kind: input.kind,
+        text: input.text ?? null,
+        s3Key: input.media?.key ?? null,
+        mime: input.media?.mime ?? null,
+        width: input.media?.width ?? null,
+        height: input.media?.height ?? null,
+        durationMs: input.media?.durationMs ?? null,
+        replyToId: input.replyToId ?? null,
+
+        // ✅ NEU: Story-Kontext speichern
+        storyId: safeStoryId,
+      },
+      // (du kannst include: { sender: true } drin lassen, aber wir brauchen es nicht)
+    });
+  } catch (e) {
+    if (clientId && e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const existing = await prisma.message.findFirst({
+        where: { threadId: input.threadId, senderId: userId, clientId },
+      });
+      if (existing) return existing;
+    }
+    throw e;
+  }
 
   // Thread.bump
   await prisma.thread.update({

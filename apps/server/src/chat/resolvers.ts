@@ -112,7 +112,7 @@ export const resolvers = {
     },
     sendMessage: async (
       _ : unknown,
-      { input }: { input: { threadId: string; kind: string; text?: string; media?: any; replyToId?: string; storyId?: string } },
+      { input }: { input: { threadId: string; clientId?: string; kind: string; text?: string; media?: any; replyToId?: string; storyId?: string } },
       ctx: Ctx
     ) => {
       requireAuth(ctx);

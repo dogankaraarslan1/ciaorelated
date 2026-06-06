@@ -39,7 +39,6 @@ declare module "react-native-gifted-chat" {
     kind?: "text" | "image" | "video" | "file";
     pending?: boolean;
 
-    // optional: wenn du später den “no-jump” serverId approach wieder einbaust
     serverId?: string;
 
     story?: {
@@ -74,6 +73,7 @@ const MESSAGES = gql`
           }
 
           id
+          clientId
           createdAt
           kind
           text
@@ -142,6 +142,7 @@ const SEND_MESSAGE = gql`
   mutation Send($input: SendMessageInput!) {
     sendMessage(input: $input) {
       id
+      clientId
       createdAt
       kind
       text
@@ -173,6 +174,7 @@ const SUB_MESSAGE_ADDED = gql`
   subscription OnAdded($threadId: ID!) {
     messageAdded(threadId: $threadId) {
       id
+      clientId
       createdAt
       kind
       text
@@ -236,6 +238,7 @@ function nameColorForUser(userId: string) {
 
 type MsgNode = {
   id: string;
+  clientId?: string | null;
   createdAt: string;
   kind: "text" | "image" | "video" | "file";
   text?: string;
@@ -659,7 +662,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
         try {
           const res = await sendMessage({
-            variables: { input: { threadId, kind: "text", text } },
+            variables: { input: { threadId, clientId: tempId, kind: "text", text } },
           });
 
           const serverMsg = res.data?.sendMessage as MsgNode | undefined;
@@ -668,12 +671,7 @@ export default function ChatScreen({ route, navigation }: any) {
             const sid = String(serverMsg.id);
             seenIds.current.add(sid);
 
-            // tmp ersetzen wie du es hast (ok), Jump ist jetzt weg weil statusSlot konstant
-            setMessages((prev) => {
-              const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
-              if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg], t));
-            });
+            setMessages((prev) => mergeById(prev, mapMessages([serverMsg], t)));
           } else {
             setMessages((prev) =>
               prev.map((x) => (String(x._id) === String(tempId) ? ({ ...x, pending: false } as any) : x))
@@ -759,6 +757,7 @@ export default function ChatScreen({ route, navigation }: any) {
         variables: {
           input: {
             threadId,
+            clientId: tempId,
             kind: "image",
             media: { key: uploaded.key, mime: uploaded.mime },
           },
@@ -771,11 +770,7 @@ export default function ChatScreen({ route, navigation }: any) {
         const sid = String(serverMsg.id);
         seenIds.current.add(sid);
 
-        setMessages((prev) => {
-          const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
-          if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg], t));
-        });
+        setMessages((prev) => mergeById(prev, mapMessages([serverMsg], t)));
       } else {
         setMessages((prev) =>
           prev.map((x) => (String(x._id) === String(tempId) ? ({ ...x, pending: false } as any) : x))
@@ -1240,9 +1235,11 @@ function isWelcomeMessageNode(node?: MsgNode | null) {
 function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
   return nodes.map((n) => {
     const isWelcome = isWelcomeMessageNode(n);
+    const stableId = n.clientId || n.id;
 
     return {
-      _id: n.id,
+      _id: stableId,
+      serverId: n.id,
       text: n.kind === "text" ? (isWelcome ? t("chat.welcomeMessage") : n.text ?? "") : "",
       createdAt: new Date(n.createdAt),
       user: {
@@ -1256,18 +1253,48 @@ function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
       story: n.story ?? null,
       storyExpired: Boolean(n.storyExpired),
       systemWelcome: isWelcome,
+      pending: false,
     };
   }) as any;
 }
 
 function hasMessage(prev: IMessage[], id: string) {
-  return prev.some((m) => String(m._id) === String(id));
+  return prev.some((m: any) => String(m._id) === String(id) || String(m.serverId ?? "") === String(id));
 }
 
 function mergeById(prev: IMessage[], incoming: IMessage[]) {
   const map = new Map<string, IMessage>();
-  for (const m of prev) map.set(String(m._id), m);
-  for (const m of incoming) map.set(String(m._id), m);
+  const serverIdToLocalId = new Map<string, string>();
+
+  for (const m of prev) {
+    const localId = String(m._id);
+    map.set(localId, m);
+    const serverId = String((m as any).serverId ?? "");
+    if (serverId) serverIdToLocalId.set(serverId, localId);
+  }
+
+  for (const m of incoming) {
+    const incomingId = String(m._id);
+    const incomingServerId = String((m as any).serverId ?? "");
+    const existingLocalId =
+      serverIdToLocalId.get(incomingId) ||
+      (incomingServerId ? serverIdToLocalId.get(incomingServerId) : undefined);
+
+    if (existingLocalId && map.has(existingLocalId)) {
+      const existing = map.get(existingLocalId)! as any;
+      map.set(existingLocalId, {
+        ...existing,
+        ...m,
+        _id: existing._id,
+        serverId: incomingServerId || incomingId,
+        createdAt: existing.createdAt,
+      } as any);
+      continue;
+    }
+
+    map.set(incomingId, m);
+    if (incomingServerId) serverIdToLocalId.set(incomingServerId, incomingId);
+  }
   const out = Array.from(map.values());
   out.sort((a, b) => +new Date(b.createdAt as any) - +new Date(a.createdAt as any));
   return out;

@@ -946,6 +946,7 @@ model Message {
   threadId   String
   sender     Profile       @relation(fields: [senderId], references: [id])
   senderId   String
+  clientId   String?
   kind       String // "text" | "image" | "video" | "file" | "emoji"
   text       String?
   s3Key      String?
@@ -959,6 +960,8 @@ model Message {
   likes      MessageLike[]
   storyId    String?
   story      Story?        @relation(fields: [storyId], references: [id], onDelete: SetNull)
+
+  @@unique([threadId, senderId, clientId])
 }
 
 model MessageLike {

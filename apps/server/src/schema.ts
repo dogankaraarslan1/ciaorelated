@@ -1030,6 +1030,7 @@ export const typeDefs = gql`
 
   type Message {
     id: ID!
+    clientId: String
     threadId: ID!
     sender: User!              # euer User
     kind: MessageKind!
@@ -1080,6 +1081,7 @@ export const typeDefs = gql`
 
   input SendMessageInput {
     threadId: ID!
+    clientId: String
     kind: MessageKind!
     text: String
     emoji: String
