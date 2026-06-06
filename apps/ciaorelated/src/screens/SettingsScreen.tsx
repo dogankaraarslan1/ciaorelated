@@ -94,6 +94,7 @@ const ME_PRIVACY = gql`
       id
       username
       isPrivate
+      isAdmin
       __typename
     }
   }
@@ -103,7 +104,7 @@ export default function SettingsScreen() {
 
   const { data } = useQuery(ME_PRIVACY, { fetchPolicy: "cache-and-network" });
   const isPrivate = !!data?.me?.isPrivate;
-  const canOpenAdminDashboard = String(data?.me?.username ?? "").toLowerCase() === "dogankaraarslan";
+  const canOpenAdminDashboard = !!data?.me?.isAdmin;
 
   const [setPrivate, { loading }] = useMutation(SET_PRIVATE);
   const { t, i18n } = useTranslation();

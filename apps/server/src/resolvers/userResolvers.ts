@@ -543,6 +543,9 @@ const resolvers = {
     isMe: (u: any, _: unknown, ctx: Ctx) =>
       !!ctx.profileId && ctx.profileId === u.id,
 
+    isAdmin: (u: any, _: unknown, ctx: Ctx) =>
+      !!ctx.profileId && ctx.profileId === u.id && !!ctx.isAdmin,
+
     totalLikeCount: async (u: any, _: unknown, ctx: Ctx) => {
       if (!u?.id) return 0;
       return ctx.prisma.like.count({

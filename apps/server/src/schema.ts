@@ -80,6 +80,7 @@ export const typeDefs = gql`
     isMe: Boolean!
     isFollowing: Boolean!
     isPrimary: Boolean!
+    isAdmin: Boolean!
 
     bannedUntil: DateTime
     bannedReason: String

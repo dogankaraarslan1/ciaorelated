@@ -6,13 +6,7 @@ import { canViewProfileContent } from "../lib/privacy";
 export default {
   Query: {
     post: async (_:unknown, { id }: { id: string }, ctx: Ctx) => {
-      const admin =
-        !!ctx.isAdmin ||
-        (!!ctx.profileId &&
-          (await ctx.prisma.profile.findUnique({
-            where: { id: ctx.profileId },
-            select: { username: true },
-          }))?.username?.toLowerCase() === "dogankaraarslan");
+      const admin = !!ctx.isAdmin;
 
       const p = await ctx.prisma.post.findUnique({
         where: { id },

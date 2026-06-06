@@ -8,14 +8,6 @@ const BAN_DAYS  = 7;
 // Optional: einfache Admin-Prüfung
 async function ensureAdmin(ctx: Ctx) {
   if (ctx.isAdmin) return;
-  if (!ctx.profileId) throw new Error("Not authenticated");
-
-  const profile = await ctx.prisma.profile.findUnique({
-    where: { id: ctx.profileId },
-    select: { username: true },
-  });
-  if (profile?.username?.toLowerCase() === "dogankaraarslan") return;
-
   throw new Error("Not authorized");
 }
 

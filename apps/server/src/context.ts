@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import jwt from "jsonwebtoken";
 import type { Request } from "express";
 import { JWT_SECRET, type JwtPayload } from "./config";
+import { isConfiguredAdminProfile } from "./lib/admin";
 
 export const prisma = new PrismaClient();
 
@@ -42,12 +43,12 @@ export async function createContext({ req }: { req: Request }): Promise<Ctx> {
   if (profileId) {
     const profile = await prisma.profile.findUnique({
       where: { id: profileId },
-      select: { role: true, accountId: true },
+      select: { id: true, username: true, role: true, accountId: true },
     });
     const belongsToAccount = !payload?.accountId || profile?.accountId === payload.accountId;
     if (profile && belongsToAccount) {
       validProfileId = profileId;
-      isAdmin = profile.role === "ADMIN";
+      isAdmin = profile.role === "ADMIN" || isConfiguredAdminProfile(profile);
     }
   }
 

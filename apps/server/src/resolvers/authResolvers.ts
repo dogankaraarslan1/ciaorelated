@@ -13,6 +13,7 @@ import { sendPasswordResetCode } from "../lib/passwordResetEmail";
 import { normalizePhoneNumber, isValidPhoneNumber } from "../lib/phone";
 import { checkPhoneVerifyCode, isTwilioVerifyConfigured, sendPhoneVerifyCode } from "../lib/sms";
 import { UserInputError, ForbiddenError } from "apollo-server-errors";
+import { sendWelcomeMessageToProfile } from "../lib/welcomeMessage";
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -131,6 +132,7 @@ const resolvers = {
         where: { phoneNumber },
         include: { profiles: true },
       });
+      let createdAccount = false;
 
       if (!account) {
         if (!args.username?.trim()) {
@@ -150,6 +152,7 @@ const resolvers = {
           },
           include: { profiles: true },
         });
+        createdAccount = true;
       } else if (!account.phoneVerifiedAt) {
         account = await ctx.prisma.account.update({
           where: { id: account.id },
@@ -162,6 +165,11 @@ const resolvers = {
 
       const primary = account.profiles.find((p: any) => p.isPrimary) ?? account.profiles[0];
       if (!primary) throw new Error("Kein Profil für diesen Account gefunden.");
+      if (createdAccount) {
+        await sendWelcomeMessageToProfile(ctx.prisma, primary.id).catch((e) =>
+          console.warn("[welcome-message] delivery failed:", e?.message || e)
+        );
+      }
 
       const token = signToken({ accountId: account.id, profileId: primary.id });
 
@@ -431,6 +439,9 @@ const resolvers = {
 
         const primary = account.profiles.find((p:any) => p.isPrimary) ?? account.profiles[0];
         if (!primary) throw new Error("Profil konnte nicht angelegt werden.");
+        await sendWelcomeMessageToProfile(ctx.prisma, primary.id).catch((e) =>
+          console.warn("[welcome-message] delivery failed:", e?.message || e)
+        );
 
         const token = signToken({ accountId: account.id, profileId: primary.id });
 
