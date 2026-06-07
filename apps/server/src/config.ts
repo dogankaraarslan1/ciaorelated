@@ -22,6 +22,16 @@ export const TWILIO_ACCOUNT_SID = cleanEnv(process.env.TWILIO_ACCOUNT_SID);
 export const TWILIO_AUTH_TOKEN = cleanEnv(process.env.TWILIO_AUTH_TOKEN);
 export const TWILIO_VERIFY_SERVICE_SID = cleanEnv(process.env.TWILIO_VERIFY_SERVICE_SID);
 
+const cleanCsvEnv = (value: string | undefined) =>
+  cleanEnv(value)
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+
+export const ADMIN_USERNAMES = cleanCsvEnv(process.env.ADMIN_USERNAMES).map((username) =>
+  username.toLowerCase()
+);
+
 //export const SMTP_HOST = process.env.SMTP_HOST || "";
 //export const SMTP_PORT = process.env.SMTP_PORT || "587";
 //export const SMTP_USER = process.env.SMTP_USER || "";

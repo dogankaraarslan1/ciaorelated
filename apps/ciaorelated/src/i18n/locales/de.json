@@ -37,7 +37,7 @@
   },
   "requiredUpdate": {
     "title": "Update erforderlich",
-    "body": "Eine neue ciaorelated-Version ist verfügbar. Bitte aktualisiere die App, um fortzufahren.",
+    "body": "Eine neue {{appName}}-Version ist verfügbar. Bitte aktualisiere die App, um fortzufahren.",
     "installed": "Installiert",
     "new": "Neu",
     "updateNow": "Jetzt aktualisieren"
@@ -746,13 +746,28 @@
   },
   "messages": {
     "news": "Nachrichten",
+    "chats": "Chats",
     "seek": "Suchen…",
+    "createTitle": "Erstellen",
+    "newGroupChat": "Neue Chatgruppe",
+    "newCommunity": "Community erstellen",
+    "viewCommunities": "Communities ansehen",
+    "selectPeopleForGroup": "Suche und wähle Personen für eine Chatgruppe aus.",
+    "groupNamePlaceholder": "Gruppenname",
+    "groupNameRequired": "Bitte gib einen Gruppennamen ein.",
+    "selectedPeople": "{{count}} ausgewählt",
+    "createGroup": "Gruppe erstellen",
+    "searchPeople": "Personen suchen",
+    "searchPeopleForGroup": "Tippe mindestens zwei Zeichen ein, um Personen für deine Gruppe zu finden.",
     "noChatsYet": "Noch keine Chats",
     "startAConversationUsingTheSearchFunc47e2cb": "Starte eine Unterhaltung über die Suche oben.",
     "noResultsFound": "Keine Treffer",
     "tryADifferentName": "Versuche einen anderen Namen.",
     "followsYou": "· folgt dir",
-    "sendMessage": "Nachricht senden"
+    "sendMessage": "Nachricht senden",
+    "threadLabelCommunity": "Community",
+    "threadLabelDisabled": "Deaktiviert",
+    "threadLabelGroup": "Gruppe"
   },
   "vlogdetail": {
     "noPostsYet": "Noch keine Beiträge",
@@ -792,8 +807,20 @@
     "cancel": "Abbrechen",
     "storyNoLongerAvailable": "Story nicht mehr verfügbar",
     "thisStoryHasExpired": "Diese Story ist abgelaufen.",
+    "openLiveFeed": "Live Feed öffnen",
     "replyToStory": "Antwort auf Story",
     "sendAMessage": "Nachricht schreiben…",
+    "welcomeTitle": "Willkommen bei {{appName}}",
+    "welcomeMessage": "Entdecke echte Momente im Feed, bleib in Chats nah an Menschen dran, tritt Communities rund um Gruppen und Orte bei, folge Live-Momenten aus Events und vervollständige dein Profil, damit andere wissen, mit wem sie sich verbinden.",
+    "welcomeActions": {
+      "feed": "Feed",
+      "chats": "Chats",
+      "communities": "Communities",
+      "events": "Momente",
+      "profile": "Profil"
+    },
+    "broadcastOnlyNotice": "Nur Admins können in diesem Broadcast-Chat Nachrichten senden.",
+    "chatDisabledNotice": "Dieser Community-Chat ist derzeit deaktiviert.",
     "deleteFailedTitle": "Löschen fehlgeschlagen",
     "sendFailedTitle": "Senden fehlgeschlagen",
     "savedTitle": "Gespeichert",
@@ -806,7 +833,14 @@
     "imageSendFailedBody": "Bitte später erneut versuchen.",
     "storyFallbackName": "Story",
     "storyBadgeVideo": "Video",
-    "storyBadgePhoto": "Story"
+    "storyBadgePhoto": "Story",
+    "groupSettings": "Gruppen-Einstellungen",
+    "groupMembers": "Gruppenmitglieder",
+    "you": "Du",
+    "thisMember": "dieses Mitglied",
+    "removeMemberTitle": "Mitglied entfernen?",
+    "removeMemberBody": "{{username}} aus dieser Gruppe entfernen?",
+    "removeMemberCta": "Entfernen"
   },
   "postactionsmenu": {
     "editPost": "Beitrag bearbeiten",
@@ -890,7 +924,7 @@
     "thisAccount": "Dieses Konto",
     "otherAccountsOnThisDevice": "Weitere Konten auf diesem Gerät",
     "noOtherAccountsSaved": "Keine weiteren Konten gespeichert.",
-    "addciaorelatedAccount": "ciaorelated-Konto hinzufügen",
+    "addciaorelatedAccount": "{{appName}}-Konto hinzufügen",
     "unnamed": "Unbenannt",
     "remove": "Entfernen"
   },
@@ -1309,7 +1343,7 @@
     "videoTooLongBody": "Stories dürfen max. 30 Sekunden sein."
   },
   "suggestedprofilescarousel": {
-    "suggestedByciaorelated": "Von ciaorelated vorgeschlagen"
+    "suggestedByciaorelated": "Von {{appName}} vorgeschlagen"
   },
   "uploadoverlay": {
     "yourPostIsCurrentlyBeingUploaded": "Dein Beitrag wird gerade hochgeladen",
@@ -1459,6 +1493,46 @@
     "peopleHere": "{{count}} Personen hier",
     "joinWithLink": "Beitritt per Link",
     "createEventMoment": "Moment erstellen",
+    "openChat": "Community-Chat öffnen",
+    "settingsTitle": "Community-Einstellungen",
+    "editCommunity": "Community bearbeiten",
+    "editCommunitySub": "Name und Community-Bild ändern.",
+    "communityName": "Community-Name",
+    "communityNamePlaceholder": "Community-Name",
+    "permissionNeededTitle": "Berechtigung nötig",
+    "permissionNeededBody": "Bitte erlaube Zugriff auf deine Fotos.",
+    "titleRequired": "Bitte gib einen Community-Namen ein.",
+    "imageMissing": "Das ausgewählte Bild konnte nicht gefunden werden.",
+    "uploadFailedStatus": "Upload fehlgeschlagen (Status {{status}}).",
+    "editFailedTitle": "Community nicht gespeichert",
+    "editFailedBody": "Die Community konnte gerade nicht aktualisiert werden. Bitte versuche es nochmal.",
+    "manageMembers": "Mitglieder verwalten",
+    "owner": "Owner",
+    "member": "Mitglied",
+    "thisMember": "dieses Mitglied",
+    "removeMemberTitle": "Mitglied entfernen?",
+    "removeMemberBody": "{{username}} aus dieser Community entfernen?",
+    "removeMemberCta": "Entfernen",
+    "removeMemberFailed": "Das Mitglied konnte gerade nicht entfernt werden.",
+    "shareLink": "Link teilen",
+    "copyLink": "Link kopieren",
+    "copyLinkSub": "Kopiert den Einladungslink in die Zwischenablage.",
+    "shareQrSub": "Teile ein QR-Einladungsbild.",
+    "enableBroadcast": "Chat als Broadcast setzen",
+    "disableBroadcast": "Alle chatten lassen",
+    "chatModeBody": "Mitglieder können chatten, Momente teilen und die Einladungsfunktionen von hier öffnen.",
+    "broadcastModeBody": "Broadcast-Modus ist aktiv. Nur Admins können in diesem Community-Chat Nachrichten senden.",
+    "broadcastModeSub": "Nur Admins können dann Nachrichten senden.",
+    "disableChat": "Community-Chat deaktivieren",
+    "enableChat": "Community-Chat aktivieren",
+    "disableChatSub": "Mitglieder können diesen Chat dann nicht mehr öffnen oder darin schreiben.",
+    "enableChatSub": "Mitglieder können den Community-Chat wieder öffnen.",
+    "chatDisabledTitle": "Community-Chat deaktiviert",
+    "chatDisabledBody": "Der Admin hat den Chat für diese Community deaktiviert.",
+    "chatModeFailedTitle": "Chat-Einstellungen nicht gespeichert",
+    "chatModeFailedBody": "Der Chat-Modus konnte gerade nicht geändert werden. Bitte versuche es nochmal.",
+    "chatUnavailableTitle": "Chat nicht verfügbar",
+    "chatUnavailableBody": "Der Community-Chat ist noch nicht bereit. Bitte versuche es gleich nochmal.",
     "shareQr": "QR-Code teilen",
     "qrShareFailedTitle": "QR-Code nicht geteilt",
     "qrShareFailedBody": "Der QR-Code konnte gerade nicht erstellt werden. Teile stattdessen den Link.",
@@ -1488,13 +1562,15 @@
     "joinedAt": "Beigetreten: {{date}}",
     "hubTitle": "Deine Communities",
     "hubSubtitle": "Live Feeds, Einladungslinks und Events an einem Ort.",
-    "emptyTitle": "Bring eine Community zu ciaorelated",
+    "emptyTitle": "Bring eine Community zu {{appName}}",
     "emptyBody": "Erstelle einen Link für Bar, Event oder Freundesgruppe und lade Menschen direkt in den Live Feed ein.",
     "leave": {
       "title": "Gruppe verlassen?",
       "body": "Willst du \"{{title}}\" verlassen?",
       "confirm": "Verlassen",
-      "failed": "Konnte Gruppe nicht verlassen."
+      "failed": "Konnte Gruppe nicht verlassen.",
+      "ownerTitle": "Adminrechte zuerst übertragen",
+      "ownerBody": "Du bist aktuell Admin dieser Community. Übertrage die Adminrechte zuerst an ein anderes Mitglied, bevor du die Community verlassen kannst."
     }
   },
   "joingroup": {
@@ -1545,7 +1621,7 @@
   },
   "rotatingsuggestionlabel": {
     "suggestedForYou": "Für dich vorgeschlagen",
-    "byciaorelated": "von ciaorelated"
+    "byciaorelated": "von {{appName}}"
   },
   "vlogcard": {
     "untitledVlog": "Unbenannter Vlog",

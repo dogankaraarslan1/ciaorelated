@@ -23,7 +23,7 @@ function GuidelinesPage() {
       ]}
     >
       <p className="text-muted-foreground">
-        To keep <strong>Beverly</strong> a safe and inspiring place for everyone, the following rules apply:
+        To keep <strong>ciaorelated</strong> a safe and inspiring place for everyone, the following rules apply:
       </p>
       <LegalSection heading="1. Respect & Safety">
         <p>Treat others with respect. No harassment, threats, hate speech, or bullying.</p>

@@ -59,6 +59,15 @@ const isAuthOp = (opName?: string) => {
   return AUTH_OPS.has(n);
 };
 
+const LOCAL_ERROR_OPS = new Set([
+  "leavegroup",
+]);
+
+const isLocalErrorOp = (opName?: string) => {
+  if (!opName) return false;
+  return LOCAL_ERROR_OPS.has(opName.toLowerCase());
+};
+
 /** 1) Auth-Header setzen */
 const authLink = setContext(async (operation, prevCtx) => {
   const active = await AuthVault.active();
@@ -92,6 +101,7 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
 
   // Auth-Ops sollen ihre Fehler lokal im Screen behandeln (Alert/Text)
   const isAuth = isAuthOp(opName);
+  const isLocalError = isLocalErrorOp(opName);
 
   if (graphQLErrors?.length) {
     for (const e of graphQLErrors) {
@@ -135,8 +145,8 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
       }
 
       // ✅ Bei Auth-Ops keine globalen Error-Modals (sonst “hängt” wegen Overlays)
-      if (isAuth) {
-        console.warn("[apollo] auth-op error (handled locally):", code, e.message);
+      if (isAuth || isLocalError) {
+        console.warn("[apollo] operation error handled locally:", opName, code, e.message);
         return;
       }
 
@@ -289,6 +299,12 @@ export const cache = new InMemoryCache({
           merge(_existing, incoming) {
             // wir ersetzen bewusst die gesamte Liste → kein Data-Loss-Alarm
             return incoming as any;
+          },
+        },
+
+        uploadQueue: {
+          merge(_existing, incoming) {
+            return incoming;
           },
         },
 

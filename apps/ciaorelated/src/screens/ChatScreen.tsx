@@ -1,14 +1,16 @@
 // apps/ciaorelated/src/screens/ChatScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, TextInput, View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
 import {
   GiftedChat,
   IMessage,
   Message,
+  MessageText,
   Composer,
   Bubble,
   Time,
 } from "react-native-gifted-chat";
+import "dayjs/locale/de";
 import { Ionicons } from "@expo/vector-icons";
 import { gql, useMutation, useQuery, useSubscription } from "@apollo/client";
 import * as ImagePicker from "expo-image-picker";
@@ -24,9 +26,10 @@ import * as Sharing from "expo-sharing";
 
 import "react-native-gifted-chat";
 
-import { CommonActions, useFocusEffect } from "@react-navigation/native";
+import { useFocusEffect } from "@react-navigation/native";
 import { setActiveChatThreadId } from "../lib/chatPresence";
 import { avatarPlaceholder } from "../../assets/placeholders";
+import { brand } from "../config/brand";
 
 
 import { useTranslation } from "react-i18next";
@@ -37,7 +40,6 @@ declare module "react-native-gifted-chat" {
     kind?: "text" | "image" | "video" | "file";
     pending?: boolean;
 
-    // optional: wenn du später den “no-jump” serverId approach wieder einbaust
     serverId?: string;
 
     story?: {
@@ -51,6 +53,7 @@ declare module "react-native-gifted-chat" {
 
     // ✅ NEU: Story expired / gelöscht
     storyExpired?: boolean;
+    systemWelcome?: boolean;
   }
 }
 
@@ -71,6 +74,7 @@ const MESSAGES = gql`
           }
 
           id
+          clientId
           createdAt
           kind
           text
@@ -91,10 +95,55 @@ const MESSAGES = gql`
   }
 `;
 
+const THREAD_INFO = gql`
+  query ThreadInfo($threadId: ID!) {
+    thread(threadId: $threadId) {
+      id
+      title
+      imageUrl
+      kind
+      isGroupChat
+      viewerIsOwner
+      members {
+        id
+        username
+        avatarThumbUrl
+        avatarUrl
+      }
+      community {
+        id
+        title
+        type
+        slug
+        owner {
+          id
+        }
+      }
+    }
+  }
+`;
+
+const UPDATE_THREAD_SETTINGS = gql`
+  mutation UpdateThreadSettings($threadId: ID!, $title: String!, $imageKey: String) {
+    updateThreadSettings(threadId: $threadId, title: $title, imageKey: $imageKey) {
+      id
+      title
+      imageUrl
+    }
+  }
+`;
+
+const REMOVE_THREAD_MEMBER = gql`
+  mutation RemoveThreadMember($threadId: ID!, $userId: ID!) {
+    removeThreadMember(threadId: $threadId, userId: $userId)
+  }
+`;
+
 const SEND_MESSAGE = gql`
   mutation Send($input: SendMessageInput!) {
     sendMessage(input: $input) {
       id
+      clientId
       createdAt
       kind
       text
@@ -126,6 +175,7 @@ const SUB_MESSAGE_ADDED = gql`
   subscription OnAdded($threadId: ID!) {
     messageAdded(threadId: $threadId) {
       id
+      clientId
       createdAt
       kind
       text
@@ -176,8 +226,20 @@ const MARK_THREAD_READ = gql`
   }
 `;
 
+const NAME_COLORS = ["#2563eb", "#0891b2", "#059669", "#7c3aed", "#db2777", "#ea580c", "#0f766e", "#4f46e5"];
+const WELCOME_MESSAGE_I18N_TOKEN = "system:welcome";
+
+function nameColorForUser(userId: string) {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i += 1) {
+    hash = (hash * 31 + userId.charCodeAt(i)) >>> 0;
+  }
+  return NAME_COLORS[hash % NAME_COLORS.length];
+}
+
 type MsgNode = {
   id: string;
+  clientId?: string | null;
   createdAt: string;
   kind: "text" | "image" | "video" | "file";
   text?: string;
@@ -196,7 +258,7 @@ type MsgNode = {
 };
 
 export default function ChatScreen({ route, navigation }: any) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   const { theme } = useTheme();
   const C = useMemo(() => {
@@ -208,11 +270,25 @@ export default function ChatScreen({ route, navigation }: any) {
       sub: x.subtext ?? "#9CA3AF",
       border: x.border ?? "#23262B",
       accent: x.primary ?? "#4f46e5",
+      danger: x.danger ?? "#ef4444",
     };
   }, [theme]);
 
   const styles = useMemo(() => makeStyles(C), [C]);
   const insets = useSafeAreaInsets();
+  const chatLanguage = useMemo(() => {
+    const language = String(i18n.resolvedLanguage ?? i18n.language ?? "en").toLowerCase();
+    return language.startsWith("de") ? "de" : "en";
+  }, [i18n.language, i18n.resolvedLanguage]);
+  const chatTimeFormat = chatLanguage === "de" ? "HH:mm" : "h:mm A";
+  const chatDateFormat = chatLanguage === "de" ? "D. MMMM YYYY" : "MMMM D, YYYY";
+  const chatDateFormatCalendar = useMemo(
+    () =>
+      chatLanguage === "de"
+        ? { sameDay: "[Heute]", lastDay: "[Gestern]", sameElse: chatDateFormat }
+        : { sameDay: "[Today]", lastDay: "[Yesterday]", sameElse: chatDateFormat },
+    [chatDateFormat, chatLanguage]
+  );
   const storyCardWidth = useMemo(() => {
     const w = Dimensions.get("window")?.width ?? 375;
     return Math.min(300, Math.max(220, Math.floor(w * 0.72)));
@@ -243,10 +319,54 @@ export default function ChatScreen({ route, navigation }: any) {
     skip: !threadId,
     fetchPolicy: "cache-and-network",
   });
+  const { data: threadInfo, refetch: refetchThreadInfo } = useQuery(THREAD_INFO, {
+    variables: { threadId },
+    skip: !threadId,
+    fetchPolicy: "cache-and-network",
+  });
+  const isGroupChat = Boolean(threadInfo?.thread?.isGroupChat);
+  const threadCommunity = threadInfo?.thread?.community;
+  const isPlainGroupChat = isGroupChat && !threadCommunity?.id;
+  const groupMembers = threadInfo?.thread?.members ?? [];
+  const viewerIsThreadOwner = Boolean(threadInfo?.thread?.viewerIsOwner);
+  const headerTitle = threadInfo?.thread?.title || title;
+  const isBroadcastOnly = threadInfo?.thread?.kind === "BROADCAST";
+  const isChatDisabled = threadInfo?.thread?.kind === "DISABLED";
+  const canSendChatMessages =
+    !isChatDisabled && (!isBroadcastOnly || (!!threadCommunity?.owner?.id && String(threadCommunity.owner.id) === String(myId)));
+
+  useEffect(() => {
+    if (!canSendChatMessages) setInputText("");
+  }, [canSendChatMessages]);
+
+  const openCommunityLiveFeed = useCallback(() => {
+    if (!threadCommunity?.id) return;
+    navigation.navigate("CommunitySpace", {
+      id: threadCommunity.id,
+      title: threadCommunity.title,
+      slug: threadCommunity.slug,
+      type: threadCommunity.type,
+    });
+  }, [navigation, threadCommunity?.id, threadCommunity?.slug, threadCommunity?.title, threadCommunity?.type]);
 
   const [deleteMessageMut] = useMutation(DELETE_MESSAGE);
   const [markThreadRead] = useMutation(MARK_THREAD_READ);
   const [sendMessage] = useMutation(SEND_MESSAGE);
+  const [updateThreadSettings, { loading: groupSettingsSaving }] = useMutation(UPDATE_THREAD_SETTINGS);
+  const [removeThreadMember, { loading: memberRemoving }] = useMutation(REMOVE_THREAD_MEMBER);
+  const [groupSettingsOpen, setGroupSettingsOpen] = useState(false);
+  const [editGroupTitle, setEditGroupTitle] = useState("");
+  const [editGroupImageUri, setEditGroupImageUri] = useState<string | null>(null);
+  const [editGroupImageMime, setEditGroupImageMime] = useState("image/jpeg");
+  const [editGroupImageName, setEditGroupImageName] = useState("group-chat.jpg");
+
+  const openGroupSettings = useCallback(() => {
+    setEditGroupTitle(String(threadInfo?.thread?.title ?? ""));
+    setEditGroupImageUri(threadInfo?.thread?.imageUrl ?? null);
+    setEditGroupImageMime("image/jpeg");
+    setEditGroupImageName("group-chat.jpg");
+    setGroupSettingsOpen(true);
+  }, [threadInfo?.thread?.imageUrl, threadInfo?.thread?.title]);
 
   const lastReadPing = useRef(0);
   const markRead = useCallback(() => {
@@ -276,10 +396,10 @@ export default function ChatScreen({ route, navigation }: any) {
 
     for (const n of nodes) if (n?.id) seenIds.current.add(String(n.id));
 
-    const mapped = mapMessages(nodes);
+    const mapped = mapMessages(nodes, t);
     setMessages((prev) => mergeById(prev, mapped));
     markRead();
-  }, [data, markRead]);
+  }, [data, markRead, t]);
 
   useSubscription(SUB_MESSAGE_ADDED, {
     variables: { threadId },
@@ -293,7 +413,7 @@ export default function ChatScreen({ route, navigation }: any) {
       if (seenIds.current.has(id)) return;
       seenIds.current.add(id);
 
-      const incoming = mapMessages([msg]);
+      const incoming = mapMessages([msg], t);
       setMessages((prev) => {
         if (hasMessage(prev, id)) return prev;
         return mergeById(prev, incoming);
@@ -322,27 +442,52 @@ export default function ChatScreen({ route, navigation }: any) {
     return <Message {...rest} />;
   }, []);
 
+  const renderMessageText = useCallback(
+    (props: any) => {
+      const m = props?.currentMessage as any;
+      if (!m?.systemWelcome) return <MessageText {...props} />;
+
+      const isMine = String(m?.user?._id ?? "") === String(myId);
+      const textColor = isMine ? "#fff" : C.text;
+      const linkColor = isMine ? "#fff" : C.accent;
+      const linkStyle = [styles.welcomeInlineLink, { color: linkColor }];
+
+      return (
+        <Text style={[styles.welcomeInlineText, { color: textColor }]}>
+          {t("chat.welcomeTitle", { appName: brand.appName })}
+          {"\n\n"}
+          {t("chat.welcomeMessage")}
+          {"\n\n"}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Home" })}>
+            {t("chat.welcomeActions.feed")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "MessagesTab" })}>
+            {t("chat.welcomeActions.chats")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("Groups")}>
+            {t("chat.welcomeActions.communities")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Vlogs" })}>
+            {t("chat.welcomeActions.events")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Profile" })}>
+            {t("chat.welcomeActions.profile")}
+          </Text>
+        </Text>
+      );
+    },
+    [C.accent, C.text, myId, navigation, styles.welcomeInlineLink, styles.welcomeInlineText, t]
+  );
+
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */
-  const goToProfileTab = useCallback(
+  const openUserProfile = useCallback(
     (userId: string) => {
       if (!userId) return;
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [
-            {
-              name: "AppTabs",
-              params: {
-                screen: "Profile",
-                params: {
-                  screen: "ProfileMain",
-                  params: { userId },
-                },
-              },
-            },
-          ],
-        })
-      );
+      navigation.navigate("UserProfile", { userId });
     },
     [navigation]
   );
@@ -362,7 +507,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
       return (
         <TouchableOpacity
-          onPress={() => goToProfileTab(uid)}
+          onPress={() => openUserProfile(uid)}
           activeOpacity={0.9}
           style={{ marginLeft: 6, marginRight: 6 }}
         >
@@ -376,7 +521,7 @@ export default function ChatScreen({ route, navigation }: any) {
         </TouchableOpacity>
       );
     },
-    [goToProfileTab, myId, styles.avatar]
+    [openUserProfile, myId, styles.avatar]
   );
 
 
@@ -495,6 +640,7 @@ export default function ChatScreen({ route, navigation }: any) {
   const onSend = useCallback(
     async (out: IMessage[] = []) => {
       if (!threadId) return;
+      if (!canSendChatMessages) return;
 
       for (const m of out) {
         const text = m.text?.trim();
@@ -517,7 +663,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
         try {
           const res = await sendMessage({
-            variables: { input: { threadId, kind: "text", text } },
+            variables: { input: { threadId, clientId: tempId, kind: "text", text } },
           });
 
           const serverMsg = res.data?.sendMessage as MsgNode | undefined;
@@ -526,12 +672,7 @@ export default function ChatScreen({ route, navigation }: any) {
             const sid = String(serverMsg.id);
             seenIds.current.add(sid);
 
-            // tmp ersetzen wie du es hast (ok), Jump ist jetzt weg weil statusSlot konstant
-            setMessages((prev) => {
-              const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
-              if (hasMessage(withoutTmp, sid)) return withoutTmp;
-              return mergeById(withoutTmp, mapMessages([serverMsg]));
-            });
+            setMessages((prev) => mergeById(prev, mapMessages([serverMsg], t)));
           } else {
             setMessages((prev) =>
               prev.map((x) => (String(x._id) === String(tempId) ? ({ ...x, pending: false } as any) : x))
@@ -546,7 +687,7 @@ export default function ChatScreen({ route, navigation }: any) {
       setInputText("");
       markRead();
     },
-    [threadId, sendMessage, myId, myAvatar, markRead, t]
+    [threadId, canSendChatMessages, sendMessage, myId, myAvatar, markRead, t]
   );
 
   async function downloadAndShare(url: string, suggestedName?: string) {
@@ -574,6 +715,7 @@ export default function ChatScreen({ route, navigation }: any) {
   const pickImage = useCallback(async () => {
     try {
       if (!threadId) return;
+      if (!canSendChatMessages) return;
 
       const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (perm.status !== "granted") {
@@ -616,6 +758,7 @@ export default function ChatScreen({ route, navigation }: any) {
         variables: {
           input: {
             threadId,
+            clientId: tempId,
             kind: "image",
             media: { key: uploaded.key, mime: uploaded.mime },
           },
@@ -628,11 +771,7 @@ export default function ChatScreen({ route, navigation }: any) {
         const sid = String(serverMsg.id);
         seenIds.current.add(sid);
 
-        setMessages((prev) => {
-          const withoutTmp = prev.filter((x) => String(x._id) !== String(tempId));
-          if (hasMessage(withoutTmp, sid)) return withoutTmp;
-          return mergeById(withoutTmp, mapMessages([serverMsg]));
-        });
+        setMessages((prev) => mergeById(prev, mapMessages([serverMsg], t)));
       } else {
         setMessages((prev) =>
           prev.map((x) => (String(x._id) === String(tempId) ? ({ ...x, pending: false } as any) : x))
@@ -642,7 +781,83 @@ export default function ChatScreen({ route, navigation }: any) {
       console.warn("[Chat] pickImage failed:", e?.message || e);
       Alert.alert(t("chat.imageSendFailedTitle"), e?.message || t("chat.imageSendFailedBody"));
     }
-  }, [apollo, threadId, sendMessage, myId, myAvatar, t]);
+  }, [apollo, threadId, canSendChatMessages, sendMessage, myId, myAvatar, t]);
+
+  const pickGroupImage = useCallback(async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") {
+      Alert.alert(t("chat.permissionMissingTitle"), t("chat.photosPermissionBody"));
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+    });
+    const asset = res.assets?.[0];
+    if (!res.canceled && asset?.uri) {
+      setEditGroupImageUri(asset.uri);
+      setEditGroupImageMime(asset.mimeType ?? "image/jpeg");
+      setEditGroupImageName(asset.fileName ?? "group-chat.jpg");
+    }
+  }, [t]);
+
+  const saveGroupSettings = useCallback(async () => {
+    const nextTitle = editGroupTitle.trim();
+    if (!nextTitle) {
+      Alert.alert(t("common.error"), t("messages.groupNameRequired"));
+      return;
+    }
+
+    try {
+      let imageKey: string | undefined;
+      if (editGroupImageUri && !/^https?:\/\//i.test(editGroupImageUri)) {
+        const uploaded = await uploadToS3(apollo, {
+          uri: editGroupImageUri,
+          name: editGroupImageName,
+          type: editGroupImageMime,
+        });
+        imageKey = uploaded.key;
+      }
+
+      await updateThreadSettings({
+        variables: {
+          threadId,
+          title: nextTitle,
+          imageKey,
+        },
+      });
+      await refetchThreadInfo();
+      setGroupSettingsOpen(false);
+    } catch (e: any) {
+      Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+    }
+  }, [editGroupImageMime, editGroupImageName, editGroupImageUri, editGroupTitle, refetchThreadInfo, t, threadId, updateThreadSettings]);
+
+  const confirmRemoveMember = useCallback(
+    (member: any) => {
+      if (!viewerIsThreadOwner || !member?.id || member.id === myId) return;
+      Alert.alert(
+        t("chat.removeMemberTitle"),
+        t("chat.removeMemberBody", { username: member.username ?? t("chat.thisMember") }),
+        [
+          { text: t("common.cancel"), style: "cancel" },
+          {
+            text: t("chat.removeMemberCta"),
+            style: "destructive",
+            onPress: async () => {
+              try {
+                await removeThreadMember({ variables: { threadId, userId: member.id } });
+                await refetchThreadInfo();
+              } catch (e: any) {
+                Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+              }
+            },
+          },
+        ]
+      );
+    },
+    [myId, refetchThreadInfo, removeThreadMember, t, threadId, viewerIsThreadOwner]
+  );
 
   const renderMessageImage = useCallback(
     (props: any) => {
@@ -688,21 +903,33 @@ const renderCustomView = useCallback(
     const m = props?.currentMessage as any;
     if (!m) return null;
 
+    const userId = String(m?.user?._id ?? "");
+    const isMine = !!userId && userId === String(myId);
+    const name = typeof m?.user?.name === "string" ? m.user.name.trim() : "";
+    const senderName = isGroupChat && !isMine && name ? (
+      <Text style={[styles.senderName, { color: nameColorForUser(userId) }]} numberOfLines={1}>
+        {name}
+      </Text>
+    ) : null;
+
     const story = m.story;
     const expired = !!m.storyExpired;
 
-    if (!story && !expired) return null;
+    if (!story && !expired) return senderName;
 
     // ───────────────── Expired ─────────────────
     if (expired || !story?.mediaUrl) {
       return (
-        <View style={[styles.storyExpiredCard, { backgroundColor: C.card, borderColor: C.border,width: storyCardWidth, alignSelf: "flex-start", }]}>
-          <Ionicons name="time-outline" size={18} color={C.sub} />
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.storyExpiredTitle, { color: C.text }]}>
-              {t("chat.storyNoLongerAvailable")}</Text>
-            <Text style={[styles.storyExpiredSub, { color: C.sub }]}>
-              {t("chat.thisStoryHasExpired")}</Text>
+        <View>
+          {senderName}
+          <View style={[styles.storyExpiredCard, { backgroundColor: C.card, borderColor: C.border,width: storyCardWidth, alignSelf: "flex-start", }]}>
+            <Ionicons name="time-outline" size={18} color={C.sub} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.storyExpiredTitle, { color: C.text }]}>
+                {t("chat.storyNoLongerAvailable")}</Text>
+              <Text style={[styles.storyExpiredSub, { color: C.sub }]}>
+                {t("chat.thisStoryHasExpired")}</Text>
+            </View>
           </View>
         </View>
       );
@@ -723,6 +950,8 @@ const renderCustomView = useCallback(
       null;
 
     return (
+      <View>
+      {senderName}
       <Container
         activeOpacity={isOpenable ? 0.9 : undefined}
         onPress={isOpenable ? () => openStoryFromMsg(m) : undefined}
@@ -773,9 +1002,10 @@ const renderCustomView = useCallback(
           <Ionicons name="chevron-forward" size={18} color={C.sub} />
         </View>
       </Container>
+      </View>
     );
   },
-  [C, myId, openStoryFromMsg, styles, storyCardWidth, t]
+  [C, isGroupChat, myId, navigation, openStoryFromMsg, styles, storyCardWidth, t]
 );
 
 
@@ -783,6 +1013,7 @@ const renderCustomView = useCallback(
   const renderPillToolbar = useCallback(
     (props: any) => {
       const handlePressSend = () => {
+        if (!canSendChatMessages) return;
         const text = inputText.trim();
         if (!text) return;
 
@@ -794,11 +1025,24 @@ const renderCustomView = useCallback(
         setInputText("");
       };
 
+      if (!canSendChatMessages) {
+        return (
+          <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: 0 }]}>
+            <View style={[styles.broadcastNotice, { backgroundColor: C.card, borderColor: C.border }]}>
+              <Ionicons name={isChatDisabled ? "chatbubbles-outline" : "megaphone-outline"} size={18} color={C.sub} />
+              <Text style={[styles.broadcastNoticeText, { color: C.sub }]}>
+                {isChatDisabled ? t("chat.chatDisabledNotice") : t("chat.broadcastOnlyNotice")}
+              </Text>
+            </View>
+          </View>
+        );
+      }
+
       return (
-        <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: Math.max(insets.bottom, 8) }]}>
+        <View style={[styles.toolbarWrap, { backgroundColor: C.bg, paddingBottom: 0 }]}>
           {!hasText && (
-            <TouchableOpacity style={[styles.camBtn, { backgroundColor: C.accent }]} onPress={pickImage} activeOpacity={0.9}>
-              <Ionicons name="camera-outline" size={18} color="#fff" />
+            <TouchableOpacity style={styles.camBtn} onPress={pickImage} activeOpacity={0.78} hitSlop={10}>
+              <Ionicons name="camera-outline" size={24} color={C.text} />
             </TouchableOpacity>
           )}
 
@@ -813,8 +1057,8 @@ const renderCustomView = useCallback(
             />
 
             {hasText ? (
-              <TouchableOpacity style={[styles.sendBtn, { backgroundColor: C.accent }]} onPress={handlePressSend} activeOpacity={0.9}>
-                <Ionicons name="send" size={16} color="#fff" />
+              <TouchableOpacity style={styles.sendBtn} onPress={handlePressSend} activeOpacity={0.78} hitSlop={10}>
+                <Ionicons name="send" size={20} color={C.accent} />
               </TouchableOpacity>
             ) : (
               <View style={{ width: 8 }} />
@@ -823,7 +1067,7 @@ const renderCustomView = useCallback(
         </View>
       );
     },
-    [C.bg, C.card, C.border, C.text, C.sub, C.accent, hasText, inputText, myId, pickImage, insets.bottom]
+    [C.bg, C.card, C.border, C.text, C.sub, C.accent, canSendChatMessages, hasText, inputText, isChatDisabled, myId, pickImage, t]
   );
 
   return (
@@ -831,18 +1075,41 @@ const renderCustomView = useCallback(
       {/* Header */}
       <View style={[styles.header, { paddingTop: 10 }]}>
         <TouchableOpacity
-          style={[styles.headerBtn, { backgroundColor: C.card, borderColor: C.border }]}
+          style={styles.headerBtn}
           onPress={() => navigation.goBack()}
-          activeOpacity={0.85}
+          activeOpacity={0.78}
+          hitSlop={12}
         >
-          <Ionicons name="chevron-back" size={22} color={C.text} />
+          <Ionicons name="chevron-back" size={28} color={C.text} />
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, { color: C.text }]} numberOfLines={1}>
-          {title}
+          {headerTitle}
         </Text>
 
-        <View style={{ width: 38 }} />
+        {threadCommunity?.id ? (
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={openCommunityLiveFeed}
+            activeOpacity={0.78}
+            hitSlop={12}
+            accessibilityLabel={t("chat.openLiveFeed")}
+          >
+            <Ionicons name="aperture-outline" size={24} color={C.text} />
+          </TouchableOpacity>
+        ) : isPlainGroupChat ? (
+          <TouchableOpacity
+            style={styles.headerBtn}
+            onPress={openGroupSettings}
+            activeOpacity={0.78}
+            hitSlop={12}
+            accessibilityLabel={t("chat.groupSettings")}
+          >
+            <Ionicons name="settings-outline" size={23} color={C.text} />
+          </TouchableOpacity>
+        ) : (
+          <View style={{ width: 38 }} />
+        )}
       </View>
 
       <GiftedChat
@@ -855,9 +1122,14 @@ const renderCustomView = useCallback(
         messagesContainerStyle={{ backgroundColor: C.bg }}
         renderMessage={renderMessage}
         renderBubble={renderBubble}
+        renderMessageText={renderMessageText}
         renderCustomView={renderCustomView}
         renderInputToolbar={renderPillToolbar}
         renderMessageImage={renderMessageImage}
+        locale={chatLanguage}
+        timeFormat={chatTimeFormat}
+        dateFormat={chatDateFormat}
+        dateFormatCalendar={chatDateFormatCalendar}
         messageIdGenerator={() => `${Date.now()}-${Math.random().toString(36).slice(2)}`}
         onLongPress={(_ctx, message) => setActionMsg(message)}
         // ✅ AVATAR wirklich aktivieren:
@@ -867,9 +1139,89 @@ const renderCustomView = useCallback(
         // falls du trotzdem onPressAvatar willst:
         onPressAvatar={(user) => {
           const userId = String((user as any)?._id);
-          if (userId) goToProfileTab(userId);
+          if (userId) openUserProfile(userId);
         }}
       />
+
+      <Modal visible={groupSettingsOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setGroupSettingsOpen(false)}>
+        <SafeAreaView style={[styles.modalRoot, { backgroundColor: C.bg }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: C.border }]}>
+            <TouchableOpacity style={styles.modalIconBtn} onPress={() => setGroupSettingsOpen(false)} hitSlop={12}>
+              <Ionicons name="close" size={24} color={C.text} />
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: C.text }]}>{t("chat.groupSettings")}</Text>
+            <View style={styles.modalIconBtn} />
+          </View>
+
+          <ScrollView contentContainerStyle={styles.modalBody} keyboardShouldPersistTaps="handled">
+            {viewerIsThreadOwner ? (
+              <View style={[styles.settingsCard, { backgroundColor: C.card, borderColor: C.border }]}>
+                <TouchableOpacity style={styles.groupImageEditBtn} onPress={pickGroupImage} activeOpacity={0.82}>
+                  {editGroupImageUri ? (
+                    <ExpoImage source={{ uri: editGroupImageUri }} style={styles.groupImageEditPreview} contentFit="cover" />
+                  ) : (
+                    <Ionicons name="camera-outline" size={26} color={C.sub} />
+                  )}
+                </TouchableOpacity>
+
+                <TextInput
+                  style={[styles.groupNameInput, { color: C.text, borderColor: C.border, backgroundColor: C.bg }]}
+                  placeholder={t("messages.groupNamePlaceholder")}
+                  placeholderTextColor={C.sub}
+                  value={editGroupTitle}
+                  onChangeText={setEditGroupTitle}
+                  maxLength={48}
+                  autoCorrect={false}
+                />
+
+                <TouchableOpacity
+                  style={[styles.saveBtn, { backgroundColor: C.text }, (!editGroupTitle.trim() || groupSettingsSaving) && { opacity: 0.45 }]}
+                  onPress={saveGroupSettings}
+                  disabled={!editGroupTitle.trim() || groupSettingsSaving}
+                  activeOpacity={0.82}
+                >
+                  {groupSettingsSaving ? (
+                    <ActivityIndicator size="small" color={C.bg} />
+                  ) : (
+                    <Text style={[styles.saveBtnText, { color: C.bg }]}>{t("common.save")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            ) : null}
+
+            <Text style={[styles.membersTitle, { color: C.sub }]}>{t("chat.groupMembers")}</Text>
+            <View style={[styles.settingsCard, { backgroundColor: C.card, borderColor: C.border }]}>
+              {groupMembers.map((member: any) => {
+                const isMe = member.id === myId;
+                return (
+                  <View key={member.id} style={[styles.memberRow, { borderBottomColor: C.border }]}>
+                    <ExpoImage
+                      source={member.avatarThumbUrl || member.avatarUrl ? { uri: member.avatarThumbUrl || member.avatarUrl } : avatarPlaceholder}
+                      style={styles.memberAvatar}
+                      contentFit="cover"
+                      cachePolicy="disk"
+                    />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={[styles.memberName, { color: C.text }]} numberOfLines={1}>@{member.username}</Text>
+                      {isMe ? <Text style={[styles.memberSub, { color: C.sub }]}>{t("chat.you")}</Text> : null}
+                    </View>
+                    {viewerIsThreadOwner && !isMe ? (
+                      <TouchableOpacity
+                        style={styles.removeMemberBtn}
+                        onPress={() => confirmRemoveMember(member)}
+                        disabled={memberRemoving}
+                        hitSlop={10}
+                      >
+                        <Ionicons name="remove-circle-outline" size={22} color={C.danger ?? "#ef4444"} />
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
+                );
+              })}
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       <ActionSheet />
     </SafeAreaView>
@@ -877,32 +1229,73 @@ const renderCustomView = useCallback(
 }
 
 /* ───────────────── Helpers ───────────────── */
-function mapMessages(nodes: MsgNode[]): IMessage[] {
-  return nodes.map((n) => ({
-    _id: n.id,
-    text: n.kind === "text" ? (n.text ?? "") : "",
-    createdAt: new Date(n.createdAt),
-    user: {
-      _id: n.sender.id,
-      name: n.sender.username,
-      avatar: n.sender.avatarThumbUrl ?? n.sender.avatarUrl ?? undefined,
-    },
-    image: n.kind === "image" ? n.media?.url : undefined,
-    video: n.kind === "video" ? n.media?.url : undefined,
-    kind: n.kind,
-    story: n.story ?? null,
-    storyExpired: Boolean(n.storyExpired),
-  })) as any;
+function isWelcomeMessageNode(node?: MsgNode | null) {
+  return node?.kind === "text" && node.text === WELCOME_MESSAGE_I18N_TOKEN;
+}
+
+function mapMessages(nodes: MsgNode[], t: (key: string) => string): IMessage[] {
+  return nodes.map((n) => {
+    const isWelcome = isWelcomeMessageNode(n);
+    const stableId = n.clientId || n.id;
+
+    return {
+      _id: stableId,
+      serverId: n.id,
+      text: n.kind === "text" ? (isWelcome ? t("chat.welcomeMessage") : n.text ?? "") : "",
+      createdAt: new Date(n.createdAt),
+      user: {
+        _id: n.sender.id,
+        name: n.sender.username,
+        avatar: n.sender.avatarThumbUrl ?? n.sender.avatarUrl ?? undefined,
+      },
+      image: n.kind === "image" ? n.media?.url : undefined,
+      video: n.kind === "video" ? n.media?.url : undefined,
+      kind: n.kind,
+      story: n.story ?? null,
+      storyExpired: Boolean(n.storyExpired),
+      systemWelcome: isWelcome,
+      pending: false,
+    };
+  }) as any;
 }
 
 function hasMessage(prev: IMessage[], id: string) {
-  return prev.some((m) => String(m._id) === String(id));
+  return prev.some((m: any) => String(m._id) === String(id) || String(m.serverId ?? "") === String(id));
 }
 
 function mergeById(prev: IMessage[], incoming: IMessage[]) {
   const map = new Map<string, IMessage>();
-  for (const m of prev) map.set(String(m._id), m);
-  for (const m of incoming) map.set(String(m._id), m);
+  const serverIdToLocalId = new Map<string, string>();
+
+  for (const m of prev) {
+    const localId = String(m._id);
+    map.set(localId, m);
+    const serverId = String((m as any).serverId ?? "");
+    if (serverId) serverIdToLocalId.set(serverId, localId);
+  }
+
+  for (const m of incoming) {
+    const incomingId = String(m._id);
+    const incomingServerId = String((m as any).serverId ?? "");
+    const existingLocalId =
+      serverIdToLocalId.get(incomingId) ||
+      (incomingServerId ? serverIdToLocalId.get(incomingServerId) : undefined);
+
+    if (existingLocalId && map.has(existingLocalId)) {
+      const existing = map.get(existingLocalId)! as any;
+      map.set(existingLocalId, {
+        ...existing,
+        ...m,
+        _id: existing._id,
+        serverId: incomingServerId || incomingId,
+        createdAt: existing.createdAt,
+      } as any);
+      continue;
+    }
+
+    map.set(incomingId, m);
+    if (incomingServerId) serverIdToLocalId.set(incomingServerId, incomingId);
+  }
   const out = Array.from(map.values());
   out.sort((a, b) => +new Date(b.createdAt as any) - +new Date(a.createdAt as any));
   return out;
@@ -919,18 +1312,116 @@ const makeStyles = (C: any) =>
       gap: 10,
     },
     headerBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
-      borderWidth: 1,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
+      backgroundColor: "transparent",
     },
     headerTitle: {
       flex: 1,
       textAlign: "center",
       fontWeight: "800",
       fontSize: 16,
+    },
+    modalRoot: {
+      flex: 1,
+    },
+    modalHeader: {
+      height: 56,
+      paddingHorizontal: 14,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    modalIconBtn: {
+      width: 42,
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    modalTitle: {
+      fontSize: 16,
+      fontWeight: "900",
+    },
+    modalBody: {
+      padding: 16,
+      gap: 14,
+    },
+    settingsCard: {
+      borderWidth: 1,
+      borderRadius: 18,
+      padding: 12,
+      gap: 12,
+    },
+    groupImageEditBtn: {
+      alignSelf: "center",
+      width: 86,
+      height: 86,
+      borderRadius: 43,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    groupImageEditPreview: {
+      width: "100%",
+      height: "100%",
+    },
+    groupNameInput: {
+      minHeight: 44,
+      borderWidth: 1,
+      borderRadius: 14,
+      paddingHorizontal: 12,
+      fontSize: 16,
+      fontWeight: "800",
+    },
+    saveBtn: {
+      height: 42,
+      borderRadius: 21,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    saveBtnText: {
+      fontSize: 14,
+      fontWeight: "900",
+    },
+    membersTitle: {
+      fontSize: 12,
+      fontWeight: "900",
+      textTransform: "uppercase",
+      letterSpacing: 0,
+      marginTop: 4,
+    },
+    memberRow: {
+      minHeight: 54,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+    },
+    memberAvatar: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+    },
+    memberName: {
+      fontSize: 14,
+      fontWeight: "800",
+    },
+    memberSub: {
+      fontSize: 12,
+      fontWeight: "600",
+      marginTop: 1,
+    },
+    removeMemberBtn: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      alignItems: "center",
+      justifyContent: "center",
     },
 
     avatar: {
@@ -940,6 +1431,13 @@ const makeStyles = (C: any) =>
       backgroundColor: C.card,
       borderWidth: 1,
       borderColor: "rgba(255,255,255,0.08)",
+    },
+    senderName: {
+      marginHorizontal: 10,
+      marginTop: 7,
+      marginBottom: 2,
+      fontSize: 12,
+      fontWeight: "800",
     },
 
     timeRow: {
@@ -963,15 +1461,33 @@ const makeStyles = (C: any) =>
       flexDirection: "row",
       alignItems: "center",
       paddingHorizontal: 10,
-      paddingTop: 6,
+      paddingTop: 18,
+    },
+    broadcastNotice: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: 21,
+      borderWidth: 1,
+      paddingHorizontal: 14,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    broadcastNoticeText: {
+      flexShrink: 1,
+      fontSize: 13,
+      fontWeight: "700",
+      textAlign: "center",
     },
     camBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 19,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
       marginRight: 8,
+      backgroundColor: "transparent",
     },
     pill: {
       flex: 1,
@@ -991,12 +1507,13 @@ const makeStyles = (C: any) =>
       paddingBottom: 8,
     },
     sendBtn: {
-      width: 34,
-      height: 34,
-      borderRadius: 17,
+      width: 36,
+      height: 36,
+      borderRadius: 18,
       alignItems: "center",
       justifyContent: "center",
       marginLeft: 4,
+      backgroundColor: "transparent",
     },
     image: {
       width: 220,
@@ -1048,6 +1565,18 @@ const makeStyles = (C: any) =>
       alignItems: "center",
       justifyContent: "center",
       backgroundColor: "rgba(0,0,0,0.55)",
+    },
+
+    welcomeInlineText: {
+      paddingHorizontal: 10,
+      paddingVertical: 7,
+      fontSize: 15,
+      lineHeight: 21,
+      fontWeight: "600",
+    },
+    welcomeInlineLink: {
+      fontWeight: "900",
+      textDecorationLine: "underline",
     },
 
     storyCard: {

@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { TopIconButton } from "./TopIconButton";
 import { useTheme } from "../../../theme/ThemeProvider";
+import { brand } from "../../../config/brand";
 
 type RootStackParamList = {
   Activity: undefined;
@@ -112,10 +113,6 @@ export function FeedHeader({
     setModeOpen(false);
   }, []);
 
-  const openCreateFlow = React.useCallback(() => {
-    navigation.navigate("CreateMedia", { initialMode: "BEITRAG", nonce: Date.now() });
-  }, [navigation]);
-
   React.useEffect(() => {
     if (detailMode) {
       setModeOpen(false);
@@ -170,19 +167,11 @@ export function FeedHeader({
       ) : (
         <>
           <View style={s.leftSlot}>
-          <View style={s.logoWrap}>
-            <TouchableOpacity
-              activeOpacity={0.78}
-              onPress={openCreateFlow}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Create"
-            >
-              <Text style={s.createPlusText} numberOfLines={1}>
-                +
+            <View style={s.logoWrap}>
+              <Text style={s.brandText} numberOfLines={1}>
+                {brand.feedHeaderText}
               </Text>
-            </TouchableOpacity>
-          </View>
+            </View>
           </View>
 
           <View style={s.headerActions}>
@@ -303,7 +292,6 @@ const styles = (C: any, mode?: string) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginLeft: 7,
     },
     centerAnchor: {
       position: "absolute",

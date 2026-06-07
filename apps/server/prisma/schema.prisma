@@ -37,6 +37,7 @@ model GroupLink {
   title String
   type  GroupLinkType @default(OTHER)
   slug  String?       @unique
+  imageKey String?
 
   ownerId String
   owner   Profile @relation("GroupLinkOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -904,11 +905,22 @@ model UserBlock {
 // Chat
 //////////////////////////////////////////////////////////
 
+enum ThreadKind {
+  DM
+  GROUP
+  COMMUNITY
+  BROADCAST
+  DISABLED
+}
+
 model Thread {
   id        String   @id @default(cuid())
   title     String?
+  imageKey  String?
+  ownerId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  kind      ThreadKind @default(DM)
 
   dmKey    String? @unique
   groupKey String? @unique
@@ -934,6 +946,7 @@ model Message {
   threadId   String
   sender     Profile       @relation(fields: [senderId], references: [id])
   senderId   String
+  clientId   String?
   kind       String // "text" | "image" | "video" | "file" | "emoji"
   text       String?
   s3Key      String?
@@ -947,6 +960,8 @@ model Message {
   likes      MessageLike[]
   storyId    String?
   story      Story?        @relation(fields: [storyId], references: [id], onDelete: SetNull)
+
+  @@unique([threadId, senderId, clientId])
 }
 
 model MessageLike {

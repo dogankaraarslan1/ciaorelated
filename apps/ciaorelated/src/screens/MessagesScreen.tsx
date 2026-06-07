@@ -1,5 +1,6 @@
-import React, { useMemo, useState, useCallback } from "react";
+import React, { useMemo, useState, useCallback, useRef } from "react";
 import {
+  Alert,
   View,
   Text,
   FlatList,
@@ -13,9 +14,13 @@ import { useQuery, useMutation, gql, useSubscription } from "@apollo/client";
 import { Image as ExpoImage } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import * as ImagePicker from "expo-image-picker";
 import { useTheme } from "../theme/ThemeProvider";
 import { useFocusEffect } from "@react-navigation/native";
 import { avatarPlaceholder } from "../../assets/placeholders";
+import GroupLinkSheet from "./GroupLinkSheet";
+import { apollo } from "../apollo";
+import { uploadToS3 } from "../lib/uploadToS3";
 
 import { useTranslation } from "react-i18next";
 
@@ -27,11 +32,23 @@ const UNREAD_Q = gql`query { unreadCount { total } }`;
 
 const THREADS = gql`
   query Threads {
+    me {
+      id
+    }
     threads {
       id
       title
+      imageUrl
       lastMessageAt
       unreadCount
+      kind
+      isGroupChat
+      community {
+        id
+        title
+        imageUrl
+        imageThumbUrl
+      }
       members {
         id
         username
@@ -58,10 +75,11 @@ const SEARCH_USERS = gql`
 `;
 
 const CREATE_THREAD = gql`
-  mutation CreateThread($memberUserIds: [ID!]!, $title: String) {
-    createThread(memberUserIds: $memberUserIds, title: $title) {
+  mutation CreateThread($memberUserIds: [ID!]!, $title: String, $imageKey: String) {
+    createThread(memberUserIds: $memberUserIds, title: $title, imageKey: $imageKey) {
       id
       title
+      imageUrl
       members {
         id
         username
@@ -122,6 +140,15 @@ export default function MessagesScreen() {
   const styles = useMemo(() => makeStyles(C), [C]);
 
   const [q, setQ] = useState("");
+  const [composeMode, setComposeMode] = useState<"group" | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<any[]>([]);
+  const [groupTitle, setGroupTitle] = useState("");
+  const [groupImageUri, setGroupImageUri] = useState<string | null>(null);
+  const [groupImageMime, setGroupImageMime] = useState<string>("image/jpeg");
+  const [groupImageName, setGroupImageName] = useState<string>("group-chat.jpg");
+  const [creatingGroup, setCreatingGroup] = useState(false);
+  const creatingGroupRef = useRef(false);
+  const [showCreateCommunity, setShowCreateCommunity] = useState(false);
 
   // Threads laden
   const {
@@ -135,11 +162,12 @@ export default function MessagesScreen() {
   const { refetch: refetchUnread } = useQuery(UNREAD_Q, {
     fetchPolicy: "cache-and-network",
   });
-  const meId = meData?.me?.id;
+  const meId = tData?.me?.id ?? meData?.me?.id;
 
   // Suche (aktiv ab 2 Zeichen)
   const trimmedQ = q.trim();
   const doSearch = trimmedQ.length >= 2;
+  const showingSearch = composeMode === "group" || doSearch;
 
   const { data: sData, loading: sLoading } = useQuery(SEARCH_USERS, {
     variables: { q: trimmedQ, limit: 30 },
@@ -148,6 +176,8 @@ export default function MessagesScreen() {
   });
 
   const [createThread, { loading: creating }] = useMutation(CREATE_THREAD);
+  const selectedUserIds = useMemo(() => new Set(selectedUsers.map((user: any) => String(user.id))), [selectedUsers]);
+  const canCreateSelectedGroup = selectedUsers.length > 0 && groupTitle.trim().length > 0 && !creatingGroup && !creating;
 
   useFocusEffect(
     React.useCallback(() => {
@@ -208,7 +238,11 @@ export default function MessagesScreen() {
    * -> Dedupe nur, wenn meId existiert.
    */
   const threads = useMemo(() => {
-    const sorted = rawThreads.slice().sort(sortByLast);
+    const byId = new Map<string, any>();
+    for (const thread of rawThreads) {
+      if (thread?.id && !byId.has(String(thread.id))) byId.set(String(thread.id), thread);
+    }
+    const sorted = [...byId.values()].sort(sortByLast);
 
     // Wenn meId noch nicht da ist: NICHT dedupen, sonst verschwinden Threads.
     if (!meId) return sorted;
@@ -219,8 +253,10 @@ export default function MessagesScreen() {
     for (const t of sorted) {
       const members = Array.isArray(t.members) ? t.members : [];
 
-      // 1:1 Thread?
-      if (members.length === 2) {
+      // Nur echte 1:1-DMs deduplizieren. Community-/Gruppen-Chats mit zwei
+      // Mitgliedern dürfen nicht verschwinden, nur weil es einen DM mit
+      // derselben Person gibt.
+      if ((t?.kind ?? "DM") === "DM" && members.length === 2) {
         const other = members.find((m: any) => m?.id && m.id !== meId)?.id;
         if (other) {
           // keep newest per other user
@@ -260,8 +296,31 @@ export default function MessagesScreen() {
     return list;
   }, [sData?.searchUsers, doSearch, trimmedQ]);
 
-  // Navigation
-  const goBack = () => nav.goBack();
+  const openCreateMenu = () => {
+    Alert.alert(t("messages.createTitle"), undefined, [
+      {
+        text: t("messages.newGroupChat"),
+        onPress: () => {
+          setComposeMode("group");
+          setSelectedUsers([]);
+          setGroupTitle("");
+          setGroupImageUri(null);
+          setGroupImageMime("image/jpeg");
+          setGroupImageName("group-chat.jpg");
+          setQ("");
+        },
+      },
+      {
+        text: t("messages.newCommunity"),
+        onPress: () => setShowCreateCommunity(true),
+      },
+      {
+        text: t("messages.viewCommunities"),
+        onPress: () => nav.navigate("Groups"),
+      },
+      { text: t("common.cancel"), style: "cancel" },
+    ]);
+  };
 
   const openThread = (thr: any) =>
     nav.navigate("Chat", {
@@ -291,17 +350,93 @@ export default function MessagesScreen() {
     if (thr?.id) openThread(thr);
   };
 
+  const toggleSelectedUser = (user: any) => {
+    setSelectedUsers((prev) => {
+      const id = String(user.id);
+      if (prev.some((item: any) => String(item.id) === id)) {
+        return prev.filter((item: any) => String(item.id) !== id);
+      }
+      return [...prev, user];
+    });
+  };
+
+  const createSelectedGroup = async () => {
+    if (!selectedUsers.length) return;
+    if (creatingGroupRef.current) return;
+    if (!groupTitle.trim()) {
+      Alert.alert(t("common.error"), t("messages.groupNameRequired"));
+      return;
+    }
+    creatingGroupRef.current = true;
+    setCreatingGroup(true);
+    try {
+      let imageKey: string | null = null;
+      if (groupImageUri) {
+        const uploaded = await uploadToS3(apollo, {
+          uri: groupImageUri,
+          name: groupImageName,
+          type: groupImageMime,
+        });
+        imageKey = uploaded.key;
+      }
+
+      const { data } = await createThread({
+        variables: {
+          memberUserIds: selectedUsers.map((user: any) => user.id),
+          title: groupTitle.trim() || null,
+          imageKey,
+        },
+      });
+      const thread = data?.createThread;
+      if (thread?.id) {
+        setComposeMode(null);
+        setSelectedUsers([]);
+        setGroupTitle("");
+        setGroupImageUri(null);
+        setGroupImageMime("image/jpeg");
+        setGroupImageName("group-chat.jpg");
+        setQ("");
+        openThread(thread);
+      }
+    } catch (e: any) {
+      Alert.alert(t("common.error"), e?.message ?? t("common.tryAgain"));
+    } finally {
+      creatingGroupRef.current = false;
+      setCreatingGroup(false);
+    }
+  };
+
+  const pickGroupImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (perm.status !== "granted") {
+      Alert.alert(t("chat.permissionMissingTitle"), t("chat.photosPermissionBody"));
+      return;
+    }
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.9,
+    });
+    const asset = res.assets?.[0];
+    if (!res.canceled && asset?.uri) {
+      setGroupImageUri(asset.uri);
+      setGroupImageMime(asset.mimeType ?? "image/jpeg");
+      setGroupImageName(asset.fileName ?? "group-chat.jpg");
+    }
+  };
+
   // Anzeige-Infos für Thread (Titel/Avatar): bei 1:1 "anderer" User
   const getThreadDisplay = (thr: any) => {
     const members = Array.isArray(thr.members) ? thr.members : [];
-    const title = thr.title || readableThreadTitle(members, meId);
+    const community = thr?.community;
+    const isDirectMessage = !community && (thr?.kind ?? "DM") === "DM" && members.length === 2;
+    const otherMember = isDirectMessage && meId ? members.find((m: any) => m?.id && m.id !== meId) : null;
 
-    let avatar = members?.[0]?.avatarThumbUrl || members?.[0]?.avatarUrl || null;
-
-    if (members.length === 2 && meId) {
-      const other = members.find((m: any) => m?.id !== meId);
-      avatar = other?.avatarThumbUrl || other?.avatarUrl || avatar;
-    }
+    const title = community?.title || (isDirectMessage ? readableThreadTitle(members, meId) : thr.title || readableThreadTitle(members, meId));
+    const avatar = community
+      ? community.imageThumbUrl || community.imageUrl || null
+      : isDirectMessage
+        ? otherMember?.avatarThumbUrl || otherMember?.avatarUrl || null
+        : thr?.imageUrl || null;
 
     return {
       title,
@@ -309,25 +444,21 @@ export default function MessagesScreen() {
     };
   };
 
+  const getThreadLabel = (thr: any) => {
+    if (thr?.kind === "DISABLED") return t("messages.threadLabelDisabled");
+    if (thr?.community || thr?.kind === "COMMUNITY" || thr?.kind === "BROADCAST") return t("messages.threadLabelCommunity");
+    if (thr?.isGroupChat || thr?.kind === "GROUP") return t("messages.threadLabelGroup");
+    return "";
+  };
+
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       {/* Header (Theme) */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={goBack} style={styles.headerBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={22} color={C.text} />
-        </TouchableOpacity>
+        <Text style={styles.headerTitle}>{t("messages.chats")}</Text>
 
-        <Text style={styles.headerTitle}>{t("messages.news")}</Text>
-
-        <TouchableOpacity
-          onPress={() => {
-            // UX: Fokus auf Suche -> Nutzer kann neuen Chat starten
-            // (TextInput ist sowieso oben)
-          }}
-          style={styles.headerBtn}
-          hitSlop={8}
-        >
-          <Ionicons name="create-outline" size={20} color={C.text} />
+        <TouchableOpacity onPress={openCreateMenu} style={styles.headerBtn} hitSlop={12} activeOpacity={0.78}>
+          <Text style={styles.headerPlus}>+</Text>
         </TouchableOpacity>
       </View>
 
@@ -347,8 +478,70 @@ export default function MessagesScreen() {
         />
       </View>
 
+      {composeMode === "group" ? (
+        <View style={styles.composeBar}>
+          <TouchableOpacity style={styles.groupImageBtn} onPress={pickGroupImage} activeOpacity={0.82}>
+            {groupImageUri ? (
+              <ExpoImage source={{ uri: groupImageUri }} style={styles.groupImagePreview} contentFit="cover" />
+            ) : (
+              <Ionicons name="camera-outline" size={22} color={C.subtext} />
+            )}
+          </TouchableOpacity>
+
+          <View style={styles.composeMain}>
+            <View style={styles.composeHeaderRow}>
+              <Text style={styles.composeTitle}>{t("messages.newGroupChat")}</Text>
+              <TouchableOpacity
+                style={styles.composeCancelBtn}
+                onPress={() => {
+                  setComposeMode(null);
+                  setSelectedUsers([]);
+                  setGroupTitle("");
+                  setGroupImageUri(null);
+                  setGroupImageMime("image/jpeg");
+                  setGroupImageName("group-chat.jpg");
+                }}
+                hitSlop={10}
+              >
+                <Ionicons name="close" size={20} color={C.subtext} />
+              </TouchableOpacity>
+            </View>
+
+            <TextInput
+              style={styles.groupTitleInput}
+              placeholder={t("messages.groupNamePlaceholder")}
+              placeholderTextColor={C.subtext}
+              value={groupTitle}
+              onChangeText={setGroupTitle}
+              autoCorrect={false}
+              maxLength={48}
+            />
+
+            <View style={styles.composeFooterRow}>
+              <Text style={styles.composeSub}>
+                {selectedUsers.length
+                  ? t("messages.selectedPeople", { count: selectedUsers.length })
+                  : t("messages.selectPeopleForGroup")}
+              </Text>
+              <TouchableOpacity
+                style={[styles.composeCreateBtn, !canCreateSelectedGroup && { opacity: 0.45 }]}
+                onPress={createSelectedGroup}
+                disabled={!canCreateSelectedGroup}
+                activeOpacity={0.82}
+              >
+                {creating || creatingGroup ? (
+                  <ActivityIndicator size="small" color={C.bg} />
+                ) : (
+                  <Text style={styles.composeCreateText}>{t("messages.createGroup")}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      ) : null}
+
       {/* Inhalt */}
-      {!doSearch ? (
+      {!showingSearch ? (
         <FlatList
           data={threads}
           keyExtractor={(i: any) => i.id}
@@ -370,6 +563,7 @@ export default function MessagesScreen() {
           }
           renderItem={({ item }: any) => {
             const { title, avatar } = getThreadDisplay(item);
+            const threadLabel = getThreadLabel(item);
 
             return (
               <TouchableOpacity
@@ -385,10 +579,19 @@ export default function MessagesScreen() {
                   transition={120}
                 />
 
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.itemTitle} numberOfLines={1}>
-                    {title}
-                  </Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <View style={styles.itemTopRow}>
+                    <Text style={[styles.itemTitle, styles.itemTitleInRow]} numberOfLines={2}>
+                      {title}
+                    </Text>
+                    {!!threadLabel && (
+                      <View style={[styles.threadLabel, item.kind === "DISABLED" && styles.threadLabelDisabled]}>
+                        <Text style={[styles.threadLabelText, item.kind === "DISABLED" && styles.threadLabelTextDisabled]} numberOfLines={1}>
+                          {threadLabel}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
                   <Text style={styles.itemSub} numberOfLines={1}>
                     {item.lastMessageAt ? dateShort(item.lastMessageAt) : "—"}
                   </Text>
@@ -416,7 +619,12 @@ export default function MessagesScreen() {
             ) : null
           }
           ListEmptyComponent={
-            !sLoading && doSearch ? (
+            composeMode === "group" && !doSearch ? (
+              <View style={styles.emptyBox}>
+                <Text style={styles.emptyTitle}>{t("messages.searchPeople")}</Text>
+                <Text style={styles.emptyText}>{t("messages.searchPeopleForGroup")}</Text>
+              </View>
+            ) : !sLoading && doSearch ? (
               <View style={styles.emptyBox}>
                 <Text style={styles.emptyTitle}>{t("messages.noResultsFound")}</Text>
                 <Text style={styles.emptyText}>
@@ -427,7 +635,7 @@ export default function MessagesScreen() {
           renderItem={({ item: u }: any) => (
             <TouchableOpacity
               style={styles.item}
-              onPress={() => startWithUser(u)}
+              onPress={() => (composeMode === "group" ? toggleSelectedUser(u) : startWithUser(u))}
               activeOpacity={0.9}
             >
               <ExpoImage
@@ -448,11 +656,26 @@ export default function MessagesScreen() {
                   {t("messages.sendMessage")}</Text>
               </View>
 
-              <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              {composeMode === "group" ? (
+                <View style={[styles.selectCircle, selectedUserIds.has(String(u.id)) && styles.selectCircleActive]}>
+                  {selectedUserIds.has(String(u.id)) ? <Ionicons name="checkmark" size={16} color={C.bg} /> : null}
+                </View>
+              ) : (
+                <Ionicons name="chevron-forward" size={18} color={C.subtext} />
+              )}
             </TouchableOpacity>
           )}
         />
       )}
+      {showCreateCommunity ? (
+        <GroupLinkSheet
+          onClose={() => setShowCreateCommunity(false)}
+          onCreated={() => {
+            setShowCreateCommunity(false);
+            refetchThreads().catch(() => {});
+          }}
+        />
+      ) : null}
     </View>
   );
 }
@@ -507,22 +730,25 @@ const makeStyles = (C: {
       gap: 10,
     },
     headerBtn: {
-      width: 38,
-      height: 38,
-      borderRadius: 12,
+      width: 42,
+      height: 42,
+      borderRadius: 21,
       alignItems: "center",
       justifyContent: "center",
-      backgroundColor: C.card,
-      borderWidth: 1,
-      borderColor: C.border,
+      backgroundColor: "transparent",
+    },
+    headerPlus: {
+      color: C.text,
+      fontSize: 30,
+      fontWeight: "500",
+      lineHeight: 42,
     },
     headerTitle: {
       flex: 1,
       color: C.text,
-      fontSize: 20,
-      fontWeight: "800",
-      textAlign: "center",
-      marginRight: 38, // optisch zentrieren (weil links button)
+      fontSize: 28,
+      fontWeight: "900",
+      textAlign: "left",
     },
 
     searchRow: {
@@ -539,6 +765,76 @@ const makeStyles = (C: {
       gap: 8,
     },
     searchInput: { flex: 1, color: C.text, fontSize: 16 },
+    composeBar: {
+      marginHorizontal: 16,
+      marginBottom: 10,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      borderRadius: 14,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: C.border,
+      backgroundColor: C.card,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    composeTitle: { color: C.text, fontSize: 14, fontWeight: "900" },
+    composeSub: { flex: 1, color: C.subtext, fontSize: 12, fontWeight: "600", marginTop: 2 },
+    composeMain: { flex: 1, minWidth: 0, gap: 8 },
+    composeHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    composeFooterRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 10,
+    },
+    groupImageBtn: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: C.border,
+      backgroundColor: C.bg,
+      overflow: "hidden",
+    },
+    groupImagePreview: {
+      width: "100%",
+      height: "100%",
+    },
+    groupTitleInput: {
+      minHeight: 36,
+      borderRadius: 12,
+      borderWidth: 1,
+      borderColor: C.border,
+      color: C.text,
+      paddingHorizontal: 10,
+      fontSize: 14,
+      fontWeight: "700",
+      backgroundColor: C.bg,
+    },
+    composeCreateBtn: {
+      height: 34,
+      paddingHorizontal: 12,
+      borderRadius: 17,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: C.text,
+    },
+    composeCreateText: { color: C.bg, fontSize: 12, fontWeight: "900" },
+    composeCancelBtn: {
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
     sep: { height: 1, backgroundColor: C.border, opacity: 0.6 },
 
@@ -556,7 +852,33 @@ const makeStyles = (C: {
       backgroundColor: C.border,
     },
     itemTitle: { color: C.text, fontWeight: "700", fontSize: 16 },
+    itemTitleInRow: { flex: 1, minWidth: 0 },
     itemSub: { color: C.subtext, fontSize: 12, marginTop: 2 },
+    itemTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    threadLabel: {
+      alignSelf: "flex-start",
+      borderRadius: 999,
+      paddingHorizontal: 8,
+      paddingVertical: 2,
+      backgroundColor: C.card,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: C.border,
+    },
+    threadLabelDisabled: {
+      opacity: 0.85,
+    },
+    threadLabelText: {
+      color: C.subtext,
+      fontSize: 10,
+      fontWeight: "800",
+    },
+    threadLabelTextDisabled: {
+      color: C.danger,
+    },
 
     badge: {
       backgroundColor: C.danger,
@@ -577,5 +899,18 @@ const makeStyles = (C: {
       color: C.subtext,
       fontSize: 12,
       fontWeight: "600",
+    },
+    selectCircle: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      borderWidth: 1.5,
+      borderColor: C.border,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    selectCircleActive: {
+      borderColor: C.text,
+      backgroundColor: C.text,
     },
   });

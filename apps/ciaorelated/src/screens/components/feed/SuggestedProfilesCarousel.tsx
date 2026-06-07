@@ -8,6 +8,7 @@ import FollowButton from "../FollowButton";
 import { avatarPlaceholder } from "../../../../assets/placeholders";
 
 import { useTranslation } from "react-i18next";
+import { brand } from "../../../config/brand";
 
 type SuggestedUser = {
   id: string;
@@ -95,7 +96,7 @@ export function SuggestedProfilesCarousel({
               </TouchableOpacity>
 
               <Text style={s.subtitle} numberOfLines={2}>
-                {t("suggestedprofilescarousel.suggestedByciaorelated")}</Text>
+                {t("suggestedprofilescarousel.suggestedByciaorelated", { appName: brand.appName })}</Text>
 
               <View style={{ marginTop: 10, width: "100%" }}>
                 <FollowButton

@@ -6,17 +6,18 @@ import "react-native-url-polyfill/auto";
 import "./src/i18n";
 
 import React, { useEffect, useState } from "react";
-import { Text, StyleSheet, Platform, AppState, Modal, View, TouchableOpacity } from "react-native";
-import { NavigationContainer, CommonActions } from "@react-navigation/native";
+import { Animated, PanResponder, Text, StyleSheet, Platform, AppState, Modal, View, TouchableOpacity, useWindowDimensions } from "react-native";
+import { NavigationContainer, CommonActions, useNavigation } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ApolloProvider, useApolloClient, gql, useQuery, useMutation } from "@apollo/client";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { AuthVault } from "./src/lib/auth-vault";
+import { brand } from "./src/config/brand";
 
 import * as Device from "expo-device";
 import { useFonts } from "expo-font";
@@ -581,11 +582,28 @@ function ProfileStackScreen() {
   );
 }
 
+function colorWithAlpha(color: string, alpha: number) {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+type FabCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
 
 
 function Tabs() {
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const [momentsFabCorner, setMomentsFabCorner] = React.useState<FabCorner>("bottom-right");
+  const [activeTabName, setActiveTabName] = React.useState("Home");
+  const momentsFabDrag = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const showMomentsFab = activeTabName !== "Vlogs";
 
   const TAB_COLORS = {
     bg: theme.colors.bg,
@@ -606,16 +624,70 @@ function Tabs() {
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },
   } as const;
+  const momentsFabSize = 58;
+  const momentsFabMargin = 18;
+  const momentsFabBottomOffset = Math.max(insets.bottom + 72, 90);
+  const momentsFabTop = insets.top + momentsFabMargin;
+  const momentsFabBottom = Math.max(momentsFabTop, height - momentsFabBottomOffset - momentsFabSize);
+  const momentsFabLeft = momentsFabMargin;
+  const momentsFabRight = Math.max(momentsFabLeft, width - momentsFabMargin - momentsFabSize);
+  const momentsFabBase = React.useMemo(() => {
+    const isTop = momentsFabCorner.startsWith("top");
+    const isLeft = momentsFabCorner.endsWith("left");
+    return {
+      left: isLeft ? momentsFabLeft : momentsFabRight,
+      top: isTop ? momentsFabTop : momentsFabBottom,
+    };
+  }, [momentsFabBottom, momentsFabCorner, momentsFabLeft, momentsFabRight, momentsFabTop]);
+  const momentsFabPanResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 6 || Math.abs(gesture.dy) > 6,
+        onPanResponderGrant: () => {
+          momentsFabDrag.stopAnimation();
+          momentsFabDrag.setValue({ x: 0, y: 0 });
+        },
+        onPanResponderMove: Animated.event(
+          [null, { dx: momentsFabDrag.x, dy: momentsFabDrag.y }],
+          { useNativeDriver: false }
+        ),
+        onPanResponderRelease: (_event, gesture) => {
+          const centerX = momentsFabBase.left + gesture.dx + momentsFabSize / 2;
+          const centerY = momentsFabBase.top + gesture.dy + momentsFabSize / 2;
+          setMomentsFabCorner(`${centerY < height / 2 ? "top" : "bottom"}-${centerX < width / 2 ? "left" : "right"}` as FabCorner);
+          Animated.spring(momentsFabDrag, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 260,
+          }).start();
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(momentsFabDrag, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 260,
+          }).start();
+        },
+      }),
+    [height, momentsFabBase.left, momentsFabBase.top, momentsFabDrag, width]
+  );
 
   return (
+    <View style={{ flex: 1 }}>
     <Tab.Navigator
+      screenListeners={({ route }) => ({
+        focus: () => setActiveTabName(route.name),
+      })}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: TAB_COLORS.active,
         tabBarInactiveTintColor: TAB_COLORS.inactive,
         tabBarShowLabel: true,
         tabBarLabel: ({ focused, color }) => {
-          if (route.name === "Explore") return null;
+          if (route.name === "CreateTab" || route.name === "Vlogs") return null;
           if (route.name === "MessagesTab") {
             return (
               <Text
@@ -635,8 +707,8 @@ function Tabs() {
           const labelKey =
             route.name === "Home"
               ? "tabs.home"
-              : route.name === "Vlogs"
-                ? "tabs.moments"
+              : route.name === "Explore"
+                ? "tabs.explore"
                 : route.name === "Profile"
                     ? "tabs.profile"
                     : "";
@@ -668,6 +740,8 @@ function Tabs() {
             case "Home":
               return <Ionicons name={focused ? "home" : "home-outline"} size={s} color={color} />;
             case "Explore":
+              return <Ionicons name={focused ? "search" : "search-outline"} size={s} color={color} />;
+            case "CreateTab":
               return (
                 <View
                   style={{
@@ -680,7 +754,17 @@ function Tabs() {
                     marginTop: 6,
                   }}
                 >
-                  <Ionicons name={focused ? "scan" : "scan-outline"} size={s} color="#fff" />
+                  <Text
+                    style={{
+                      color: "#fff",
+                      fontSize: s + 8,
+                      fontWeight: "600",
+                      lineHeight: s + 10,
+                      marginTop: -2,
+                    }}
+                  >
+                    +
+                  </Text>
                 </View>
               );
             case "MessagesTab":
@@ -697,11 +781,63 @@ function Tabs() {
       })}
     >
       <Tab.Screen name="Home" component={FeedScreen} />
-      <Tab.Screen name="Vlogs" component={ReelsScreen} />
       <Tab.Screen name="Explore" component={ExploreScreen} />
+      <Tab.Screen
+        name="CreateTab"
+        component={ExploreScreen}
+        listeners={({ navigation }) => ({
+          tabPress: (event) => {
+            event.preventDefault();
+            navigation.getParent()?.navigate("CreateMedia", { initialMode: "BEITRAG", nonce: Date.now() });
+          },
+        })}
+      />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Profile" component={ProfileStackScreen} />
+      <Tab.Screen
+        name="Vlogs"
+        component={ReelsScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
     </Tab.Navigator>
+      {showMomentsFab ? (
+      <Animated.View
+        {...momentsFabPanResponder.panHandlers}
+        style={{
+          position: "absolute",
+          left: momentsFabBase.left,
+          top: momentsFabBase.top,
+          transform: momentsFabDrag.getTranslateTransform(),
+        }}
+      >
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => navigation.navigate("AppTabs", { screen: "Vlogs" })}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t("tabs.moments")}
+          style={{
+            width: momentsFabSize,
+            height: momentsFabSize,
+            borderRadius: momentsFabSize / 2,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colorWithAlpha(TAB_COLORS.primary, 0.72),
+            shadowColor: "#000",
+            shadowOpacity: theme.mode === "dark" ? 0.28 : 0.18,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 8,
+          }}
+        >
+          <Ionicons name="aperture" size={42} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
+      ) : null}
+    </View>
   );
 }
 let lastJoinSlugSeen: string | null = null;
@@ -713,8 +849,7 @@ function firstQueryValue(value: unknown) {
   return null;
 }
 
-function setPendingDeepLinkFromUrl(url: string) {
-  console.log("DEEPLINK IN:", url);
+function joinSlugFromUrl(url: string) {
   try {
     const parsed = Linking.parse(url);
     const path = parsed.path ?? "";
@@ -731,7 +866,17 @@ function setPendingDeepLinkFromUrl(url: string) {
       (qSlug ? qSlug : null) ??
       (parts[i] === "join" && parts[i + 1] ? parts[i + 1] : null);
 
-    if (slug) {
+    return slug;
+  } catch (e) {
+    console.log("DeepLink parse failed:", e);
+    return null;
+  }
+}
+
+function setPendingDeepLinkFromUrl(url: string) {
+  console.log("DEEPLINK IN:", url);
+  const slug = joinSlugFromUrl(url);
+  if (slug) {
       // ✅ Dedup: Expo sendet initial + event fast hintereinander
       if (__DEV__) {
         const now = Date.now();
@@ -743,9 +888,6 @@ function setPendingDeepLinkFromUrl(url: string) {
       pendingDeepLink = { route: "JoinGroup", params: { slug } };
       void persistPendingJoinSlug(slug);
       return;
-    }
-  } catch (e) {
-    console.log("DeepLink parse failed:", e);
   }
 }
 
@@ -928,8 +1070,9 @@ async function shouldAcceptInitialUrl(initialUrl: string) {
   if (isTrustedWebUrl(initialUrl)) return true;
 
 
-  // ✅ DEV exp:// initialUrl NIE akzeptieren (Expo Go sticky)
-  if (__DEV__ && initialUrl.startsWith("exp://")) return false;
+  // Expo Go can start with sticky exp:// URLs. Only accept them when they
+  // explicitly carry a local invite route such as /--/join/GROUP_SLUG.
+  if (__DEV__ && initialUrl.startsWith("exp://")) return !!joinSlugFromUrl(initialUrl);
 
   return false;
 }
@@ -1168,8 +1311,8 @@ function ThemedRootNavigator({
           component={CreateMediaRoot}
           options={{
             headerShown: false,
-            presentation: "fullScreenModal",
-            contentStyle: { backgroundColor: C.bg }, // ✅ wichtig für Modals
+            animation: "none",
+            contentStyle: { backgroundColor: C.bg },
           }}
         />
 
@@ -1308,7 +1451,7 @@ function RequiredUpdateOverlay() {
 
           <Text style={[requiredUpdateStyles.title, { color: C.text }]}>{t("requiredUpdate.title")}</Text>
           <Text style={[requiredUpdateStyles.body, { color: C.subtext }]}>
-            {t("requiredUpdate.body")}
+            {t("requiredUpdate.body", { appName: brand.appName })}
           </Text>
 
           <View style={[requiredUpdateStyles.versionRow, { backgroundColor: C.card, borderColor: C.border }]}>

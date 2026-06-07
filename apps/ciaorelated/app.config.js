@@ -8,32 +8,41 @@ const associatedDomains = (process.env.EXPO_PUBLIC_ASSOCIATED_DOMAINS || "")
   .map((domain) => `applinks:${domain}`);
 
 const easProjectId = process.env.EAS_PROJECT_ID || "";
+const appName = process.env.EXPO_PUBLIC_APP_NAME || "ciaorelated";
+const appSlug = process.env.EXPO_SLUG || process.env.EXPO_PUBLIC_APP_SLUG || "ciaorelated";
 const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || "ciaorelated";
+const appIcon = process.env.EXPO_ICON_PATH || "./assets/cr.png";
+const webFavicon = process.env.EXPO_WEB_FAVICON_PATH || appIcon;
+const splashImage = process.env.EXPO_SPLASH_IMAGE_PATH || "./assets/splash-icon.png";
+const splashBackgroundColor = process.env.EXPO_SPLASH_BACKGROUND_COLOR || "#ffffff";
 
 export default {
   expo: {
-    name: 'ciaorelated',
-    slug: 'ciaorelated',
+    name: appName,
+    slug: appSlug,
     scheme: appScheme,
     owner: process.env.EXPO_OWNER,
     version: '1.0.6',
     orientation: 'portrait',
     userInterfaceStyle: 'light',
     entryPoint: './src/App.tsx',
-    icon: './assets/cr.png',
+    icon: appIcon,
     splash: {
-      image: "./assets/splash-icon.png",
+      image: splashImage,
       resizeMode: "contain",
-      backgroundColor: "#fefdfa"
+      backgroundColor: splashBackgroundColor,
     },
-    
-
 
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
       websiteUrl: process.env.EXPO_PUBLIC_WEBSITE_URL ?? "",
       oneLinkUrl: process.env.EXPO_PUBLIC_ONELINK_URL ?? "",
+      appName,
+      appSlug,
       appScheme,
+      feedHeaderText: process.env.EXPO_PUBLIC_FEED_HEADER_TEXT ?? "",
+      qrCenterText: process.env.EXPO_PUBLIC_QR_CENTER_TEXT ?? "",
+      supportEmail: process.env.EXPO_PUBLIC_SUPPORT_EMAIL ?? "",
       iosAppStoreId: process.env.EXPO_PUBLIC_IOS_APP_STORE_ID ?? "",
       appsFlyerDevKey: process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY ?? "",
       appsFlyerEnabled: process.env.EXPO_PUBLIC_APPSFLYER_ENABLED === "true",
@@ -101,6 +110,6 @@ export default {
 
 
 
-    web: { favicon: './assets/cr.png' },
+    web: { favicon: webFavicon },
   },
 };

@@ -41,7 +41,7 @@ function CampaignPage() {
           <div className="flex justify-center">
             <div className="glass-card flex aspect-square w-full max-w-xs flex-col items-center justify-center rounded-3xl p-6 text-center">
               <QrCode className="h-32 w-32 text-foreground" />
-              <div className="mt-4 text-sm font-medium">your-domain.example</div>
+              <div className="mt-4 text-sm font-medium">ciaorelated.com</div>
               <div className="text-xs text-muted-foreground">Scan with your phone</div>
             </div>
           </div>

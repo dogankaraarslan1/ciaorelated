@@ -23,10 +23,10 @@ function DatenschutzPage() {
       ]}
     >
       <p className="text-muted-foreground">
-        Diese Datenschutzerklärung informiert dich über die Verarbeitung personenbezogener Daten bei Nutzung von <strong>Beverly</strong> und dieser Website.
+        Diese Datenschutzerklärung informiert dich über die Verarbeitung personenbezogener Daten bei Nutzung von <strong>ciaorelated</strong> und dieser Website.
       </p>
       <LegalSection heading="1. Verantwortlicher">
-        <p>apparrivederci<br />Schratten 56, 5441 Abtenau<br />E-Mail: <span>support@bvrly.app</span></p>
+        <p>apparrivederci<br />Schratten 56, 5441 Abtenau<br />E-Mail: <span>info@ciaorelated.com</span></p>
       </LegalSection>
       <LegalSection heading="2. Verarbeitete Daten & Zwecke">
         <ul className="list-disc space-y-1 pl-6">

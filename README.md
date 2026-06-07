@@ -274,7 +274,12 @@ Server variables at a glance:
 EXPO_PUBLIC_API_URL=http://YOUR_LAN_IP:4000/graphql
 EXPO_PUBLIC_WEBSITE_URL=https://your-domain.example
 EXPO_PUBLIC_ONELINK_URL=
+EXPO_PUBLIC_APP_NAME=ciaorelated
+EXPO_PUBLIC_APP_SLUG=ciaorelated
 EXPO_PUBLIC_APP_SCHEME=ciaorelated
+EXPO_PUBLIC_FEED_HEADER_TEXT=ciao
+EXPO_PUBLIC_QR_CENTER_TEXT=ciaorelated
+EXPO_PUBLIC_SUPPORT_EMAIL=support@example.com
 EXPO_PUBLIC_ASSOCIATED_DOMAINS=
 EXPO_PUBLIC_IOS_APP_STORE_ID=
 EXPO_PUBLIC_APPSFLYER_DEV_KEY=
@@ -282,6 +287,10 @@ EXPO_PUBLIC_APPSFLYER_ENABLED=false
 EXPO_OWNER=
 EXPO_IOS_BUNDLE_IDENTIFIER=com.example.ciaorelated
 EXPO_ANDROID_PACKAGE=com.example.ciaorelated
+EXPO_ICON_PATH=./assets/cr.png
+EXPO_WEB_FAVICON_PATH=./assets/cr.png
+EXPO_SPLASH_IMAGE_PATH=./assets/splash-icon.png
+EXPO_SPLASH_BACKGROUND_COLOR=#ffffff
 EAS_PROJECT_ID=
 ```
 
@@ -302,7 +311,12 @@ Mobile variables at a glance:
 | `EXPO_PUBLIC_API_URL` | Yes | GraphQL API URL used by the mobile app. |
 | `EXPO_PUBLIC_WEBSITE_URL` | Recommended | Public website base URL used for invite links, legal pages, and Universal Link prefixes. |
 | `EXPO_PUBLIC_ONELINK_URL` | Optional | AppsFlyer OneLink base URL accepted as a trusted incoming link source. |
+| `EXPO_PUBLIC_APP_NAME` | Optional | Display name used by Expo config and brand-aware UI text. Defaults to `ciaorelated`. |
+| `EXPO_PUBLIC_APP_SLUG` | Optional | Expo project slug. Defaults to `ciaorelated`. |
 | `EXPO_PUBLIC_APP_SCHEME` | Optional | Custom app URL scheme. Defaults to `ciaorelated`. |
+| `EXPO_PUBLIC_FEED_HEADER_TEXT` | Optional | Short Pacifico wordmark shown in the feed header. Defaults to `ciao`. |
+| `EXPO_PUBLIC_QR_CENTER_TEXT` | Optional | Center text shown in generated invite QR share images. Defaults to `ciaorelated`. |
+| `EXPO_PUBLIC_SUPPORT_EMAIL` | Optional | Support email used by brand-aware app surfaces. Defaults to `support@example.com`. |
 | `EXPO_PUBLIC_ASSOCIATED_DOMAINS` | Optional | Comma-separated Universal Link domains, e.g. `example.com,www.example.com`. |
 | `EXPO_PUBLIC_IOS_APP_STORE_ID` | Optional | iOS App Store ID used by update/deep-link helpers. |
 | `EXPO_PUBLIC_APPSFLYER_DEV_KEY` | Optional | AppsFlyer key if you use AppsFlyer deep links. |
@@ -310,7 +324,29 @@ Mobile variables at a glance:
 | `EXPO_OWNER` | Optional | Expo account/organization owner. |
 | `EXPO_IOS_BUNDLE_IDENTIFIER` | Recommended for builds | iOS bundle identifier. |
 | `EXPO_ANDROID_PACKAGE` | Recommended for builds | Android package name. |
+| `EXPO_ICON_PATH` | Optional | App icon path used by Expo config. Defaults to `./assets/cr.png`. |
+| `EXPO_WEB_FAVICON_PATH` | Optional | Web favicon path used by Expo config. Defaults to the app icon path. |
+| `EXPO_SPLASH_IMAGE_PATH` | Optional | Splash image path used by Expo config. Defaults to `./assets/splash-icon.png`. |
+| `EXPO_SPLASH_BACKGROUND_COLOR` | Optional | Splash screen background color. Defaults to `#ffffff`. |
 | `EAS_PROJECT_ID` | Optional | Needed for Expo push tokens and EAS-linked builds. Forks should create their own via EAS. |
+
+Branding-only example for a separate Beverly build:
+
+```env
+EXPO_PUBLIC_APP_NAME=Beverly
+EXPO_PUBLIC_APP_SLUG=beverly
+EXPO_PUBLIC_APP_SCHEME=beverly
+EXPO_PUBLIC_FEED_HEADER_TEXT=Bvrly
+EXPO_PUBLIC_QR_CENTER_TEXT=Beverly
+EXPO_PUBLIC_WEBSITE_URL=https://bvrly.app
+EXPO_PUBLIC_SUPPORT_EMAIL=support@bvrly.app
+EXPO_IOS_BUNDLE_IDENTIFIER=com.example.beverly
+EXPO_ANDROID_PACKAGE=com.example.beverly
+EXPO_ICON_PATH=./assets/beverly-icon.png
+EXPO_WEB_FAVICON_PATH=./assets/beverly-icon.png
+EXPO_SPLASH_IMAGE_PATH=./assets/beverly-splash.png
+EXPO_SPLASH_BACKGROUND_COLOR=#ffffff
+```
 
 ## Where To Get Provider Values
 
@@ -453,6 +489,42 @@ For local development, keep AppsFlyer disabled:
 ```env
 EXPO_PUBLIC_APPSFLYER_ENABLED=false
 ```
+
+### Testing Invite Links Locally
+
+You do not need AppsFlyer or a public website to test community invite links during local development.
+
+If you use a development build with the app scheme installed, open the invite directly with the local scheme:
+
+```bash
+npx uri-scheme open "ciaorelated://join/GROUP_SLUG" --ios
+npx uri-scheme open "ciaorelated://join?slug=GROUP_SLUG" --ios
+```
+
+For Android development builds, use the same URLs with `--android`:
+
+```bash
+npx uri-scheme open "ciaorelated://join/GROUP_SLUG" --android
+npx uri-scheme open "ciaorelated://join?slug=GROUP_SLUG" --android
+```
+
+Expo Go support for custom invite deep links can vary by SDK, network mode, and client. If you still want to try it, start the app through the normal Expo QR code first, then use Expo's local deep-link format:
+
+```txt
+exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG
+```
+
+Example with documentation-only placeholder values:
+
+```txt
+exp://192.0.2.10:8081/--/join/GROUP_SLUG
+```
+
+In other words:
+
+- `https://your-domain.example/join?slug=GROUP_SLUG` tests your website / Universal Link fallback.
+- `ciaorelated://join/GROUP_SLUG` tests the installed app scheme in a development build.
+- `exp://YOUR_LAN_IP:8081/--/join/GROUP_SLUG` may work in Expo Go, but a development build is the reliable local path for custom scheme testing.
 
 When AppsFlyer is disabled, the app still accepts regular links such as `ciaorelated://join?slug=GROUP_SLUG` and `https://your-domain.example/join?slug=GROUP_SLUG`.
 

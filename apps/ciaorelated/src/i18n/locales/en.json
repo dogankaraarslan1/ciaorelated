@@ -37,7 +37,7 @@
   },
   "requiredUpdate": {
     "title": "Update required",
-    "body": "A new ciaorelated version is available. Please update the app to continue.",
+    "body": "A new {{appName}} version is available. Please update the app to continue.",
     "installed": "Installed",
     "new": "New",
     "updateNow": "Update now"
@@ -741,13 +741,28 @@
   },
   "messages": {
     "news": "Messages",
+    "chats": "Chats",
     "seek": "Search…",
+    "createTitle": "Create",
+    "newGroupChat": "New group chat",
+    "newCommunity": "Create community",
+    "viewCommunities": "View communities",
+    "selectPeopleForGroup": "Search and select people for a group chat.",
+    "groupNamePlaceholder": "Group name",
+    "groupNameRequired": "Please enter a group name.",
+    "selectedPeople": "{{count}} selected",
+    "createGroup": "Create group",
+    "searchPeople": "Search people",
+    "searchPeopleForGroup": "Type at least two characters to find people for your group.",
     "noChatsYet": "No chats yet",
     "startAConversationUsingTheSearchFunc47e2cb": "Start a conversation using the search above.",
     "noResultsFound": "No results found",
     "tryADifferentName": "Try a different name.",
     "followsYou": "· follows you",
-    "sendMessage": "Send message"
+    "sendMessage": "Send message",
+    "threadLabelCommunity": "Community",
+    "threadLabelDisabled": "Disabled",
+    "threadLabelGroup": "Group"
   },
   "vlogdetail": {
     "noPostsYet": "No posts yet",
@@ -786,8 +801,20 @@
     "cancel": "Cancel",
     "storyNoLongerAvailable": "Story no longer available",
     "thisStoryHasExpired": "This story has expired.",
+    "openLiveFeed": "Open live feed",
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
+    "welcomeTitle": "Welcome to {{appName}}",
+    "welcomeMessage": "Discover real moments in the feed, keep conversations close in chats, join communities around groups and places, follow live moments from events, and complete your profile so people know who they are connecting with.",
+    "welcomeActions": {
+      "feed": "Feed",
+      "chats": "Chats",
+      "communities": "Communities",
+      "events": "Moments",
+      "profile": "Profile"
+    },
+    "broadcastOnlyNotice": "Only admins can send messages in this broadcast chat.",
+    "chatDisabledNotice": "This community chat is currently disabled.",
     "deleteFailedTitle": "Delete failed",
     "sendFailedTitle": "Send failed",
     "savedTitle": "Saved",
@@ -800,7 +827,14 @@
     "imageSendFailedBody": "Please try again later.",
     "storyFallbackName": "Story",
     "storyBadgeVideo": "Video",
-    "storyBadgePhoto": "Story"
+    "storyBadgePhoto": "Story",
+    "groupSettings": "Group settings",
+    "groupMembers": "Group members",
+    "you": "You",
+    "thisMember": "this member",
+    "removeMemberTitle": "Remove member?",
+    "removeMemberBody": "Remove {{username}} from this group?",
+    "removeMemberCta": "Remove"
   },
   "postactionsmenu": {
     "editPost": "Edit post",
@@ -885,7 +919,7 @@
     "thisAccount": "This account",
     "otherAccountsOnThisDevice": "Other accounts on this device",
     "noOtherAccountsSaved": "No other accounts saved.",
-    "addciaorelatedAccount": "Add ciaorelated account",
+    "addciaorelatedAccount": "Add {{appName}} account",
     "unnamed": "Unnamed",
     "remove": "Remove"
   },
@@ -1305,7 +1339,7 @@
     "videoTooLongBody": "Stories can be up to 30 seconds."
   },
   "suggestedprofilescarousel": {
-    "suggestedByciaorelated": "Suggested by ciaorelated"
+    "suggestedByciaorelated": "Suggested by {{appName}}"
   },
   "uploadoverlay": {
     "yourPostIsCurrentlyBeingUploaded": "Your post is currently being uploaded",
@@ -1455,6 +1489,46 @@
     "peopleHere": "{{count}} people here",
     "joinWithLink": "Join with link",
     "createEventMoment": "Create moment",
+    "openChat": "Open community chat",
+    "settingsTitle": "Community settings",
+    "editCommunity": "Edit community",
+    "editCommunitySub": "Change name and community image.",
+    "communityName": "Community name",
+    "communityNamePlaceholder": "Community name",
+    "permissionNeededTitle": "Permission needed",
+    "permissionNeededBody": "Please allow access to your photos.",
+    "titleRequired": "Please enter a community name.",
+    "imageMissing": "The selected image could not be found.",
+    "uploadFailedStatus": "Upload failed (status {{status}}).",
+    "editFailedTitle": "Community not saved",
+    "editFailedBody": "The community could not be updated right now. Please try again.",
+    "manageMembers": "Manage members",
+    "owner": "Owner",
+    "member": "Member",
+    "thisMember": "this member",
+    "removeMemberTitle": "Remove member?",
+    "removeMemberBody": "Remove {{username}} from this community?",
+    "removeMemberCta": "Remove",
+    "removeMemberFailed": "The member could not be removed right now.",
+    "shareLink": "Share link",
+    "copyLink": "Copy link",
+    "copyLinkSub": "Copy the invite link to your clipboard.",
+    "shareQrSub": "Share a QR invite image.",
+    "enableBroadcast": "Make chat broadcast-only",
+    "disableBroadcast": "Allow everyone to chat",
+    "chatModeBody": "Members can chat, share moments and open the invite tools from here.",
+    "broadcastModeBody": "Broadcast mode is active. Only admins can send messages in this community chat.",
+    "broadcastModeSub": "Only admins will be able to send messages.",
+    "disableChat": "Disable community chat",
+    "enableChat": "Enable community chat",
+    "disableChatSub": "Members will no longer be able to open or write in this chat.",
+    "enableChatSub": "Members can open the community chat again.",
+    "chatDisabledTitle": "Community chat disabled",
+    "chatDisabledBody": "The admin has disabled chat for this community.",
+    "chatModeFailedTitle": "Chat settings not saved",
+    "chatModeFailedBody": "The chat mode could not be changed right now. Please try again.",
+    "chatUnavailableTitle": "Chat unavailable",
+    "chatUnavailableBody": "The community chat is not ready yet. Please try again in a moment.",
     "shareQr": "Share QR code",
     "qrShareFailedTitle": "QR code not shared",
     "qrShareFailedBody": "The QR code could not be created right now. Share the link instead.",
@@ -1484,13 +1558,15 @@
     "joinedAt": "Joined: {{date}}",
     "hubTitle": "Your Communities",
     "hubSubtitle": "Live feeds, invite links and events in one place.",
-    "emptyTitle": "Bring a community to ciaorelated",
+    "emptyTitle": "Bring a community to {{appName}}",
     "emptyBody": "Create a link for a bar, event or friend group and invite people straight into the live feed.",
     "leave": {
       "title": "Leave group?",
       "body": "Do you want to leave \"{{title}}\"?",
       "confirm": "Leave",
-      "failed": "Couldn't leave the group."
+      "failed": "Couldn't leave the group.",
+      "ownerTitle": "Transfer admin rights first",
+      "ownerBody": "You are currently the admin of this community. Transfer admin rights to another member before leaving the community."
     }
   },
   "joingroup": {
@@ -1541,7 +1617,7 @@
   },
   "rotatingsuggestionlabel": {
     "suggestedForYou": "Suggested for you",
-    "byciaorelated": "by ciaorelated"
+    "byciaorelated": "by {{appName}}"
   },
   "vlogcard": {
     "untitledVlog": "Untitled vlog",

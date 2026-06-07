@@ -80,6 +80,7 @@ export const typeDefs = gql`
     isMe: Boolean!
     isFollowing: Boolean!
     isPrimary: Boolean!
+    isAdmin: Boolean!
 
     bannedUntil: DateTime
     bannedReason: String
@@ -595,6 +596,8 @@ export const typeDefs = gql`
     code: String!
     title: String!
     type: GroupLinkType!
+    imageUrl: String
+    imageThumbUrl: String
     owner: User!
     memberCount: Int!
     viewerIsOwner: Boolean!
@@ -603,6 +606,11 @@ export const typeDefs = gql`
     createdAt: DateTime!
     expiresAt: DateTime
     slug: String
+  }
+
+  input UpdateGroupLinkInput {
+    title: String
+    imageKey: String
   }
 
   type FeedSource {
@@ -693,6 +701,7 @@ export const typeDefs = gql`
   type JoinGroupResult {
     id: ID!
     title: String!
+    chatThread: Thread
   }
   # ---------- Queries ----------
   type Query {
@@ -701,6 +710,7 @@ export const typeDefs = gql`
     groupLink(id: ID!): GroupLink
     groupLinkPosts(groupId: ID!, offset: Int = 0, limit: Int = 20): [Post!]!
     groupLinkMembers(groupId: ID!, limit: Int = 24): [User!]!
+    communityThread(groupId: ID!): Thread
     vlogMembers(vlogId: ID!): [VlogMember!]!
   
     searchContexts(q: String!, limit: Int = 20, windowHours: Int = 168): [ContextSearchHit!]!
@@ -799,6 +809,9 @@ export const typeDefs = gql`
   type Mutation {
     leaveGroup(groupId: ID!): Boolean!
     createGroupLink(title: String!, type: GroupLinkType!): GroupLink!
+    updateGroupLink(id: ID!, input: UpdateGroupLinkInput!): GroupLink!
+    getSignedGroupLinkImageUpload(groupId: ID!, mime: String!, size: Int!): SignedUpload!
+    removeGroupLinkMember(groupId: ID!, profileId: ID!): Boolean!
     joinGroupLink(slug: String!): JoinGroupResult!
 
     updateOnboarding(input: OnboardingInput!): User!
@@ -982,12 +995,25 @@ export const typeDefs = gql`
 
   # WICHTIG: DateTime & User sind bereits definiert – NICHT erneut definieren.
 
+  enum ThreadKind {
+    DM
+    GROUP
+    COMMUNITY
+    BROADCAST
+    DISABLED
+  }
+
   type Thread {
     id: ID!
     title: String
+    imageUrl: String
+    kind: ThreadKind!
     members: [User!]!         # nutzt euren bestehenden User-Typ
     lastMessageAt: DateTime
     unreadCount: Int!
+    isGroupChat: Boolean!
+    viewerIsOwner: Boolean!
+    community: GroupLink
   }
 
   # Medienobjekt NUR für Chat (wegen Kollision mit PostMedia/MediaInput)
@@ -1004,6 +1030,7 @@ export const typeDefs = gql`
 
   type Message {
     id: ID!
+    clientId: String
     threadId: ID!
     sender: User!              # euer User
     kind: MessageKind!
@@ -1054,6 +1081,7 @@ export const typeDefs = gql`
 
   input SendMessageInput {
     threadId: ID!
+    clientId: String
     kind: MessageKind!
     text: String
     emoji: String
@@ -1065,6 +1093,7 @@ export const typeDefs = gql`
   # --------- Queries (neu) ---------
   extend type Query {
     threads: [Thread!]
+    thread(threadId: ID!): Thread
     messages(threadId: ID!, cursor: ID, take: Int = 30): MessageConnection!
     unreadCount: UnreadCount!
   }
@@ -1074,7 +1103,10 @@ export const typeDefs = gql`
     sendMessage(input: SendMessageInput!): Message!
     markThreadRead(threadId: ID!): Boolean!
     signUpload(mime: String!, filename: String): SignedUpload!
-    createThread(memberUserIds: [ID!]!, title: String): Thread!
+    createThread(memberUserIds: [ID!]!, title: String, imageKey: String): Thread!
+    updateThreadSettings(threadId: ID!, title: String!, imageKey: String): Thread!
+    removeThreadMember(threadId: ID!, userId: ID!): Boolean!
+    setCommunityChatKind(groupId: ID!, kind: ThreadKind!): Thread!
     setTyping(threadId: ID!, typing: Boolean!): Boolean!
     toggleMessageLike(messageId: ID!): Message!
   }

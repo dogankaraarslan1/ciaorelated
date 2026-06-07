@@ -3,6 +3,7 @@ import type { Ctx } from "../context";
 import { containsProfanity, maskProfanity } from "../lib/profanity";
 import { assertNoProfanity } from "../graphql/profanity-guard";
 import { normalizeUsername, validateUsernameOrThrow } from "../lib/username";
+import { sendWelcomeMessageToProfile } from "../lib/welcomeMessage";
 
 
 function validateUsername(u: string) {
@@ -31,13 +32,17 @@ export default {
       // Optional: Name maskieren, wenn du statt Hard-Fail lieber entschärfen willst
       const nameClean = maskProfanity((input.name ?? "").trim() || null);
 
-      return ctx.prisma.profile.create({
+      const profile = await ctx.prisma.profile.create({
         data: {
           accountId: ctx.accountId,
           username: usernameNorm,   // ⬅️ nur normalisierte Usernames speichern
           name: nameClean,
         },
       });
+      await sendWelcomeMessageToProfile(ctx.prisma, profile.id).catch((e) =>
+        console.warn("[welcome-message] delivery failed:", e?.message || e)
+      );
+      return profile;
     },
 
 

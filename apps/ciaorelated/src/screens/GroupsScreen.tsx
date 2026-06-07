@@ -7,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 
 import Screen from "./components/Screen";
 import { useTheme } from "../theme/ThemeProvider";
+import { brand } from "../config/brand";
 import { buildJoinUrl } from "../config/webLinks";
 import GroupLinkSheet from "./GroupLinkSheet";
 import type { RootStackParamList } from "../../App";
@@ -61,6 +62,12 @@ function typeTint(type: string, C: any) {
   if (type === "FAMILY") return { bg: "rgba(244,114,182,0.14)", fg: "#F472B6" };
   return { bg: "rgba(255,255,255,0.08)", fg: C.text };
 }
+
+function isOwnerLeaveError(error: unknown) {
+  const raw = String((error as any)?.message ?? "");
+  return raw.toLowerCase().includes("owner cannot leave");
+}
+
 export default function GroupsScreen() {
   const { theme } = useTheme();
   const C = theme.colors as any;
@@ -105,7 +112,11 @@ export default function GroupsScreen() {
                 await leaveGroup({ variables: { groupId } });
                 refetch();
                 } catch (e: any) {
-                Alert.alert(t("common.error"), e?.message ?? t("groups.leave.failed"));
+                if (isOwnerLeaveError(e)) {
+                  Alert.alert(t("groups.leave.ownerTitle"), t("groups.leave.ownerBody"));
+                  return;
+                }
+                Alert.alert(t("common.error"), t("groups.leave.failed"));
                 }
             },
             },
@@ -138,7 +149,7 @@ export default function GroupsScreen() {
             <View style={s.emptyIcon}>
               <Ionicons name="people-circle-outline" size={34} color={C.text} />
             </View>
-            <Text style={s.emptyTitle}>{t("groups.emptyTitle")}</Text>
+            <Text style={s.emptyTitle}>{t("groups.emptyTitle", { appName: brand.appName })}</Text>
             <Text style={s.emptySub}>{t("groups.emptyBody")}</Text>
             <TouchableOpacity style={s.emptyBtn} onPress={() => setShowCreate(true)}>
               <Ionicons name="add-circle-outline" size={18} color={C.bg} />

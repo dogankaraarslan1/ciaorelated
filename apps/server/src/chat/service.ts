@@ -1,4 +1,4 @@
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { pubsub } from "./pubsub";
 import { EVENTS } from "./events";
 import { GraphQLError } from "graphql";
@@ -11,8 +11,11 @@ function uniqSorted(ids: string[]) {
 function dmKeyFor(a: string, b: string) {
   return [a, b].sort().join(":");
 }
-function groupKeyFor(ids: string[]) {
-  return uniqSorted(ids).join(":");
+function communityGroupKey(groupId: string) {
+  return `community:${groupId}`;
+}
+function newGroupThreadKey() {
+  return `group:${Date.now()}:${Math.random().toString(36).slice(2)}`;
 }
 
 // ----------------- Blocks (Chat Safety) -----------------
@@ -105,6 +108,11 @@ export async function listThreads(prisma: PrismaClient, userId: string) {
       return {
         id: t.id,
         title: t.title,
+        imageKey: (t as any).imageKey ?? null,
+        ownerId: (t as any).ownerId ?? null,
+        groupKey: t.groupKey,
+        kind: (t as any).kind ?? (t.groupKey ? "GROUP" : "DM"),
+        isGroupChat: ((t as any).kind ?? (t.groupKey ? "GROUP" : "DM")) !== "DM",
         members: t.members.map((m) => m.user),
         lastMessageAt: t.messages[0]?.createdAt ?? t.createdAt,
         unreadCount: unread,
@@ -154,6 +162,7 @@ export async function sendMessage(
   userId: string,
   input: {
     threadId: string;
+    clientId?: string;
     kind: string;
     text?: string;
     media?: any;
@@ -161,6 +170,8 @@ export async function sendMessage(
     storyId?: string; // ✅ NEU
   }
 ) {
+  const clientId = String(input.clientId ?? "").trim().slice(0, 120) || null;
+
   // Basic validation
   if (input.kind === "text" && !input.text?.trim()) throw new Error("Text required");
   if (input.kind !== "text") {
@@ -170,10 +181,31 @@ export async function sendMessage(
   }
 
   // Sicherheitscheck: gehört User zum Thread?
-  const membership = await prisma.threadMember.findUnique({
-    where: { threadId_userId: { threadId: input.threadId, userId } },
-  });
+  const [membership, thread] = await Promise.all([
+    prisma.threadMember.findUnique({
+      where: { threadId_userId: { threadId: input.threadId, userId } },
+    }),
+    prisma.thread.findUnique({
+      where: { id: input.threadId },
+      select: { id: true, kind: true, groupKey: true },
+    }),
+  ]);
   if (!membership) throw new Error("NO_ACCESS_TO_THREAD");
+  if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+
+  if (String(thread.kind) === "DISABLED") {
+    throw new GraphQLError("CHAT_DISABLED");
+  }
+
+  if (String(thread.kind) === "BROADCAST") {
+    const groupId = thread.groupKey?.startsWith("community:") ? thread.groupKey.slice("community:".length) : null;
+    if (!groupId) throw new GraphQLError("BROADCAST_NOT_CONFIGURED");
+    const group = await prisma.groupLink.findUnique({
+      where: { id: groupId },
+      select: { ownerId: true, isActive: true },
+    });
+    if (!group?.isActive || group.ownerId !== userId) throw new GraphQLError("BROADCAST_ONLY");
+  }
 
   // Block-Safety: wenn irgendwer im Thread geblockt ist (in beide Richtungen) => nicht senden
   await assertThreadNotBlocked(prisma, userId, input.threadId);
@@ -208,25 +240,44 @@ export async function sendMessage(
 
   const now = new Date();
 
-  // ✅ Wichtig: kein msg.sender mehr nötig
-  const msg = await prisma.message.create({
-    data: {
-      threadId: input.threadId,
-      senderId: userId,
-      kind: input.kind,
-      text: input.text ?? null,
-      s3Key: input.media?.key ?? null,
-      mime: input.media?.mime ?? null,
-      width: input.media?.width ?? null,
-      height: input.media?.height ?? null,
-      durationMs: input.media?.durationMs ?? null,
-      replyToId: input.replyToId ?? null,
+  if (clientId) {
+    const existing = await prisma.message.findFirst({
+      where: { threadId: input.threadId, senderId: userId, clientId },
+    });
+    if (existing) return existing;
+  }
 
-      // ✅ NEU: Story-Kontext speichern
-      storyId: safeStoryId,
-    },
-    // (du kannst include: { sender: true } drin lassen, aber wir brauchen es nicht)
-  });
+  let msg;
+  try {
+    // ✅ Wichtig: kein msg.sender mehr nötig
+    msg = await prisma.message.create({
+      data: {
+        threadId: input.threadId,
+        senderId: userId,
+        clientId,
+        kind: input.kind,
+        text: input.text ?? null,
+        s3Key: input.media?.key ?? null,
+        mime: input.media?.mime ?? null,
+        width: input.media?.width ?? null,
+        height: input.media?.height ?? null,
+        durationMs: input.media?.durationMs ?? null,
+        replyToId: input.replyToId ?? null,
+
+        // ✅ NEU: Story-Kontext speichern
+        storyId: safeStoryId,
+      },
+      // (du kannst include: { sender: true } drin lassen, aber wir brauchen es nicht)
+    });
+  } catch (e) {
+    if (clientId && e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
+      const existing = await prisma.message.findFirst({
+        where: { threadId: input.threadId, senderId: userId, clientId },
+      });
+      if (existing) return existing;
+    }
+    throw e;
+  }
 
   // Thread.bump
   await prisma.thread.update({
@@ -353,7 +404,8 @@ export async function createThread(
   prisma: PrismaClient,
   requesterId: string,
   memberUserIds: string[],
-  title?: string
+  title?: string,
+  imageKey?: string | null
 ) {
   const members = uniqSorted(memberUserIds);
   if (members.length < 2) throw new Error("need at least 2 members");
@@ -377,7 +429,7 @@ export async function createThread(
     if (existing) return existing;
 
     return prisma.$transaction(async (tx) => {
-      const thread = await tx.thread.create({ data: { title: title ?? null, dmKey } });
+      const thread = await tx.thread.create({ data: { title: title ?? null, dmKey, kind: "DM" } });
       await tx.threadMember.createMany({
         data: members.map((userId) => ({ threadId: thread.id, userId })),
       });
@@ -385,16 +437,92 @@ export async function createThread(
     });
   }
 
-  // Gruppen-Thread → via groupKey de-dupen
-  const groupKey = groupKeyFor(members);
-  const existing = await prisma.thread.findUnique({ where: { groupKey } });
-  if (existing) return existing;
+  const safeTitle = String(title ?? "").trim();
+  if (!safeTitle) throw new GraphQLError("GROUP_TITLE_REQUIRED");
+
+  // Gruppen-Threads werden nicht dedupliziert: gleiche Mitglieder dürfen mehrere Gruppen haben.
+  const groupKey = newGroupThreadKey();
 
   return prisma.$transaction(async (tx) => {
-    const thread = await tx.thread.create({ data: { title: title ?? null, groupKey } });
+    const thread = await tx.thread.create({
+      data: {
+        title: safeTitle,
+        groupKey,
+        kind: "GROUP",
+        ownerId: requesterId,
+        imageKey: imageKey ?? null,
+      } as any,
+    });
     await tx.threadMember.createMany({
       data: members.map((userId) => ({ threadId: thread.id, userId })),
     });
     return thread;
+  });
+}
+
+export async function ensureCommunityThread(prisma: PrismaClient, groupId: string) {
+  const group = await prisma.groupLink.findUnique({
+    where: { id: groupId },
+    select: { id: true, title: true, ownerId: true, isActive: true },
+  });
+  if (!group || !group.isActive) throw new GraphQLError("GROUP_NOT_FOUND");
+
+  const rows = await prisma.groupLinkMember.findMany({
+    where: { groupLinkId: group.id },
+    select: { profileId: true },
+  });
+  const memberIds = uniqSorted([group.ownerId, ...rows.map((row) => row.profileId)]);
+  const groupKey = communityGroupKey(group.id);
+
+  return prisma.$transaction(async (tx) => {
+    const thread =
+      (await tx.thread.findUnique({ where: { groupKey } })) ??
+      (await tx.thread.create({
+        data: {
+          title: group.title,
+          groupKey,
+          kind: "COMMUNITY",
+        },
+      }));
+
+    if (thread.title !== group.title) {
+      await tx.thread.update({
+        where: { id: thread.id },
+        data: { title: group.title },
+      });
+    }
+
+    if (memberIds.length) {
+      const existing = await tx.threadMember.findMany({
+        where: { threadId: thread.id },
+        select: { userId: true },
+      });
+      const existingIds = new Set(existing.map((member) => member.userId));
+      const missing = memberIds.filter((userId) => !existingIds.has(userId));
+
+      if (missing.length) {
+        await tx.threadMember.createMany({
+          data: missing.map((userId) => ({ threadId: thread.id, userId })),
+          skipDuplicates: true,
+        });
+      }
+    }
+
+    return tx.thread.findUnique({ where: { id: thread.id } });
+  });
+}
+
+export async function removeCommunityThreadMember(prisma: PrismaClient, groupId: string, profileId: string) {
+  const thread = await prisma.thread.findUnique({
+    where: { groupKey: communityGroupKey(groupId) },
+    select: { id: true },
+  });
+  if (!thread) return;
+
+  await prisma.threadMember.deleteMany({
+    where: {
+      threadId: thread.id,
+      userId: profileId,
+    },
   });
 }

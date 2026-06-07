@@ -5,7 +5,7 @@ import { pubsub } from "./pubsub";
 import { EVENTS } from "./events";
 import * as svc from "./service";
 import type { Ctx } from "../context";
-import { signPutForChat } from "../s3";
+import { getSignedGetUrl, signPutForChat } from "../s3";
 import { GetObjectCommand,S3Client } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { withFilter } from "graphql-subscriptions";
@@ -58,6 +58,16 @@ export const resolvers = {
       return svc.listThreads(ctx.prisma as PrismaClient, ctx.profileId);
     },
 
+    thread: async (_: unknown, { threadId }: { threadId: string }, ctx: Ctx) => {
+      requireAuth(ctx);
+      const membership = await (ctx.prisma as PrismaClient).threadMember.findUnique({
+        where: { threadId_userId: { threadId, userId: ctx.profileId } },
+        select: { id: true },
+      });
+      if (!membership) throw new GraphQLError("FORBIDDEN");
+      return (ctx.prisma as PrismaClient).thread.findUnique({ where: { id: threadId } });
+    },
+
     messages: async (
       _: unknown,
       args: { threadId: string; cursor?: string; take?: number },
@@ -102,7 +112,7 @@ export const resolvers = {
     },
     sendMessage: async (
       _ : unknown,
-      { input }: { input: { threadId: string; kind: string; text?: string; media?: any; replyToId?: string; storyId?: string } },
+      { input }: { input: { threadId: string; clientId?: string; kind: string; text?: string; media?: any; replyToId?: string; storyId?: string } },
       ctx: Ctx
     ) => {
       requireAuth(ctx);
@@ -155,13 +165,74 @@ export const resolvers = {
 
     createThread: async (
       _: unknown,
-      { memberUserIds, title }: { memberUserIds: string[]; title?: string },
+      { memberUserIds, title, imageKey }: { memberUserIds: string[]; title?: string; imageKey?: string | null },
       ctx: Ctx
     ) => {
       requireAuth(ctx);
       const members = Array.isArray(memberUserIds) ? [...memberUserIds] : [];
       if (!members.includes(ctx.profileId)) members.push(ctx.profileId);
-      return svc.createThread(ctx.prisma as PrismaClient, ctx.profileId, members, title);
+      return svc.createThread(ctx.prisma as PrismaClient, ctx.profileId, members, title, imageKey);
+    },
+
+    updateThreadSettings: async (
+      _: unknown,
+      { threadId, title, imageKey }: { threadId: string; title: string; imageKey?: string | null },
+      ctx: Ctx
+    ) => {
+      requireAuth(ctx);
+      const safeTitle = String(title ?? "").trim();
+      if (!safeTitle) throw new GraphQLError("GROUP_TITLE_REQUIRED");
+
+      const [thread] = await (ctx.prisma as PrismaClient).$queryRaw<
+        Array<{ id: string; kind: string; groupKey: string | null; ownerId: string | null }>
+      >`SELECT id, kind::text AS kind, "groupKey", "ownerId" FROM "Thread" WHERE id = ${threadId} LIMIT 1`;
+      if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+      if (String(thread.kind) !== "GROUP" || !thread.groupKey?.length) throw new GraphQLError("NOT_GROUP_THREAD");
+      if (thread.ownerId !== ctx.profileId) throw new GraphQLError("FORBIDDEN");
+
+      return (ctx.prisma as PrismaClient).thread.update({
+        where: { id: threadId },
+        data: {
+          title: safeTitle,
+          ...(typeof imageKey !== "undefined" ? { imageKey: imageKey || null } : {}),
+        } as any,
+      });
+    },
+
+    removeThreadMember: async (_: unknown, { threadId, userId }: { threadId: string; userId: string }, ctx: Ctx) => {
+      requireAuth(ctx);
+      const [thread] = await (ctx.prisma as PrismaClient).$queryRaw<
+        Array<{ id: string; kind: string; groupKey: string | null; ownerId: string | null }>
+      >`SELECT id, kind::text AS kind, "groupKey", "ownerId" FROM "Thread" WHERE id = ${threadId} LIMIT 1`;
+      if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+      if (String(thread.kind) !== "GROUP" || !thread.groupKey?.length) throw new GraphQLError("NOT_GROUP_THREAD");
+      if (thread.ownerId !== ctx.profileId) throw new GraphQLError("FORBIDDEN");
+      if (userId === thread.ownerId) throw new GraphQLError("OWNER_CANNOT_BE_REMOVED");
+
+      await (ctx.prisma as PrismaClient).threadMember.deleteMany({
+        where: { threadId, userId },
+      });
+      return true;
+    },
+
+    setCommunityChatKind: async (_: unknown, { groupId, kind }: { groupId: string; kind: string }, ctx: Ctx) => {
+      requireAuth(ctx);
+      if (kind !== "COMMUNITY" && kind !== "BROADCAST" && kind !== "DISABLED") throw new GraphQLError("INVALID_THREAD_KIND");
+
+      const group = await (ctx.prisma as PrismaClient).groupLink.findUnique({
+        where: { id: groupId },
+        select: { id: true, ownerId: true, isActive: true },
+      });
+      if (!group || !group.isActive) throw new GraphQLError("GROUP_NOT_FOUND");
+      if (group.ownerId !== ctx.profileId) throw new GraphQLError("FORBIDDEN");
+
+      const thread = await svc.ensureCommunityThread(ctx.prisma as PrismaClient, group.id);
+      if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+
+      return (ctx.prisma as PrismaClient).thread.update({
+        where: { id: thread.id },
+        data: { kind: kind as any },
+      });
     },
 
     setTyping: async (_: unknown, { threadId, typing }: { threadId: string; typing: boolean }, ctx: Ctx) => {
@@ -299,6 +370,13 @@ export const resolvers = {
       });
       return mems.map((m) => m.user);
     },
+    imageUrl: async (t: any) => {
+      const key = typeof t?.imageKey === "string" ? t.imageKey : "";
+      if (!key) return null;
+      if (/^https?:\/\//i.test(key)) return key;
+      return getSignedGetUrl(key);
+    },
+    viewerIsOwner: (t: any, _a: unknown, ctx: Ctx) => !!ctx.profileId && t?.ownerId === ctx.profileId,
     lastMessageAt: async (t: any, _a: unknown, ctx: Ctx) => {
       const last = await (ctx.prisma as PrismaClient).message.findFirst({
         where: { threadId: t.id },
@@ -319,6 +397,19 @@ export const resolvers = {
           createdAt: { gt: mem.lastReadAt },
           senderId: { not: ctx.profileId }, // ✅ eigene Messages NICHT zählen
         },
+      });
+    },
+    kind: (t: any) => t?.kind ?? (t?.groupKey ? "GROUP" : "DM"),
+    isGroupChat: (t: any) => (t?.kind ? t.kind !== "DM" : Boolean(t?.groupKey)),
+    community: async (t: any, _a: unknown, ctx: Ctx) => {
+      const groupKey = typeof t?.groupKey === "string" ? t.groupKey : "";
+      if (!groupKey.startsWith("community:")) return null;
+
+      const groupId = groupKey.slice("community:".length);
+      if (!groupId) return null;
+
+      return (ctx.prisma as PrismaClient).groupLink.findFirst({
+        where: { id: groupId, isActive: true },
       });
     },
   },

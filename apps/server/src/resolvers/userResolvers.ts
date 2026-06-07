@@ -543,6 +543,9 @@ const resolvers = {
     isMe: (u: any, _: unknown, ctx: Ctx) =>
       !!ctx.profileId && ctx.profileId === u.id,
 
+    isAdmin: (u: any, _: unknown, ctx: Ctx) =>
+      !!ctx.profileId && ctx.profileId === u.id && !!ctx.isAdmin,
+
     totalLikeCount: async (u: any, _: unknown, ctx: Ctx) => {
       if (!u?.id) return 0;
       return ctx.prisma.like.count({
@@ -653,11 +656,25 @@ const resolvers = {
     },
 
     connectionCount: async (u: any, _: any, ctx: Ctx) => {
-      // u.id ist das Profile
-      const cnt = await ctx.prisma.connection.count({
-        where: { fromId: u.id },
-      });
-      return cnt;
+      const rows = await ctx.prisma.$queryRaw<Array<{ count: bigint }>>`
+        SELECT COUNT(*)::bigint AS count
+        FROM "Connection" c
+        WHERE c."fromId" = ${u.id}
+          AND c."groupLinkId" IS NOT NULL
+          AND EXISTS (
+            SELECT 1
+            FROM "GroupLinkMember" m
+            WHERE m."groupLinkId" = c."groupLinkId"
+              AND m."profileId" = c."fromId"
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM "GroupLinkMember" m
+            WHERE m."groupLinkId" = c."groupLinkId"
+              AND m."profileId" = c."toId"
+          )
+      `;
+      return Number(rows[0]?.count ?? 0);
     },
 
 

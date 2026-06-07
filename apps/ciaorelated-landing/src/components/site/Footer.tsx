@@ -47,7 +47,7 @@ export function Footer() {
       <div className="border-t border-border/60">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6">
           <span>© {year} ciaorelated. {t.footer.rights}</span>
-          <span>your-domain.example</span>
+          <span>ciaorelated.com</span>
         </div>
       </div>
     </footer>

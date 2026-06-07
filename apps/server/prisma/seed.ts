@@ -1,14 +1,10 @@
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
   const email = "dogankaraarslan2@icloud.com";
   const username = "dogankaraarslan";
-
-  // Passwort hashen
-  const password = await bcrypt.hash("The0309!", 10);
 
   // User anlegen oder wiederverwenden
   const user = await prisma.user.upsert({
@@ -17,7 +13,6 @@ async function main() {
     create: {
       username,
       email,
-      password, // ✅ richtig!
       avatarUrl: "https://i.pravatar.cc/150?u=dogan",
     },
   });

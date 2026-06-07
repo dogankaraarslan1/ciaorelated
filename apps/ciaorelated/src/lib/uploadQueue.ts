@@ -10,18 +10,20 @@ export type UploadQueueItem = {
 };
 
 export function pushUploadQueue(item: UploadQueueItem) {
+  const nextItem: UploadQueueItem = { __typename: "UploadQueueItem", ...item };
+
   try {
     const existing = apollo.readQuery({ query: UPLOAD_QUEUE }) as any;
     const list: UploadQueueItem[] = existing?.uploadQueue ?? [];
     apollo.writeQuery({
       query: UPLOAD_QUEUE,
-      data: { uploadQueue: [item, ...list] },
+      data: { uploadQueue: [nextItem, ...list] },
     });
   } catch {
     // falls noch nicht initialisiert
     apollo.writeQuery({
       query: UPLOAD_QUEUE,
-      data: { uploadQueue: [item] },
+      data: { uploadQueue: [nextItem] },
     });
   }
 }

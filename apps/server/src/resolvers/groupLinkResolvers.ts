@@ -1,8 +1,13 @@
 import type { Ctx } from "../context";
 import crypto from "node:crypto";
+import { getSignedGetUrl, getSignedPutUrl } from "../s3";
 import { getBlockedSets } from "../lib/blocks";
+import { ensureCommunityThread, removeCommunityThreadMember } from "../chat/service";
+import { assertNoProfanity } from "../graphql/profanity-guard";
 
 import { GroupLinkType } from "@prisma/client";
+const GROUP_IMAGE_MAX_BYTES = Number(process.env.MAX_GROUP_IMAGE_BYTES ?? 5 * 1024 * 1024);
+
 function makeCode() {
   return crypto.randomBytes(6).toString("base64url"); // kurz & URL-sicher
 }
@@ -46,6 +51,14 @@ async function assertCanViewGroup(ctx: Ctx, groupId: string) {
   });
 
   if (!membership) throw new Error("Forbidden");
+  return group;
+}
+
+async function assertOwnsGroup(ctx: Ctx, groupId: string) {
+  if (!ctx.profileId) throw new Error("Not authenticated");
+  const group = await ctx.prisma.groupLink.findUnique({ where: { id: groupId } });
+  if (!group || !group.isActive) throw new Error("Group not found");
+  if (group.ownerId !== ctx.profileId) throw new Error("Forbidden");
   return group;
 }
 
@@ -118,6 +131,11 @@ export default {
 
       const owner = await ctx.prisma.profile.findUnique({ where: { id: group.ownerId } });
       return owner ? [owner, ...members] : members;
+    },
+
+    communityThread: async (_: any, { groupId }: { groupId: string }, ctx: Ctx) => {
+      await assertCanViewGroup(ctx, groupId);
+      return ensureCommunityThread(ctx.prisma as any, groupId);
     },
 
     communityMomentsFeed: async (_: any, { offset = 0, limit = 20 }: { offset?: number; limit?: number }, ctx: Ctx) => {
@@ -298,6 +316,20 @@ export default {
   },
 
   GroupLink: {
+    imageUrl: async (group: any) => {
+      const key = typeof group?.imageKey === "string" ? group.imageKey : "";
+      if (!key) return null;
+      if (/^https?:\/\//i.test(key)) return key;
+      return getSignedGetUrl(key);
+    },
+
+    imageThumbUrl: async (group: any) => {
+      const key = typeof group?.imageKey === "string" ? group.imageKey : "";
+      if (!key) return null;
+      if (/^https?:\/\//i.test(key)) return key;
+      return getSignedGetUrl(key);
+    },
+
     owner: (group: any, _args: any, ctx: Ctx) =>
       ctx.prisma.profile.findUnique({ where: { id: group.ownerId } }),
 
@@ -323,6 +355,66 @@ export default {
   },
 
   Mutation: {
+    getSignedGroupLinkImageUpload: async (_: any, { groupId, mime, size }: { groupId: string; mime: string; size: number }, ctx: Ctx) => {
+      await assertOwnsGroup(ctx, groupId);
+      if (!mime?.startsWith("image/")) throw new Error("Only images allowed");
+      if (size > GROUP_IMAGE_MAX_BYTES) throw new Error("File too large");
+
+      const ext =
+        mime === "image/png" ? "png" :
+        mime === "image/webp" ? "webp" : "jpg";
+
+      const key = `group-links/${groupId}/image-${crypto.randomUUID()}.${ext}`;
+      const putUrl = await getSignedPutUrl(key, mime);
+      return { key, putUrl };
+    },
+
+    updateGroupLink: async (_: any, { id, input }: { id: string; input: { title?: string | null; imageKey?: string | null } }, ctx: Ctx) => {
+      await assertOwnsGroup(ctx, id);
+
+      const data: any = {};
+      if (Object.prototype.hasOwnProperty.call(input, "title")) {
+        const title = String(input.title ?? "").trim();
+        if (!title) throw new Error("Title required");
+        if (title.length > 80) throw new Error("Title too long");
+        assertNoProfanity({ title }, ["title"]);
+        data.title = title;
+      }
+      if (Object.prototype.hasOwnProperty.call(input, "imageKey")) {
+        const imageKey = String(input.imageKey ?? "").trim();
+        data.imageKey = imageKey || null;
+      }
+
+      const updated = await ctx.prisma.groupLink.update({
+        where: { id },
+        data,
+      });
+
+      await ensureCommunityThread(ctx.prisma as any, id);
+      return updated;
+    },
+
+    removeGroupLinkMember: async (_: any, { groupId, profileId }: { groupId: string; profileId: string }, ctx: Ctx) => {
+      const group = await assertOwnsGroup(ctx, groupId);
+      if (profileId === group.ownerId) throw new Error("Owner cannot be removed");
+
+      await ctx.prisma.$transaction(async (tx) => {
+        await tx.connection.deleteMany({
+          where: {
+            groupLinkId: groupId,
+            OR: [{ fromId: profileId }, { toId: profileId }],
+          },
+        });
+
+        await tx.groupLinkMember.deleteMany({
+          where: { groupLinkId: groupId, profileId },
+        });
+      });
+
+      await removeCommunityThreadMember(ctx.prisma as any, groupId, profileId);
+      return true;
+    },
+
     createGroupLink: async (_: any, { title, type }: { title: string; type: GroupLinkType}, ctx: Ctx) => {
       if (!ctx.profileId) throw new Error("Not authenticated");
       const slug = makeSlug();
@@ -347,6 +439,15 @@ export default {
         const profileId = ctx.profileId;
         if (!profileId) throw new Error("Not authenticated");
 
+        const group = await tx.groupLink.findUnique({
+          where: { id: groupId },
+          select: { ownerId: true },
+        });
+        if (!group) throw new Error("Group not found");
+        if (group.ownerId === profileId) {
+          throw new Error("Owner cannot leave the community before transferring ownership");
+        }
+
         // 1) Connections entfernen, die über diesen GroupLink laufen
         await tx.connection.deleteMany({
           where: {
@@ -369,6 +470,8 @@ export default {
           },
         });
       });
+
+      await removeCommunityThreadMember(ctx.prisma as any, groupId, ctx.profileId);
 
       return true;
     },
@@ -440,10 +543,13 @@ export default {
         });
       }
 
+      const chatThread = await ensureCommunityThread(ctx.prisma as any, link.id);
+
       // ✅ WICHTIG: Gruppe zurückgeben (für JoinGroupScreen)
       return {
         id: link.id,
         title: link.title,
+        chatThread,
       };
     },
 
