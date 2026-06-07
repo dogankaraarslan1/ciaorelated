@@ -1,6 +1,6 @@
 // apps/ciaorelated/src/screens/ChatScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, TextInput, View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, TextInput, View, StyleSheet, TouchableOpacity, Text, Alert, Dimensions, Linking, Platform } from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -14,6 +14,7 @@ import "dayjs/locale/de";
 import { Ionicons } from "@expo/vector-icons";
 import { gql, useMutation, useQuery, useSubscription } from "@apollo/client";
 import * as ImagePicker from "expo-image-picker";
+import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 
@@ -33,6 +34,16 @@ import { brand } from "../config/brand";
 
 
 import { useTranslation } from "react-i18next";
+
+const expoConfig = (Constants.expoConfig ?? {}) as any;
+const iosAppStoreId = String((expoConfig.extra as any)?.iosAppStoreId ?? "").trim();
+const androidPackageName = String((expoConfig.android as any)?.package ?? "").trim();
+const appStoreReviewUrl = iosAppStoreId
+  ? `https://apps.apple.com/app/id${iosAppStoreId}?action=write-review`
+  : "https://apps.apple.com";
+const playStoreUrl = androidPackageName
+  ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(androidPackageName)}`
+  : "https://play.google.com/store";
 
 /* ───────────────── GiftedChat types ───────────────── */
 declare module "react-native-gifted-chat" {
@@ -442,6 +453,11 @@ export default function ChatScreen({ route, navigation }: any) {
     return <Message {...rest} />;
   }, []);
 
+  const openStoreListing = useCallback(() => {
+    const url = Platform.OS === "android" ? playStoreUrl : appStoreReviewUrl;
+    Linking.openURL(url).catch(() => {});
+  }, []);
+
   const renderMessageText = useCallback(
     (props: any) => {
       const m = props?.currentMessage as any;
@@ -477,10 +493,33 @@ export default function ChatScreen({ route, navigation }: any) {
           <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Profile" })}>
             {t("chat.welcomeActions.profile")}
           </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("Activity")}>
+            {t("chat.welcomeActions.activity")}
+          </Text>
+          {" · "}
+          <Text style={linkStyle} onPress={() => navigation.navigate("NotificationSettings")}>
+            {t("chat.welcomeActions.activitySettings")}
+          </Text>
+          {"\n\n"}
+          {t("chat.welcomeReviewPrefix")}
+          <Text style={linkStyle} onPress={openStoreListing}>
+            {t("chat.welcomeReviewLink")}
+          </Text>
+          {t("chat.welcomeReviewSuffix")}
+          {"\n\n"}
+          {t("chat.welcomeLanguagePrefix")}
+          <Text
+            style={linkStyle}
+            onPress={() => navigation.navigate("LanguageSettings")}
+          >
+            {t("chat.welcomeLanguageLink")}
+          </Text>
+          {t("chat.welcomeLanguageSuffix")}
         </Text>
       );
     },
-    [C.accent, C.text, myId, navigation, styles.welcomeInlineLink, styles.welcomeInlineText, t]
+    [C.accent, C.text, myId, navigation, openStoreListing, styles.welcomeInlineLink, styles.welcomeInlineText, t]
   );
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */

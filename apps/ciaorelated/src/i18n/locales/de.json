@@ -811,13 +811,21 @@
     "replyToStory": "Antwort auf Story",
     "sendAMessage": "Nachricht schreiben…",
     "welcomeTitle": "Willkommen bei {{appName}}",
-    "welcomeMessage": "Entdecke echte Momente im Feed, bleib in Chats nah an Menschen dran, tritt Communities rund um Gruppen und Orte bei, folge Live-Momenten aus Events und vervollständige dein Profil, damit andere wissen, mit wem sie sich verbinden.",
+    "welcomeMessage": "Entdecke echte Momente im Feed, bleib in Chats nah an Menschen dran, tritt Communities rund um Gruppen und Orte bei, folge Live-Momenten aus Events und vervollständige dein Profil, damit andere wissen, mit wem sie sich verbinden. In Aktivität findest du Likes, Kommentare, Follows, Erwähnungen und Community-Updates gesammelt an einem Ort. In den Aktivitätseinstellungen entscheidest du, welche Updates dich benachrichtigen sollen.",
+    "welcomeReviewPrefix": "Wenn dir die Idee einer Open-Source-Social-Media-App gefällt, freuen wir uns über eine Bewertung im App Store oder Play Store: ",
+    "welcomeReviewLink": "Store-Eintrag öffnen",
+    "welcomeReviewSuffix": ".",
+    "welcomeLanguagePrefix": "You can adjust language settings ",
+    "welcomeLanguageLink": "here",
+    "welcomeLanguageSuffix": ".",
     "welcomeActions": {
       "feed": "Feed",
       "chats": "Chats",
       "communities": "Communities",
       "events": "Momente",
-      "profile": "Profil"
+      "profile": "Profil",
+      "activity": "Aktivität",
+      "activitySettings": "Aktivitätseinstellungen"
     },
     "broadcastOnlyNotice": "Nur Admins können in diesem Broadcast-Chat Nachrichten senden.",
     "chatDisabledNotice": "Dieser Community-Chat ist derzeit deaktiviert.",
