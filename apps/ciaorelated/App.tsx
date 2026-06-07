@@ -581,6 +581,14 @@ function ProfileStackScreen() {
   );
 }
 
+function colorWithAlpha(color: string, alpha: number) {
+  if (!/^#[0-9a-f]{6}$/i.test(color)) return color;
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 
 
 function Tabs() {
@@ -749,7 +757,7 @@ function Tabs() {
           borderRadius: 29,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: theme.mode === "dark" ? "#334155" : "#64748B",
+          backgroundColor: colorWithAlpha(TAB_COLORS.primary, 0.72),
           shadowColor: "#000",
           shadowOpacity: theme.mode === "dark" ? 0.28 : 0.18,
           shadowRadius: 14,
