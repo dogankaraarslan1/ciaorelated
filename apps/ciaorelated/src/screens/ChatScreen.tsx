@@ -1,6 +1,6 @@
 // apps/ciaorelated/src/screens/ChatScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Modal, ScrollView, TextInput, View, StyleSheet, TouchableOpacity, Text, Alert, Dimensions, Linking, Platform } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, TextInput, View, StyleSheet, TouchableOpacity, Text, Alert,Dimensions  } from "react-native";
 import {
   GiftedChat,
   IMessage,
@@ -453,11 +453,6 @@ export default function ChatScreen({ route, navigation }: any) {
     return <Message {...rest} />;
   }, []);
 
-  const openStoreListing = useCallback(() => {
-    const url = Platform.OS === "android" ? playStoreUrl : appStoreReviewUrl;
-    Linking.openURL(url).catch(() => {});
-  }, []);
-
   const renderMessageText = useCallback(
     (props: any) => {
       const m = props?.currentMessage as any;
@@ -493,33 +488,10 @@ export default function ChatScreen({ route, navigation }: any) {
           <Text style={linkStyle} onPress={() => navigation.navigate("AppTabs", { screen: "Profile" })}>
             {t("chat.welcomeActions.profile")}
           </Text>
-          {" · "}
-          <Text style={linkStyle} onPress={() => navigation.navigate("Activity")}>
-            {t("chat.welcomeActions.activity")}
-          </Text>
-          {" · "}
-          <Text style={linkStyle} onPress={() => navigation.navigate("NotificationSettings")}>
-            {t("chat.welcomeActions.activitySettings")}
-          </Text>
-          {"\n\n"}
-          {t("chat.welcomeReviewPrefix")}
-          <Text style={linkStyle} onPress={openStoreListing}>
-            {t("chat.welcomeReviewLink")}
-          </Text>
-          {t("chat.welcomeReviewSuffix")}
-          {"\n\n"}
-          {t("chat.welcomeLanguagePrefix")}
-          <Text
-            style={linkStyle}
-            onPress={() => navigation.navigate("LanguageSettings")}
-          >
-            {t("chat.welcomeLanguageLink")}
-          </Text>
-          {t("chat.welcomeLanguageSuffix")}
         </Text>
       );
     },
-    [C.accent, C.text, myId, navigation, openStoreListing, styles.welcomeInlineLink, styles.welcomeInlineText, t]
+    [C.accent, C.text, myId, navigation, styles.welcomeInlineLink, styles.welcomeInlineText, t]
   );
 
   /* ───────────────── Avatar fix (wirklich anzeigen) ───────────────── */

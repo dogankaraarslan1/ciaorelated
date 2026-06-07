@@ -805,21 +805,13 @@
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
     "welcomeTitle": "Welcome to {{appName}}",
-    "welcomeMessage": "Discover real moments in the feed, keep conversations close in chats, join communities around groups and places, follow live moments from events, and complete your profile so people know who they are connecting with. Activity keeps likes, comments, follows, mentions, and community updates in one place. In Activity Settings, you can choose which updates should notify you.",
-    "welcomeReviewPrefix": "If you like the idea of an open-source social media app, we would be happy about a review in the App Store or Play Store: ",
-    "welcomeReviewLink": "open store listing",
-    "welcomeReviewSuffix": ".",
-    "welcomeLanguagePrefix": "You can adjust language settings ",
-    "welcomeLanguageLink": "here",
-    "welcomeLanguageSuffix": ".",
+    "welcomeMessage": "Discover real moments in the feed, keep conversations close in chats, join communities around groups and places, follow live moments from events, and complete your profile so people know who they are connecting with.",
     "welcomeActions": {
       "feed": "Feed",
       "chats": "Chats",
       "communities": "Communities",
       "events": "Moments",
-      "profile": "Profile",
-      "activity": "Activity",
-      "activitySettings": "Activity Settings"
+      "profile": "Profile"
     },
     "broadcastOnlyNotice": "Only admins can send messages in this broadcast chat.",
     "chatDisabledNotice": "This community chat is currently disabled.",
