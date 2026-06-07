@@ -177,9 +177,9 @@ export function FeedHeader({
               onPress={openExplore}
               hitSlop={12}
               accessibilityRole="button"
-              accessibilityLabel="Search"
+              accessibilityLabel="Explore"
             >
-              <Ionicons name="search" size={23} color={C.text} />
+              <Text style={s.brandText} numberOfLines={1}>ciao</Text>
             </TouchableOpacity>
           </View>
           </View>

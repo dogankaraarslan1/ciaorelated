@@ -7,12 +7,12 @@ import "./src/i18n";
 
 import React, { useEffect, useState } from "react";
 import { Text, StyleSheet, Platform, AppState, Modal, View, TouchableOpacity } from "react-native";
-import { NavigationContainer, CommonActions } from "@react-navigation/native";
+import { NavigationContainer, CommonActions, useNavigation } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator, NativeStackScreenProps } from "@react-navigation/native-stack";
 import { ApolloProvider, useApolloClient, gql, useQuery, useMutation } from "@apollo/client";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { SafeAreaProvider } from "react-native-safe-area-context";
+import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-context";
 
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
@@ -584,6 +584,8 @@ function ProfileStackScreen() {
 
 
 function Tabs() {
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const { t } = useTranslation();
 
@@ -608,6 +610,7 @@ function Tabs() {
   } as const;
 
   return (
+    <View style={{ flex: 1 }}>
     <Tab.Navigator
       screenOptions={({ route }) => ({
         headerShown: false,
@@ -615,7 +618,7 @@ function Tabs() {
         tabBarInactiveTintColor: TAB_COLORS.inactive,
         tabBarShowLabel: true,
         tabBarLabel: ({ focused, color }) => {
-          if (route.name === "Explore") return null;
+          if (route.name === "CreateTab" || route.name === "Vlogs") return null;
           if (route.name === "MessagesTab") {
             return (
               <Text
@@ -635,8 +638,8 @@ function Tabs() {
           const labelKey =
             route.name === "Home"
               ? "tabs.home"
-              : route.name === "Vlogs"
-                ? "tabs.moments"
+              : route.name === "Explore"
+                ? "tabs.explore"
                 : route.name === "Profile"
                     ? "tabs.profile"
                     : "";
@@ -668,6 +671,8 @@ function Tabs() {
             case "Home":
               return <Ionicons name={focused ? "home" : "home-outline"} size={s} color={color} />;
             case "Explore":
+              return <Ionicons name={focused ? "search" : "search-outline"} size={s} color={color} />;
+            case "CreateTab":
               return (
                 <View
                   style={{
@@ -707,9 +712,9 @@ function Tabs() {
       })}
     >
       <Tab.Screen name="Home" component={FeedScreen} />
-      <Tab.Screen name="Vlogs" component={ReelsScreen} />
+      <Tab.Screen name="Explore" component={ExploreScreen} />
       <Tab.Screen
-        name="Explore"
+        name="CreateTab"
         component={ExploreScreen}
         listeners={({ navigation }) => ({
           tabPress: (event) => {
@@ -720,7 +725,41 @@ function Tabs() {
       />
       <Tab.Screen name="MessagesTab" component={MessagesScreen} options={{ headerShown: false }} />
       <Tab.Screen name="Profile" component={ProfileStackScreen} />
+      <Tab.Screen
+        name="Vlogs"
+        component={ReelsScreen}
+        options={{
+          tabBarButton: () => null,
+          tabBarItemStyle: { display: "none" },
+        }}
+      />
     </Tab.Navigator>
+      <TouchableOpacity
+        activeOpacity={0.88}
+        onPress={() => navigation.navigate("AppTabs", { screen: "Vlogs" })}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel={t("tabs.moments")}
+        style={{
+          position: "absolute",
+          right: 18,
+          bottom: Math.max(insets.bottom + 92, 112),
+          width: 58,
+          height: 58,
+          borderRadius: 29,
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: TAB_COLORS.primary,
+          shadowColor: "#000",
+          shadowOpacity: theme.mode === "dark" ? 0.28 : 0.18,
+          shadowRadius: 14,
+          shadowOffset: { width: 0, height: 8 },
+          elevation: 8,
+        }}
+      >
+        <Ionicons name="aperture" size={28} color="#fff" />
+      </TouchableOpacity>
+    </View>
   );
 }
 let lastJoinSlugSeen: string | null = null;
