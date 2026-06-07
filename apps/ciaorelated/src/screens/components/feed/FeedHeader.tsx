@@ -167,11 +167,11 @@ export function FeedHeader({
       ) : (
         <>
           <View style={s.leftSlot}>
-          <View style={s.logoWrap}>
-            <Text style={s.brandText} numberOfLines={1}>
-              {brand.feedHeaderText}
-            </Text>
-          </View>
+            <View style={s.logoWrap}>
+              <Text style={s.brandText} numberOfLines={1}>
+                {brand.feedHeaderText}
+              </Text>
+            </View>
           </View>
 
           <View style={s.headerActions}>
@@ -292,7 +292,6 @@ const styles = (C: any, mode?: string) =>
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
-      marginLeft: 7,
     },
     centerAnchor: {
       position: "absolute",
