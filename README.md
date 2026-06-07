@@ -289,6 +289,8 @@ EXPO_IOS_BUNDLE_IDENTIFIER=com.example.ciaorelated
 EXPO_ANDROID_PACKAGE=com.example.ciaorelated
 EXPO_ICON_PATH=./assets/cr.png
 EXPO_WEB_FAVICON_PATH=./assets/cr.png
+EXPO_SPLASH_IMAGE_PATH=./assets/splash-icon.png
+EXPO_SPLASH_BACKGROUND_COLOR=#ffffff
 EAS_PROJECT_ID=
 ```
 
@@ -324,6 +326,8 @@ Mobile variables at a glance:
 | `EXPO_ANDROID_PACKAGE` | Recommended for builds | Android package name. |
 | `EXPO_ICON_PATH` | Optional | App icon path used by Expo config. Defaults to `./assets/cr.png`. |
 | `EXPO_WEB_FAVICON_PATH` | Optional | Web favicon path used by Expo config. Defaults to the app icon path. |
+| `EXPO_SPLASH_IMAGE_PATH` | Optional | Splash image path used by Expo config. Defaults to `./assets/splash-icon.png`. |
+| `EXPO_SPLASH_BACKGROUND_COLOR` | Optional | Splash screen background color. Defaults to `#ffffff`. |
 | `EAS_PROJECT_ID` | Optional | Needed for Expo push tokens and EAS-linked builds. Forks should create their own via EAS. |
 
 Branding-only example for a separate Beverly build:
@@ -340,6 +344,8 @@ EXPO_IOS_BUNDLE_IDENTIFIER=com.example.beverly
 EXPO_ANDROID_PACKAGE=com.example.beverly
 EXPO_ICON_PATH=./assets/beverly-icon.png
 EXPO_WEB_FAVICON_PATH=./assets/beverly-icon.png
+EXPO_SPLASH_IMAGE_PATH=./assets/beverly-splash.png
+EXPO_SPLASH_BACKGROUND_COLOR=#ffffff
 ```
 
 ## Where To Get Provider Values

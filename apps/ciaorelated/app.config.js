@@ -13,6 +13,8 @@ const appSlug = process.env.EXPO_SLUG || process.env.EXPO_PUBLIC_APP_SLUG || "ci
 const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME || "ciaorelated";
 const appIcon = process.env.EXPO_ICON_PATH || "./assets/cr.png";
 const webFavicon = process.env.EXPO_WEB_FAVICON_PATH || appIcon;
+const splashImage = process.env.EXPO_SPLASH_IMAGE_PATH || "./assets/splash-icon.png";
+const splashBackgroundColor = process.env.EXPO_SPLASH_BACKGROUND_COLOR || "#ffffff";
 
 export default {
   expo: {
@@ -25,6 +27,11 @@ export default {
     userInterfaceStyle: 'light',
     entryPoint: './src/App.tsx',
     icon: appIcon,
+    splash: {
+      image: splashImage,
+      resizeMode: "contain",
+      backgroundColor: splashBackgroundColor,
+    },
 
     extra: {
       apiUrl: process.env.EXPO_PUBLIC_API_URL ?? "",
