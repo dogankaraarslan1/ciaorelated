@@ -13,7 +13,6 @@ import { useTheme } from "../../../theme/ThemeProvider";
 type RootStackParamList = {
   Activity: undefined;
   Messages: undefined;
-  Explore: undefined;
   CreateMedia: { initialMode?: "BEITRAG" | "STORY"; nonce?: number } | undefined;
 };
 
@@ -28,6 +27,8 @@ const UNREAD_COUNTS_Q = gql`
     }
   }
 `;
+
+const feedHeaderText = (process.env.EXPO_PUBLIC_FEED_HEADER_TEXT || "ciao").trim() || "ciao";
 
 export function FeedHeader({
   mode = "SONGVERWANDT",
@@ -113,10 +114,6 @@ export function FeedHeader({
     setModeOpen(false);
   }, []);
 
-  const openExplore = React.useCallback(() => {
-    navigation.navigate("Explore");
-  }, [navigation]);
-
   React.useEffect(() => {
     if (detailMode) {
       setModeOpen(false);
@@ -172,15 +169,9 @@ export function FeedHeader({
         <>
           <View style={s.leftSlot}>
           <View style={s.logoWrap}>
-            <TouchableOpacity
-              activeOpacity={0.78}
-              onPress={openExplore}
-              hitSlop={12}
-              accessibilityRole="button"
-              accessibilityLabel="Explore"
-            >
-              <Text style={s.brandText} numberOfLines={1}>ciao</Text>
-            </TouchableOpacity>
+            <Text style={s.brandText} numberOfLines={1}>
+              {feedHeaderText}
+            </Text>
           </View>
           </View>
 

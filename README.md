@@ -275,6 +275,7 @@ EXPO_PUBLIC_API_URL=http://YOUR_LAN_IP:4000/graphql
 EXPO_PUBLIC_WEBSITE_URL=https://your-domain.example
 EXPO_PUBLIC_ONELINK_URL=
 EXPO_PUBLIC_APP_SCHEME=ciaorelated
+EXPO_PUBLIC_FEED_HEADER_TEXT=ciao
 EXPO_PUBLIC_ASSOCIATED_DOMAINS=
 EXPO_PUBLIC_IOS_APP_STORE_ID=
 EXPO_PUBLIC_APPSFLYER_DEV_KEY=
@@ -303,6 +304,7 @@ Mobile variables at a glance:
 | `EXPO_PUBLIC_WEBSITE_URL` | Recommended | Public website base URL used for invite links, legal pages, and Universal Link prefixes. |
 | `EXPO_PUBLIC_ONELINK_URL` | Optional | AppsFlyer OneLink base URL accepted as a trusted incoming link source. |
 | `EXPO_PUBLIC_APP_SCHEME` | Optional | Custom app URL scheme. Defaults to `ciaorelated`. |
+| `EXPO_PUBLIC_FEED_HEADER_TEXT` | Optional | Short Pacifico wordmark shown in the feed header. Defaults to `ciao`. |
 | `EXPO_PUBLIC_ASSOCIATED_DOMAINS` | Optional | Comma-separated Universal Link domains, e.g. `example.com,www.example.com`. |
 | `EXPO_PUBLIC_IOS_APP_STORE_ID` | Optional | iOS App Store ID used by update/deep-link helpers. |
 | `EXPO_PUBLIC_APPSFLYER_DEV_KEY` | Optional | AppsFlyer key if you use AppsFlyer deep links. |
