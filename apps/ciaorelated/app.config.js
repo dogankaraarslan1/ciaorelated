@@ -1,5 +1,4 @@
 // apps/ciaorelated/app.config.js
-import "dotenv/config";
 
 const associatedDomains = (process.env.EXPO_PUBLIC_ASSOCIATED_DOMAINS || "")
   .split(",")
@@ -22,7 +21,7 @@ export default {
     slug: appSlug,
     scheme: appScheme,
     owner: process.env.EXPO_OWNER,
-    version: '1.0.6',
+    version: '1.1.0',
     orientation: 'portrait',
     userInterfaceStyle: 'light',
     entryPoint: './src/App.tsx',
@@ -46,6 +45,7 @@ export default {
       iosAppStoreId: process.env.EXPO_PUBLIC_IOS_APP_STORE_ID ?? "",
       appsFlyerDevKey: process.env.EXPO_PUBLIC_APPSFLYER_DEV_KEY ?? "",
       appsFlyerEnabled: process.env.EXPO_PUBLIC_APPSFLYER_ENABLED === "true",
+      androidPackage: process.env.EXPO_ANDROID_PACKAGE ?? 'com.example.ciaorelated',
       eas: { projectId: easProjectId },
     },
     plugins: [

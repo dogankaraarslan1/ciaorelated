@@ -15,6 +15,7 @@ export const typeDefs = gql`
   enum MembershipStatus { PENDING ACCEPTED INVITED REJECTED }
   enum TagStatus { PENDING ACCEPTED REJECTED }
   enum MediaProcessStatus { NONE PENDING PROCESSING DONE FAILED }
+  enum AppPlatform { IOS ANDROID }
 
 
   # ---------- Account / User ----------
@@ -703,8 +704,17 @@ export const typeDefs = gql`
     title: String!
     chatThread: Thread
   }
+
+  type AppRuntimeConfig {
+    platform: AppPlatform!
+    minSupportedVersion: String
+    latestVersion: String
+    storeUrl: String
+  }
+
   # ---------- Queries ----------
   type Query {
+    appRuntimeConfig(platform: AppPlatform!, appSlug: String, currentVersion: String): AppRuntimeConfig!
     myJoinedGroupLinks: [GroupLink!]!
     myGroupLinks: [GroupLink!]!
     groupLink(id: ID!): GroupLink
