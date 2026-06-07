@@ -1,7 +1,6 @@
 // apps/ciaorelated/src/screens/ReelsScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   FlatList,
@@ -2101,7 +2100,7 @@ const onHeaderLayout = useCallback((e: any) => {
     return (
       <View
        onLayout={onHeaderLayout}
-        style={{ paddingTop: 0 }}
+        style={{ paddingTop: headerPadTop }}
       >
         <Animated.View
           pointerEvents={inHeader ? "auto" : "none"}
@@ -2479,7 +2478,7 @@ const EndFooter = useMemo(() => {
 
   const hasSnap = snapOffsets.length > 0;
   return (
-    <SafeAreaView style={s.screen}>
+    <View style={s.screen}>
       <FlashList
         ref={feedListRef}
         data={listData}
@@ -2506,6 +2505,7 @@ const EndFooter = useMemo(() => {
         refreshControl={
           <RefreshControl
             tintColor={C.text}
+            progressViewOffset={headerPadTop + 56}
             refreshing={!!refreshing}
             onRefresh={onRefresh}
           />
@@ -2694,7 +2694,7 @@ const EndFooter = useMemo(() => {
           </Text>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
