@@ -749,7 +749,7 @@ function Tabs() {
           borderRadius: 29,
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#14B8A6",
+          backgroundColor: theme.mode === "dark" ? "#334155" : "#64748B",
           shadowColor: "#000",
           shadowOpacity: theme.mode === "dark" ? 0.28 : 0.18,
           shadowRadius: 14,
@@ -757,7 +757,7 @@ function Tabs() {
           elevation: 8,
         }}
       >
-        <Ionicons name="aperture" size={34} color="#fff" />
+        <Ionicons name="aperture" size={40} color="#fff" />
       </TouchableOpacity>
     </View>
   );
