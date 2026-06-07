@@ -681,15 +681,13 @@ function Tabs() {
                     borderRadius: (s + 14) / 2,
                     alignItems: "center",
                     justifyContent: "center",
-                    backgroundColor: focused ? TAB_COLORS.primary : "transparent",
-                    borderWidth: focused ? 0 : 1.6,
-                    borderColor: TAB_COLORS.inactive,
+                    backgroundColor: TAB_COLORS.primary,
                     marginTop: 6,
                   }}
                 >
                   <Text
                     style={{
-                      color: focused ? "#fff" : TAB_COLORS.inactive,
+                      color: "#fff",
                       fontSize: s + 8,
                       fontWeight: "600",
                       lineHeight: s + 10,
@@ -759,7 +757,7 @@ function Tabs() {
           elevation: 8,
         }}
       >
-        <Ionicons name="aperture" size={36} color="#fff" />
+        <Ionicons name="aperture" size={46} color="#fff" />
       </TouchableOpacity>
     </View>
   );
