@@ -1310,6 +1310,7 @@ function ThemedRootNavigator({
           component={CreateMediaRoot}
           options={{
             headerShown: false,
+            animation: "none",
             contentStyle: { backgroundColor: C.bg },
           }}
         />
