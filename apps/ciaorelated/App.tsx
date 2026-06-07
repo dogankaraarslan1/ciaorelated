@@ -6,7 +6,7 @@ import "react-native-url-polyfill/auto";
 import "./src/i18n";
 
 import React, { useEffect, useState } from "react";
-import { Text, StyleSheet, Platform, AppState, Modal, View, TouchableOpacity } from "react-native";
+import { Animated, PanResponder, Text, StyleSheet, Platform, AppState, Modal, View, TouchableOpacity, useWindowDimensions } from "react-native";
 import { NavigationContainer, CommonActions, useNavigation } from "@react-navigation/native";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { createNativeStackNavigator, NativeStackScreenProps } from "@react-navigation/native-stack";
@@ -589,13 +589,18 @@ function colorWithAlpha(color: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+type FabCorner = "top-left" | "top-right" | "bottom-left" | "bottom-right";
+
 
 
 function Tabs() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const { theme } = useTheme();
   const { t } = useTranslation();
+  const [momentsFabCorner, setMomentsFabCorner] = React.useState<FabCorner>("bottom-right");
+  const momentsFabDrag = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   const TAB_COLORS = {
     bg: theme.colors.bg,
@@ -616,6 +621,56 @@ function Tabs() {
     shadowRadius: 0,
     shadowOffset: { width: 0, height: 0 },
   } as const;
+  const momentsFabSize = 58;
+  const momentsFabMargin = 18;
+  const momentsFabBottomOffset = Math.max(insets.bottom + 72, 90);
+  const momentsFabTop = insets.top + momentsFabMargin;
+  const momentsFabBottom = Math.max(momentsFabTop, height - momentsFabBottomOffset - momentsFabSize);
+  const momentsFabLeft = momentsFabMargin;
+  const momentsFabRight = Math.max(momentsFabLeft, width - momentsFabMargin - momentsFabSize);
+  const momentsFabBase = React.useMemo(() => {
+    const isTop = momentsFabCorner.startsWith("top");
+    const isLeft = momentsFabCorner.endsWith("left");
+    return {
+      left: isLeft ? momentsFabLeft : momentsFabRight,
+      top: isTop ? momentsFabTop : momentsFabBottom,
+    };
+  }, [momentsFabBottom, momentsFabCorner, momentsFabLeft, momentsFabRight, momentsFabTop]);
+  const momentsFabPanResponder = React.useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_event, gesture) =>
+          Math.abs(gesture.dx) > 6 || Math.abs(gesture.dy) > 6,
+        onPanResponderGrant: () => {
+          momentsFabDrag.stopAnimation();
+          momentsFabDrag.setValue({ x: 0, y: 0 });
+        },
+        onPanResponderMove: Animated.event(
+          [null, { dx: momentsFabDrag.x, dy: momentsFabDrag.y }],
+          { useNativeDriver: false }
+        ),
+        onPanResponderRelease: (_event, gesture) => {
+          const centerX = momentsFabBase.left + gesture.dx + momentsFabSize / 2;
+          const centerY = momentsFabBase.top + gesture.dy + momentsFabSize / 2;
+          setMomentsFabCorner(`${centerY < height / 2 ? "top" : "bottom"}-${centerX < width / 2 ? "left" : "right"}` as FabCorner);
+          Animated.spring(momentsFabDrag, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 260,
+          }).start();
+        },
+        onPanResponderTerminate: () => {
+          Animated.spring(momentsFabDrag, {
+            toValue: { x: 0, y: 0 },
+            useNativeDriver: true,
+            damping: 18,
+            stiffness: 260,
+          }).start();
+        },
+      }),
+    [height, momentsFabBase.left, momentsFabBase.top, momentsFabDrag, width]
+  );
 
   return (
     <View style={{ flex: 1 }}>
@@ -742,31 +797,38 @@ function Tabs() {
         }}
       />
     </Tab.Navigator>
-      <TouchableOpacity
-        activeOpacity={0.88}
-        onPress={() => navigation.navigate("AppTabs", { screen: "Vlogs" })}
-        hitSlop={10}
-        accessibilityRole="button"
-        accessibilityLabel={t("tabs.moments")}
+      <Animated.View
+        {...momentsFabPanResponder.panHandlers}
         style={{
           position: "absolute",
-          right: 18,
-          bottom: Math.max(insets.bottom + 72, 90),
-          width: 58,
-          height: 58,
-          borderRadius: 29,
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: colorWithAlpha(TAB_COLORS.primary, 0.72),
-          shadowColor: "#000",
-          shadowOpacity: theme.mode === "dark" ? 0.28 : 0.18,
-          shadowRadius: 14,
-          shadowOffset: { width: 0, height: 8 },
-          elevation: 8,
+          left: momentsFabBase.left,
+          top: momentsFabBase.top,
+          transform: momentsFabDrag.getTranslateTransform(),
         }}
       >
-        <Ionicons name="aperture" size={42} color="#fff" />
-      </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.88}
+          onPress={() => navigation.navigate("AppTabs", { screen: "Vlogs" })}
+          hitSlop={10}
+          accessibilityRole="button"
+          accessibilityLabel={t("tabs.moments")}
+          style={{
+            width: momentsFabSize,
+            height: momentsFabSize,
+            borderRadius: momentsFabSize / 2,
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: colorWithAlpha(TAB_COLORS.primary, 0.72),
+            shadowColor: "#000",
+            shadowOpacity: theme.mode === "dark" ? 0.28 : 0.18,
+            shadowRadius: 14,
+            shadowOffset: { width: 0, height: 8 },
+            elevation: 8,
+          }}
+        >
+          <Ionicons name="aperture" size={42} color="#fff" />
+        </TouchableOpacity>
+      </Animated.View>
     </View>
   );
 }
