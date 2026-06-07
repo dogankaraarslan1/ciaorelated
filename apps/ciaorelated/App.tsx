@@ -1379,6 +1379,11 @@ function ThemedRootNavigator({
           component={NotificationSettingsScreen}
           options={{ headerShown: false }}
         />
+        <Root.Screen
+          name="LanguageSettings"
+          component={LanguageSettingsScreen}
+          options={{ headerShown: false }}
+        />
         <Root.Screen name="AppTabs" component={Tabs} />
 
         <Root.Screen

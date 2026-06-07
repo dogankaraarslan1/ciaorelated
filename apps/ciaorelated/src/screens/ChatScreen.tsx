@@ -14,6 +14,7 @@ import "dayjs/locale/de";
 import { Ionicons } from "@expo/vector-icons";
 import { gql, useMutation, useQuery, useSubscription } from "@apollo/client";
 import * as ImagePicker from "expo-image-picker";
+import Constants from "expo-constants";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image as ExpoImage } from "expo-image";
 
@@ -33,6 +34,16 @@ import { brand } from "../config/brand";
 
 
 import { useTranslation } from "react-i18next";
+
+const expoConfig = (Constants.expoConfig ?? {}) as any;
+const iosAppStoreId = String((expoConfig.extra as any)?.iosAppStoreId ?? "").trim();
+const androidPackageName = String((expoConfig.android as any)?.package ?? "").trim();
+const appStoreReviewUrl = iosAppStoreId
+  ? `https://apps.apple.com/app/id${iosAppStoreId}?action=write-review`
+  : "https://apps.apple.com";
+const playStoreUrl = androidPackageName
+  ? `https://play.google.com/store/apps/details?id=${encodeURIComponent(androidPackageName)}`
+  : "https://play.google.com/store";
 
 /* ───────────────── GiftedChat types ───────────────── */
 declare module "react-native-gifted-chat" {
