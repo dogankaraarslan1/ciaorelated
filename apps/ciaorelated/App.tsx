@@ -757,7 +757,7 @@ function Tabs() {
           elevation: 8,
         }}
       >
-        <Ionicons name="aperture" size={58} color="#fff" />
+        <Ionicons name="aperture" size={42} color="#fff" />
       </TouchableOpacity>
     </View>
   );
