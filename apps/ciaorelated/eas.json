@@ -12,70 +12,40 @@
       "node": "20.18.1",
       "developmentClient": true,
       "distribution": "internal",
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://your-domain.example",
-        "EXPO_PUBLIC_ONELINK_URL": "",
-        "EXPO_PUBLIC_APP_SCHEME": "ciaorelated"
-      }
+      "environment": "development"
     },
     "dev-simulator": {
       "node": "20.18.1",
       "developmentClient": true,
       "distribution": "internal",
       "ios": { "simulator": true },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:4000/graphql",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://your-domain.example",
-        "EXPO_PUBLIC_ONELINK_URL": "",
-        "EXPO_PUBLIC_APP_SCHEME": "ciaorelated"
-      }
+      "environment": "development"
     },
     "preview": {
       "node": "20.18.1",
       "distribution": "internal",
       "android": { "buildType": "apk" },
       "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://your-domain.example",
-        "EXPO_PUBLIC_ONELINK_URL": "",
-        "EXPO_PUBLIC_APP_SCHEME": "ciaorelated"
-      }
+      "environment": "preview"
     },
     "production": {
       "node": "20.18.1",
       "distribution": "store",
       "android": { "buildType": "app-bundle" },
       "autoIncrement": true,
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://your-domain.example",
-        "EXPO_PUBLIC_ONELINK_URL": "",
-        "EXPO_PUBLIC_APP_SCHEME": "ciaorelated"
-      }
+      "environment": "production"
     },
     "screenshots-ios-sim": {
       "node": "20.18.1",
       "distribution": "internal",
       "ios": { "simulator": true },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "http://localhost:4000/graphql",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://your-domain.example",
-        "EXPO_PUBLIC_ONELINK_URL": "",
-        "EXPO_PUBLIC_APP_SCHEME": "ciaorelated"
-      }
+      "environment": "preview"
     },
     "screenshots-android": {
       "node": "20.18.1",
       "distribution": "internal",
       "android": { "buildType": "apk" },
-      "env": {
-        "EXPO_PUBLIC_API_URL": "https://your-api.example.com/graphql",
-        "EXPO_PUBLIC_WEBSITE_URL": "https://your-domain.example",
-        "EXPO_PUBLIC_ONELINK_URL": "",
-        "EXPO_PUBLIC_APP_SCHEME": "ciaorelated"
-      }
+      "environment": "preview"
     }
   },
   "submit": {

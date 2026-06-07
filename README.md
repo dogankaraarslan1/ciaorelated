@@ -201,6 +201,13 @@ CLIENT_ORIGIN="http://localhost:3000"
 CURRENT_TERMS_VERSION="1"
 NOMINATIM_EMAIL=""
 
+APP_IOS_MIN_SUPPORTED_VERSION=""
+APP_IOS_LATEST_VERSION=""
+APP_IOS_STORE_URL=""
+APP_ANDROID_MIN_SUPPORTED_VERSION=""
+APP_ANDROID_LATEST_VERSION=""
+APP_ANDROID_STORE_URL=""
+
 SENDGRID_API_KEY=""
 EMAIL_FROM="ciaorelated <noreply@example.com>"
 
@@ -253,6 +260,12 @@ Server variables at a glance:
 | `CLIENT_ORIGIN` | Optional | Legacy/client origin value for deployments that expect it. |
 | `CURRENT_TERMS_VERSION` | Optional | Current terms version shown by the terms gate. Defaults to `1`. |
 | `NOMINATIM_EMAIL` | Recommended | Contact email for Nominatim/OpenStreetMap geocoding requests. |
+| `APP_IOS_MIN_SUPPORTED_VERSION` | Optional | Minimum iOS app version allowed by the remote update gate. |
+| `APP_IOS_LATEST_VERSION` | Optional | Latest iOS app version shown by the remote update gate. |
+| `APP_IOS_STORE_URL` | Optional | iOS App Store URL used by the update gate. |
+| `APP_ANDROID_MIN_SUPPORTED_VERSION` | Optional | Minimum Android app version allowed by the remote update gate. |
+| `APP_ANDROID_LATEST_VERSION` | Optional | Latest Android app version shown by the remote update gate. |
+| `APP_ANDROID_STORE_URL` | Optional | Play Store URL used by the update gate. |
 | `SENDGRID_API_KEY` | Optional | Enables email verification/password reset emails. |
 | `EMAIL_FROM` | Optional | From address for outgoing emails. |
 | `SMS_PROVIDER` | Optional | Set to `console` for local code logging. |
@@ -273,6 +286,17 @@ Server variables at a glance:
 | `ENABLE_*_WORKER` | Optional | Enables background workers for thumbnails, video, digest jobs. |
 | `TMPDIR` | Optional | Temporary directory for workers. |
 | `FFMPEG_PATH` / `FFPROBE_PATH` | Optional | Paths used by the video worker. |
+
+For multiple branded app instances on the same server, prefix update variables with the public app slug in uppercase. For example, if `EXPO_PUBLIC_APP_SLUG=songverwandt`:
+
+```env
+APP_SONGVERWANDT_IOS_MIN_SUPPORTED_VERSION="1.1.0"
+APP_SONGVERWANDT_IOS_LATEST_VERSION="1.1.0"
+APP_SONGVERWANDT_IOS_STORE_URL="https://apps.apple.com/app/id6751941066"
+APP_SONGVERWANDT_ANDROID_MIN_SUPPORTED_VERSION="1.1.0"
+APP_SONGVERWANDT_ANDROID_LATEST_VERSION="1.1.0"
+APP_SONGVERWANDT_ANDROID_STORE_URL="https://play.google.com/store/apps/details?id=com.dogankaraarslan1.songverwandt"
+```
 
 ### Mobile Env
 
@@ -338,23 +362,72 @@ Mobile variables at a glance:
 | `EXPO_SPLASH_BACKGROUND_COLOR` | Optional | Splash screen background color. Defaults to `#ffffff`. |
 | `EAS_PROJECT_ID` | Optional | Needed for Expo push tokens and EAS-linked builds. Forks should create their own via EAS. |
 
-Branding-only example for a separate Beverly build:
+Branding-only example for a separate branded deployment:
 
 ```env
-EXPO_PUBLIC_APP_NAME=Beverly
-EXPO_PUBLIC_APP_SLUG=beverly
-EXPO_PUBLIC_APP_SCHEME=beverly
-EXPO_PUBLIC_FEED_HEADER_TEXT=Bvrly
-EXPO_PUBLIC_QR_CENTER_TEXT=Beverly
-EXPO_PUBLIC_WEBSITE_URL=https://bvrly.app
-EXPO_PUBLIC_SUPPORT_EMAIL=support@bvrly.app
-EXPO_IOS_BUNDLE_IDENTIFIER=com.example.beverly
-EXPO_ANDROID_PACKAGE=com.example.beverly
-EXPO_ICON_PATH=./assets/beverly-icon.png
-EXPO_WEB_FAVICON_PATH=./assets/beverly-icon.png
-EXPO_SPLASH_IMAGE_PATH=./assets/beverly-splash.png
+EXPO_PUBLIC_APP_NAME=YourApp
+EXPO_PUBLIC_APP_SLUG=your-app
+EXPO_PUBLIC_APP_SCHEME=yourapp
+EXPO_PUBLIC_FEED_HEADER_TEXT=YourApp
+EXPO_PUBLIC_QR_CENTER_TEXT=YourApp
+EXPO_PUBLIC_WEBSITE_URL=https://your-domain.example
+EXPO_PUBLIC_SUPPORT_EMAIL=support@your-domain.example
+EXPO_IOS_BUNDLE_IDENTIFIER=com.example.yourapp
+EXPO_ANDROID_PACKAGE=com.example.yourapp
+EXPO_ICON_PATH=./assets/your-app-icon.png
+EXPO_WEB_FAVICON_PATH=./assets/your-app-favicon.png
+EXPO_SPLASH_IMAGE_PATH=./assets/your-app-splash.png
 EXPO_SPLASH_BACKGROUND_COLOR=#ffffff
 ```
+
+### EAS Builds
+
+`apps/ciaorelated/eas.json` is intentionally configured to use EAS Environment Variables instead of hardcoding deployment-specific URLs, brand names, or store identifiers in the repository.
+
+For production builds, create the values above in the Expo dashboard under:
+
+```txt
+Project -> Environment Variables -> production
+```
+
+Use plain-text visibility for public build values such as API URL, app name, scheme, domains, icon paths, and bundle identifiers. Use sensitive visibility for provider keys such as `EXPO_PUBLIC_APPSFLYER_DEV_KEY`. Values prefixed with `EXPO_PUBLIC_` are still embedded in the mobile app bundle, so they should not be treated as server secrets.
+
+If your local shell does not load a `.env` file while EAS is resolving the project, pass the project identity values inline:
+
+```bash
+EAS_PROJECT_ID=your-eas-project-id \
+EXPO_OWNER=your-expo-owner \
+EXPO_PUBLIC_APP_SLUG=your-app-slug \
+EXPO_PUBLIC_APP_NAME=YourAppName \
+EXPO_PUBLIC_APP_SCHEME=your-scheme \
+npx eas-cli build --platform ios --profile production
+```
+
+For an iOS App Store build:
+
+```bash
+npx eas-cli build --platform ios --profile production
+```
+
+Submit the latest successful iOS build:
+
+```bash
+npx eas-cli submit --platform ios --latest --profile production
+```
+
+For Android, use a preview APK before submitting to the Play Store:
+
+```bash
+npx eas-cli build --platform android --profile preview
+```
+
+Use the production Android profile only for Play Store app bundles:
+
+```bash
+npx eas-cli build --platform android --profile production
+```
+
+Increase `expo.version` in `apps/ciaorelated/app.config.js` when you want a user-visible app version change. EAS can auto-increment build numbers for repeated uploads of the same version.
 
 ## Where To Get Provider Values
 

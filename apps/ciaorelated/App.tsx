@@ -26,7 +26,7 @@ import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { ThemeProvider, useTheme } from "./src/theme/ThemeProvider";
 import { apollo } from "./src/apollo";
 import { Auth } from "./src/lib/auth";
-import { getRequiredIosUpdateInfo, openAppStoreUpdate, type AppUpdateInfo } from "./src/lib/appUpdate";
+import { getRequiredUpdateInfo, openStoreUpdate, type AppUpdateInfo } from "./src/lib/appUpdate";
 import { useTranslation } from "react-i18next";
 
 import { DefaultTheme as NavDefaultTheme } from "@react-navigation/native";
@@ -1410,6 +1410,7 @@ function ThemedRootNavigator({
 const Root = createNativeStackNavigator<RootStackParamList>();
 
 function RequiredUpdateOverlay() {
+  const client = useApolloClient();
   const { t } = useTranslation();
   const { theme } = useTheme();
   const C = theme.colors as any;
@@ -1420,14 +1421,14 @@ function RequiredUpdateOverlay() {
     if (checkingRef.current) return;
     checkingRef.current = true;
     try {
-      const next = await getRequiredIosUpdateInfo(IOS_APP_STORE_ID);
+      const next = await getRequiredUpdateInfo(client, { appSlug: brand.appSlug });
       setUpdateInfo(next);
     } catch (e) {
       console.warn("required update check failed", e);
     } finally {
       checkingRef.current = false;
     }
-  }, []);
+  }, [client]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -1474,7 +1475,7 @@ function RequiredUpdateOverlay() {
           <TouchableOpacity
             style={[requiredUpdateStyles.updateButton, { backgroundColor: C.primary }]}
             activeOpacity={0.86}
-            onPress={() => openAppStoreUpdate(updateInfo)}
+            onPress={() => openStoreUpdate(updateInfo)}
           >
             <Ionicons name="open-outline" size={18} color="#fff" />
             <Text style={requiredUpdateStyles.updateText}>{t("requiredUpdate.updateNow")}</Text>
