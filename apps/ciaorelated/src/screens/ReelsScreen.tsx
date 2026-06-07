@@ -11,7 +11,9 @@ import {
   TextInput,
   RefreshControl,
   Animated,
-  InteractionManager
+  InteractionManager,
+  Platform,
+  StatusBar
 } from "react-native";
 import { useNavigation, useIsFocused, useFocusEffect, useRoute } from "@react-navigation/native";
 import {
@@ -1103,7 +1105,8 @@ useEffect(() => {
 
   // ✅ fixe Header-Höhe (wie Feed-Header)
   const HEADER_H = 52;
-  const headerPadTop = Math.max(insets.top, 10); // safe + optisch
+  const androidStatusBarTop = Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0;
+  const headerPadTop = Math.max(insets.top, androidStatusBarTop, 10); // safe + optisch
 
   // ⬇️ "Scroll hint" arrow animation
   const arrowAnim = useRef(new Animated.Value(0)).current;
