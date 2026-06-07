@@ -96,6 +96,14 @@ Most social apps are optimized for endless global feeds. `ciaorelated` is being 
 
 The project can be used as a learning resource, a social media app starter, or a foundation for building an event/community-oriented social network.
 
+## Brand Layer
+
+`ciaorelated` is the open technical core of the project. It contains the shared app architecture, feeds, chats, communities, event/moment logic, deep links, GraphQL backend, and deployment foundations.
+
+The app identity is designed to be configurable. Forks and deployments can use their own app name, URL scheme, domains, icons, splash screen, support address, and store identifiers without rewriting hardcoded strings throughout the codebase.
+
+This is handled through branding and build variables such as `EXPO_PUBLIC_APP_NAME`, `EXPO_PUBLIC_APP_SCHEME`, `EXPO_PUBLIC_FEED_HEADER_TEXT`, `EXPO_PUBLIC_WEBSITE_URL`, `EXPO_ICON_PATH`, and `EXPO_SPLASH_IMAGE_PATH`.
+
 ## Tech Stack
 
 ### Mobile App
