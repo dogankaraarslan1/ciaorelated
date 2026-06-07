@@ -600,7 +600,9 @@ function Tabs() {
   const { theme } = useTheme();
   const { t } = useTranslation();
   const [momentsFabCorner, setMomentsFabCorner] = React.useState<FabCorner>("bottom-right");
+  const [activeTabName, setActiveTabName] = React.useState("Home");
   const momentsFabDrag = React.useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const showMomentsFab = activeTabName !== "Vlogs";
 
   const TAB_COLORS = {
     bg: theme.colors.bg,
@@ -675,6 +677,9 @@ function Tabs() {
   return (
     <View style={{ flex: 1 }}>
     <Tab.Navigator
+      screenListeners={({ route }) => ({
+        focus: () => setActiveTabName(route.name),
+      })}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: TAB_COLORS.active,
@@ -797,6 +802,7 @@ function Tabs() {
         }}
       />
     </Tab.Navigator>
+      {showMomentsFab ? (
       <Animated.View
         {...momentsFabPanResponder.panHandlers}
         style={{
@@ -829,6 +835,7 @@ function Tabs() {
           <Ionicons name="aperture" size={42} color="#fff" />
         </TouchableOpacity>
       </Animated.View>
+      ) : null}
     </View>
   );
 }
