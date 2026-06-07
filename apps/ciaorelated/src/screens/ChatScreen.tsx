@@ -29,6 +29,7 @@ import "react-native-gifted-chat";
 import { useFocusEffect } from "@react-navigation/native";
 import { setActiveChatThreadId } from "../lib/chatPresence";
 import { avatarPlaceholder } from "../../assets/placeholders";
+import { brand } from "../config/brand";
 
 
 import { useTranslation } from "react-i18next";
@@ -453,7 +454,7 @@ export default function ChatScreen({ route, navigation }: any) {
 
       return (
         <Text style={[styles.welcomeInlineText, { color: textColor }]}>
-          {t("chat.welcomeTitle")}
+          {t("chat.welcomeTitle", { appName: brand.appName })}
           {"\n\n"}
           {t("chat.welcomeMessage")}
           {"\n\n"}

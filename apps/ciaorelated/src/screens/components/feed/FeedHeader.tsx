@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 
 import { TopIconButton } from "./TopIconButton";
 import { useTheme } from "../../../theme/ThemeProvider";
+import { brand } from "../../../config/brand";
 
 type RootStackParamList = {
   Activity: undefined;
@@ -27,8 +28,6 @@ const UNREAD_COUNTS_Q = gql`
     }
   }
 `;
-
-const feedHeaderText = (process.env.EXPO_PUBLIC_FEED_HEADER_TEXT || "ciao").trim() || "ciao";
 
 export function FeedHeader({
   mode = "SONGVERWANDT",
@@ -170,7 +169,7 @@ export function FeedHeader({
           <View style={s.leftSlot}>
           <View style={s.logoWrap}>
             <Text style={s.brandText} numberOfLines={1}>
-              {feedHeaderText}
+              {brand.feedHeaderText}
             </Text>
           </View>
           </View>

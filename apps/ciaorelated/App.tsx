@@ -17,6 +17,7 @@ import { SafeAreaProvider, useSafeAreaInsets } from "react-native-safe-area-cont
 import * as Notifications from "expo-notifications";
 import Constants from "expo-constants";
 import { AuthVault } from "./src/lib/auth-vault";
+import { brand } from "./src/config/brand";
 
 import * as Device from "expo-device";
 import { useFonts } from "expo-font";
@@ -1450,7 +1451,7 @@ function RequiredUpdateOverlay() {
 
           <Text style={[requiredUpdateStyles.title, { color: C.text }]}>{t("requiredUpdate.title")}</Text>
           <Text style={[requiredUpdateStyles.body, { color: C.subtext }]}>
-            {t("requiredUpdate.body")}
+            {t("requiredUpdate.body", { appName: brand.appName })}
           </Text>
 
           <View style={[requiredUpdateStyles.versionRow, { backgroundColor: C.card, borderColor: C.border }]}>

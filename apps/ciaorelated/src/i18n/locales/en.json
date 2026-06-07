@@ -37,7 +37,7 @@
   },
   "requiredUpdate": {
     "title": "Update required",
-    "body": "A new ciaorelated version is available. Please update the app to continue.",
+    "body": "A new {{appName}} version is available. Please update the app to continue.",
     "installed": "Installed",
     "new": "New",
     "updateNow": "Update now"
@@ -804,7 +804,7 @@
     "openLiveFeed": "Open live feed",
     "replyToStory": "Reply to story",
     "sendAMessage": "Write a message…",
-    "welcomeTitle": "Welcome to ciaorelated",
+    "welcomeTitle": "Welcome to {{appName}}",
     "welcomeMessage": "Discover real moments in the feed, keep conversations close in chats, join communities around groups and places, follow live moments from events, and complete your profile so people know who they are connecting with.",
     "welcomeActions": {
       "feed": "Feed",
@@ -919,7 +919,7 @@
     "thisAccount": "This account",
     "otherAccountsOnThisDevice": "Other accounts on this device",
     "noOtherAccountsSaved": "No other accounts saved.",
-    "addciaorelatedAccount": "Add ciaorelated account",
+    "addciaorelatedAccount": "Add {{appName}} account",
     "unnamed": "Unnamed",
     "remove": "Remove"
   },
@@ -1339,7 +1339,7 @@
     "videoTooLongBody": "Stories can be up to 30 seconds."
   },
   "suggestedprofilescarousel": {
-    "suggestedByciaorelated": "Suggested by ciaorelated"
+    "suggestedByciaorelated": "Suggested by {{appName}}"
   },
   "uploadoverlay": {
     "yourPostIsCurrentlyBeingUploaded": "Your post is currently being uploaded",
@@ -1558,7 +1558,7 @@
     "joinedAt": "Joined: {{date}}",
     "hubTitle": "Your Communities",
     "hubSubtitle": "Live feeds, invite links and events in one place.",
-    "emptyTitle": "Bring a community to ciaorelated",
+    "emptyTitle": "Bring a community to {{appName}}",
     "emptyBody": "Create a link for a bar, event or friend group and invite people straight into the live feed.",
     "leave": {
       "title": "Leave group?",
@@ -1617,7 +1617,7 @@
   },
   "rotatingsuggestionlabel": {
     "suggestedForYou": "Suggested for you",
-    "byciaorelated": "by ciaorelated"
+    "byciaorelated": "by {{appName}}"
   },
   "vlogcard": {
     "untitledVlog": "Untitled vlog",

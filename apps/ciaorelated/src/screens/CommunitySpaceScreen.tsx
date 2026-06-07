@@ -33,6 +33,7 @@ import { useTheme } from "../theme/ThemeProvider";
 import { PostCard } from "./components/feed/PostCard";
 import { useMarkPostViewed } from "../hooks/useMarkPostViewed";
 import { buildJoinUrl } from "../config/webLinks";
+import { brand } from "../config/brand";
 
 const heroBackground = require("../../assets/sticky-header-bg.png");
 
@@ -648,7 +649,7 @@ export default function CommunitySpaceScreen() {
           ))}
         </Svg>
         <View style={s.qrCenterLabel} pointerEvents="none">
-          <Text style={s.qrCenterText}>ciaorelated</Text>
+          <Text style={s.qrCenterText}>{brand.qrCenterText}</Text>
         </View>
       </View>
 

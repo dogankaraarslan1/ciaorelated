@@ -37,7 +37,7 @@
   },
   "requiredUpdate": {
     "title": "Update erforderlich",
-    "body": "Eine neue ciaorelated-Version ist verfügbar. Bitte aktualisiere die App, um fortzufahren.",
+    "body": "Eine neue {{appName}}-Version ist verfügbar. Bitte aktualisiere die App, um fortzufahren.",
     "installed": "Installiert",
     "new": "Neu",
     "updateNow": "Jetzt aktualisieren"
@@ -810,7 +810,7 @@
     "openLiveFeed": "Live Feed öffnen",
     "replyToStory": "Antwort auf Story",
     "sendAMessage": "Nachricht schreiben…",
-    "welcomeTitle": "Willkommen bei ciaorelated",
+    "welcomeTitle": "Willkommen bei {{appName}}",
     "welcomeMessage": "Entdecke echte Momente im Feed, bleib in Chats nah an Menschen dran, tritt Communities rund um Gruppen und Orte bei, folge Live-Momenten aus Events und vervollständige dein Profil, damit andere wissen, mit wem sie sich verbinden.",
     "welcomeActions": {
       "feed": "Feed",
@@ -924,7 +924,7 @@
     "thisAccount": "Dieses Konto",
     "otherAccountsOnThisDevice": "Weitere Konten auf diesem Gerät",
     "noOtherAccountsSaved": "Keine weiteren Konten gespeichert.",
-    "addciaorelatedAccount": "ciaorelated-Konto hinzufügen",
+    "addciaorelatedAccount": "{{appName}}-Konto hinzufügen",
     "unnamed": "Unbenannt",
     "remove": "Entfernen"
   },
@@ -1343,7 +1343,7 @@
     "videoTooLongBody": "Stories dürfen max. 30 Sekunden sein."
   },
   "suggestedprofilescarousel": {
-    "suggestedByciaorelated": "Von ciaorelated vorgeschlagen"
+    "suggestedByciaorelated": "Von {{appName}} vorgeschlagen"
   },
   "uploadoverlay": {
     "yourPostIsCurrentlyBeingUploaded": "Dein Beitrag wird gerade hochgeladen",
@@ -1562,7 +1562,7 @@
     "joinedAt": "Beigetreten: {{date}}",
     "hubTitle": "Deine Communities",
     "hubSubtitle": "Live Feeds, Einladungslinks und Events an einem Ort.",
-    "emptyTitle": "Bring eine Community zu ciaorelated",
+    "emptyTitle": "Bring eine Community zu {{appName}}",
     "emptyBody": "Erstelle einen Link für Bar, Event oder Freundesgruppe und lade Menschen direkt in den Live Feed ein.",
     "leave": {
       "title": "Gruppe verlassen?",
@@ -1621,7 +1621,7 @@
   },
   "rotatingsuggestionlabel": {
     "suggestedForYou": "Für dich vorgeschlagen",
-    "byciaorelated": "von ciaorelated"
+    "byciaorelated": "von {{appName}}"
   },
   "vlogcard": {
     "untitledVlog": "Unbenannter Vlog",

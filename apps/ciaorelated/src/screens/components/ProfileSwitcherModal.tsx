@@ -11,6 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { avatarPlaceholder } from "../../../assets/placeholders";
+import { brand } from "../../config/brand";
 
 import { useTranslation } from "react-i18next";
 
@@ -215,10 +216,10 @@ export default function ProfileSwitcherModal({
             activeOpacity={0.8}
             onPress={onAddAccount}
             accessibilityRole="button"
-            accessibilityLabel={t("profileswitchermodal.addciaorelatedAccount")}
+            accessibilityLabel={t("profileswitchermodal.addciaorelatedAccount", { appName: brand.appName })}
           >
             <Ionicons name="add" size={18} color={COLORS.primary} style={{ marginRight: 8 }} />
-            <Text style={s.addAccountText}>{t("profileswitchermodal.addciaorelatedAccount")}</Text>
+            <Text style={s.addAccountText}>{t("profileswitchermodal.addciaorelatedAccount", { appName: brand.appName })}</Text>
           </TouchableOpacity>
         </View>
       </View>

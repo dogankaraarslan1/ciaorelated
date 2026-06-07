@@ -7,6 +7,7 @@ import * as Clipboard from "expo-clipboard";
 
 import Screen from "./components/Screen";
 import { useTheme } from "../theme/ThemeProvider";
+import { brand } from "../config/brand";
 import { buildJoinUrl } from "../config/webLinks";
 import GroupLinkSheet from "./GroupLinkSheet";
 import type { RootStackParamList } from "../../App";
@@ -148,7 +149,7 @@ export default function GroupsScreen() {
             <View style={s.emptyIcon}>
               <Ionicons name="people-circle-outline" size={34} color={C.text} />
             </View>
-            <Text style={s.emptyTitle}>{t("groups.emptyTitle")}</Text>
+            <Text style={s.emptyTitle}>{t("groups.emptyTitle", { appName: brand.appName })}</Text>
             <Text style={s.emptySub}>{t("groups.emptyBody")}</Text>
             <TouchableOpacity style={s.emptyBtn} onPress={() => setShowCreate(true)}>
               <Ionicons name="add-circle-outline" size={18} color={C.bg} />
