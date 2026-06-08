@@ -1,10 +1,14 @@
 # /.well-known/
 
-TODO: Add `apple-app-site-association` here once the real iOS App ID and team
-prefix are known. The file must be served with `Content-Type: application/json`
-and without a `.json` extension. Do NOT commit placeholder app IDs.
+Universal Links and Android App Links require real app identifiers from the
+deployment owner. Do not deploy placeholder IDs.
 
-Example shape (do not deploy with these values):
+## iOS: `apple-app-site-association`
+
+Create `public/.well-known/apple-app-site-association` without a `.json`
+extension and serve it as JSON.
+
+Shape:
 
     {
       "applinks": {
@@ -17,3 +21,28 @@ Example shape (do not deploy with these values):
         ]
       }
     }
+
+Use your real Apple Team ID and iOS bundle identifier:
+
+    "appID": "APPLE_TEAM_ID.com.example.ciaorelated"
+
+## Android: `assetlinks.json`
+
+Create `public/.well-known/assetlinks.json` and serve it as JSON.
+
+Shape:
+
+    [
+      {
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+          "namespace": "android_app",
+          "package_name": "com.example.ciaorelated",
+          "sha256_cert_fingerprints": [
+            "SHA256:RELEASE_CERTIFICATE_FINGERPRINT"
+          ]
+        }
+      }
+    ]
+
+Use your real Android package name and release signing certificate SHA-256.

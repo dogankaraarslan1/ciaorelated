@@ -324,7 +324,7 @@ EXPO_PUBLIC_APP_SCHEME=ciaorelated
 EXPO_PUBLIC_FEED_HEADER_TEXT=ciao
 EXPO_PUBLIC_QR_CENTER_TEXT=ciaorelated
 EXPO_PUBLIC_SUPPORT_EMAIL=support@example.com
-EXPO_PUBLIC_ASSOCIATED_DOMAINS=
+EXPO_PUBLIC_ASSOCIATED_DOMAINS=your-domain.example,www.your-domain.example
 EXPO_PUBLIC_IOS_APP_STORE_ID=
 EXPO_PUBLIC_APPSFLYER_DEV_KEY=
 EXPO_PUBLIC_APPSFLYER_ENABLED=false
@@ -361,7 +361,7 @@ Mobile variables at a glance:
 | `EXPO_PUBLIC_FEED_HEADER_TEXT` | Optional | Short Pacifico wordmark shown in the feed header. Defaults to `ciao`. |
 | `EXPO_PUBLIC_QR_CENTER_TEXT` | Optional | Center text shown in generated invite QR share images. Defaults to `ciaorelated`. |
 | `EXPO_PUBLIC_SUPPORT_EMAIL` | Optional | Support email used by brand-aware app surfaces. Defaults to `support@example.com`. |
-| `EXPO_PUBLIC_ASSOCIATED_DOMAINS` | Optional | Comma-separated Universal Link domains, e.g. `example.com,www.example.com`. |
+| `EXPO_PUBLIC_ASSOCIATED_DOMAINS` | Recommended for production | Comma-separated Universal Link / Android App Link domains, e.g. `example.com,www.example.com,link.example.com`. The app config also includes hosts from `EXPO_PUBLIC_WEBSITE_URL` and `EXPO_PUBLIC_ONELINK_URL`. |
 | `EXPO_PUBLIC_IOS_APP_STORE_ID` | Optional | iOS App Store ID used by update/deep-link helpers. |
 | `EXPO_PUBLIC_APPSFLYER_DEV_KEY` | Optional | AppsFlyer key if you use AppsFlyer deep links. |
 | `EXPO_PUBLIC_APPSFLYER_ENABLED` | Optional | Set to `true` only in builds where AppsFlyer should initialize. Defaults to `false`. |
@@ -527,6 +527,70 @@ Default app scheme URL shape:
 
 ```txt
 ciaorelated://join?slug=GROUP_SLUG
+```
+
+Supported incoming invite formats:
+
+```txt
+https://your-domain.example/join?slug=GROUP_SLUG
+https://your-domain.example/join/GROUP_SLUG
+ciaorelated://join?slug=GROUP_SLUG
+ciaorelated://join/GROUP_SLUG
+https://link.your-domain.example/...?...&deep_link_sub1=GROUP_SLUG
+```
+
+For production Universal Links / Android App Links:
+
+1. Set mobile env:
+   ```env
+   EXPO_PUBLIC_WEBSITE_URL=https://your-domain.example
+   EXPO_PUBLIC_ONELINK_URL=https://link.your-domain.example
+   EXPO_PUBLIC_APP_SCHEME=ciaorelated
+   EXPO_PUBLIC_ASSOCIATED_DOMAINS=your-domain.example,www.your-domain.example,link.your-domain.example
+   ```
+2. Deploy iOS association on every Universal Link domain:
+   ```txt
+   /.well-known/apple-app-site-association
+   ```
+   Use your real Apple Team ID and bundle identifier, for example:
+   ```json
+   {
+     "applinks": {
+       "apps": [],
+       "details": [
+         {
+           "appID": "APPLE_TEAM_ID.com.example.ciaorelated",
+           "paths": ["/join", "/join/*"]
+         }
+       ]
+     }
+   }
+   ```
+3. Deploy Android association on every Android App Link domain:
+   ```txt
+   /.well-known/assetlinks.json
+   ```
+   Use your real Android package name and release signing certificate SHA-256:
+   ```json
+   [
+     {
+       "relation": ["delegate_permission/common.handle_all_urls"],
+       "target": {
+         "namespace": "android_app",
+         "package_name": "com.example.ciaorelated",
+         "sha256_cert_fingerprints": ["SHA256:RELEASE_CERTIFICATE_FINGERPRINT"]
+       }
+     }
+   ]
+   ```
+
+Landing website env example:
+
+```env
+VITE_PUBLIC_APP_SCHEME=ciaorelated
+VITE_PUBLIC_ONELINK_URL=https://link.your-domain.example/TEMPLATE_ID/invite
+VITE_PUBLIC_IOS_STORE_URL=https://apps.apple.com/app/idYOUR_APP_ID
+VITE_PUBLIC_ANDROID_STORE_URL=https://play.google.com/store/apps/details?id=com.example.ciaorelated
 ```
 
 If you use AppsFlyer, create your own OneLink setup instead of reusing another deployment's domain or keys.

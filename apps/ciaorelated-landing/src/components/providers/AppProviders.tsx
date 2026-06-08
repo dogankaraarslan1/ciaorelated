@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { I18nContext, translations, type Lang } from "@/lib/i18n";
 import { ThemeContext, type Theme } from "@/lib/theme";
+import { brandText } from "@/lib/brand";
+
+function applyBrand<T>(value: T): T {
+  if (typeof value === "string") return brandText(value) as T;
+  if (Array.isArray(value)) return value.map((item) => applyBrand(item)) as T;
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value).map(([key, child]) => [key, applyBrand(child)]),
+    ) as T;
+  }
+  return value;
+}
 
 export function AppProviders({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
@@ -41,7 +53,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
   );
 
   const i18nValue = useMemo(
-    () => ({ lang, setLang: setLangState, t: translations[lang] }),
+    () => ({ lang, setLang: setLangState, t: applyBrand(translations[lang]) }),
     [lang],
   );
 

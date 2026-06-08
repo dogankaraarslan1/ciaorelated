@@ -2,15 +2,14 @@ import { useEffect, useState } from "react";
 import { Copy, Download, Smartphone, Check } from "lucide-react";
 import { CTAButton, CTALink } from "./CTAButton";
 import { useI18n } from "@/lib/i18n";
+import { brand } from "@/lib/brand";
 
 /**
  * JoinInviteCard
  *
  * Invite / deep-link landing card.
- * Final deep-link routing logic (AppsFlyer, App Store fallback, custom scheme
- * attempts, /.well-known/apple-app-site-association) is intentionally NOT
- * implemented here. See: /public/deep-link.js (loaded by /join page) for the
- * placeholder script slot where the production logic can be wired in later.
+ * The production handoff is implemented in /public/deep-link.js, which reads
+ * the stable element IDs and data attributes below.
  *
  * Required element IDs (do not rename):
  *   - statusText, slugText, openApp, copyBtn, appStoreBtn
@@ -18,7 +17,11 @@ import { useI18n } from "@/lib/i18n";
 export function JoinInviteCard({ slug }: { slug: string }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
-  const [origin, setOrigin] = useState("https://ciaorelated.com");
+  const [origin, setOrigin] = useState(brand.websiteUrl);
+  const appScheme = brand.appScheme;
+  const oneLinkUrl = brand.oneLinkUrl;
+  const iosStoreUrl = brand.iosStoreUrl;
+  const androidStoreUrl = brand.androidStoreUrl;
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -26,7 +29,10 @@ export function JoinInviteCard({ slug }: { slug: string }) {
     }
   }, []);
 
-  const link = slug ? `${origin}/join?slug=${slug}` : `${origin}/join`;
+  const encodedSlug = encodeURIComponent(slug || "");
+  const link = slug ? `${origin}/join?slug=${encodedSlug}` : `${origin}/join`;
+  const openAppHref = slug ? `${appScheme}://join/${encodedSlug}` : `${appScheme}://`;
+  const fallbackStoreHref = iosStoreUrl || androidStoreUrl || "/kampagne.html";
 
   const handleCopy = async () => {
     try {
@@ -63,11 +69,20 @@ export function JoinInviteCard({ slug }: { slug: string }) {
       </div>
 
       <div className="mt-6 grid gap-2 sm:grid-cols-2">
-        <CTALink id="openApp" href={`#open-app`} variant="primary" data-slug={slug}>
+        <CTALink
+          id="openApp"
+          href={openAppHref}
+          variant="primary"
+          data-slug={slug}
+          data-app-scheme={appScheme}
+          data-onelink-url={oneLinkUrl}
+          data-ios-store-url={iosStoreUrl}
+          data-android-store-url={androidStoreUrl}
+        >
           <Smartphone className="h-4 w-4" />
           {t.join.openApp}
         </CTALink>
-        <CTALink id="appStoreBtn" href="/kampagne.html" variant="secondary">
+        <CTALink id="appStoreBtn" href={fallbackStoreHref} variant="secondary">
           <Download className="h-4 w-4" />
           {t.join.download}
         </CTALink>

@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout, LegalSection } from "@/components/site/LegalPageLayout";
+import { brand, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/guidelines-de.html")({
   head: () => ({
     meta: [
-      { title: "Community-Richtlinien — ciaorelated" },
-      { name: "description", content: "So bleibt ciaorelated freundlich und nützlich." },
+      { title: brandTitle("Community-Richtlinien") },
+      { name: "description", content: `So bleibt ${brand.appName} freundlich und nützlich.` },
     ],
   }),
   component: GuidelinesDePage,
@@ -23,7 +24,7 @@ function GuidelinesDePage() {
       ]}
     >
       <p className="text-muted-foreground">
-        Damit <strong>ciaorelated</strong> für alle ein sicherer Ort bleibt, gelten folgende Regeln:
+        Damit <strong>{brand.appName}</strong> für alle ein sicherer Ort bleibt, gelten folgende Regeln:
       </p>
       <LegalSection heading="1. Respekt & Sicherheit">
         <p>Behandle andere Nutzer:innen mit Respekt. Keine Belästigungen, Drohungen oder Hassrede.</p>

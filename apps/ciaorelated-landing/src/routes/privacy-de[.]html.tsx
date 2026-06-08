@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout, LegalSection } from "@/components/site/LegalPageLayout";
+import { brand, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/privacy-de.html")({
   head: () => ({
     meta: [
-      { title: "Datenschutzerklärung — ciaorelated" },
-      { name: "description", content: "So geht ciaorelated mit deinen Daten um." },
+      { title: brandTitle("Datenschutzerklärung") },
+      { name: "description", content: `So geht ${brand.appName} mit deinen Daten um.` },
     ],
   }),
   component: PrivacyDePage,
@@ -23,10 +24,10 @@ function PrivacyDePage() {
       ]}
     >
       <p className="text-muted-foreground">
-        Wir legen großen Wert auf den Schutz deiner Daten. Diese Erklärung erläutert, wie <strong>ciaorelated</strong> deine Informationen verarbeitet.
+        Wir legen großen Wert auf den Schutz deiner Daten. Diese Erklärung erläutert, wie <strong>{brand.appName}</strong> deine Informationen verarbeitet.
       </p>
       <LegalSection heading="1. Verantwortlicher">
-        <p>Verantwortlich für die Datenverarbeitung ist das Team von ciaorelated. Bei Fragen kontaktiere uns über die <a href="/support.html" className="text-primary underline">Support-Seite</a>.</p>
+        <p>Verantwortlich für die Datenverarbeitung ist {brand.legalEntity}. Bei Fragen kontaktiere uns über die <a href="/support.html" className="text-primary underline">Support-Seite</a>.</p>
       </LegalSection>
       <LegalSection heading="2. Erhobene Daten">
         <ul className="list-disc space-y-1 pl-6">

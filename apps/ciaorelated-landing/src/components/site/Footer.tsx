@@ -1,4 +1,5 @@
 import { useI18n } from "@/lib/i18n";
+import { brand, brandHost } from "@/lib/brand";
 
 export function Footer() {
   const { t, lang } = useI18n();
@@ -9,11 +10,11 @@ export function Footer() {
 
   return (
     <footer className="border-t border-border/60 bg-card/40">
-      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 md:grid-cols-4">
+      <div className="mx-auto grid max-w-6xl gap-10 px-4 py-12 sm:grid-cols-2 sm:px-6 md:grid-cols-3">
         <div>
           <div className="flex items-center gap-2 font-semibold">
             <span className="inline-block h-6 w-6 rounded-lg gradient-hero" aria-hidden />
-            <span>ciao<span className="text-primary">related</span></span>
+            <span className="text-foreground">{brand.wordmark}</span>
           </div>
           <p className="mt-3 max-w-xs text-sm text-muted-foreground">{t.footer.tagline}</p>
         </div>
@@ -34,20 +35,11 @@ export function Footer() {
             <li><a href={guidelinesHref} className="hover:text-foreground">{t.footer.guidelines}</a></li>
           </ul>
         </div>
-        <div>
-          <h4 className="text-sm font-semibold">{t.footer.language}</h4>
-          <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-            <li><a href="/privacy.html" className="hover:text-foreground">Privacy (EN)</a></li>
-            <li><a href="/privacy-de.html" className="hover:text-foreground">Datenschutz (DE)</a></li>
-            <li><a href="/terms.html" className="hover:text-foreground">Terms (EN)</a></li>
-            <li><a href="/terms-de.html" className="hover:text-foreground">AGB (DE)</a></li>
-          </ul>
-        </div>
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 px-4 py-5 text-xs text-muted-foreground sm:flex-row sm:items-center sm:px-6">
-          <span>© {year} ciaorelated. {t.footer.rights}</span>
-          <span>ciaorelated.com</span>
+          <span>© {year} {brand.copyrightName}. {t.footer.rights}</span>
+          <span>{brandHost}</span>
         </div>
       </div>
     </footer>

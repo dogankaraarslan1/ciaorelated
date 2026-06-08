@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout, LegalSection } from "@/components/site/LegalPageLayout";
+import { brand, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/support.html")({
   head: () => ({
     meta: [
-      { title: "Support — ciaorelated" },
-      { name: "description", content: "Get help with ciaorelated." },
+      { title: brandTitle("Support") },
+      { name: "description", content: `Get help with ${brand.appName}.` },
     ],
   }),
   component: SupportPage,
@@ -24,7 +25,7 @@ function SupportPage() {
     >
       <LegalSection heading="Need a hand?">
         <p>
-          We're a small team. Reach out at <a className="text-primary underline" href="mailto:info@ciaorelated.com">info@ciaorelated.com</a> and
+          We're a small team. Reach out at <a className="text-primary underline" href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a> and
           we'll get back to you as soon as we can.
         </p>
       </LegalSection>
@@ -35,7 +36,7 @@ function SupportPage() {
       </LegalSection>
       <LegalSection heading="Press and partnerships">
         <p>
-          For press inquiries write to <a className="text-primary underline" href="mailto:info@ciaorelated.com">info@ciaorelated.com</a>.
+          For press inquiries write to <a className="text-primary underline" href={`mailto:${brand.supportEmail}`}>{brand.supportEmail}</a>.
         </p>
       </LegalSection>
     </LegalPageLayout>

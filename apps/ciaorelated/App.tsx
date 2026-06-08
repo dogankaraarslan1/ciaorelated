@@ -856,15 +856,34 @@ function joinSlugFromUrl(url: string) {
     const parts = path.split("/").filter(Boolean);
     const i = parts[0] === "--" ? 1 : 0;
     const queryParams = parsed.queryParams as Record<string, unknown> | undefined;
+    let rawHost = "";
+    let rawParts: string[] = [];
+    let rawQuerySlug: string | null = null;
+
+    try {
+      const raw = new URL(url);
+      rawHost = raw.hostname;
+      rawParts = raw.pathname.split("/").filter(Boolean);
+      rawQuerySlug =
+        raw.searchParams.get("slug") ||
+        raw.searchParams.get("deep_link_sub1") ||
+        raw.searchParams.get("af_sub1") ||
+        raw.searchParams.get("sub1");
+    } catch {}
 
     const qSlug =
       firstQueryValue(queryParams?.slug) ??
       firstQueryValue(queryParams?.deep_link_sub1) ??
       firstQueryValue(queryParams?.af_sub1) ??
-      firstQueryValue(queryParams?.sub1);
+      firstQueryValue(queryParams?.sub1) ??
+      rawQuerySlug;
+
+    const rawJoinIndex = rawParts[0] === "--" ? 1 : rawParts.indexOf("join");
     const slug =
       (qSlug ? qSlug : null) ??
-      (parts[i] === "join" && parts[i + 1] ? parts[i + 1] : null);
+      (parts[i] === "join" && parts[i + 1] ? parts[i + 1] : null) ??
+      (rawHost === "join" && rawParts[0] ? rawParts[0] : null) ??
+      (rawJoinIndex >= 0 && rawParts[rawJoinIndex + 1] ? rawParts[rawJoinIndex + 1] : null);
 
     return slug;
   } catch (e) {
@@ -1193,8 +1212,13 @@ function ThemedRootNavigator({
   useEffect(() => {
     if (!APPSFLYER_ENABLED) return;
 
-    if (!APPSFLYER_DEV_KEY || !IOS_APP_STORE_ID) {
-      console.log("AppsFlyer skipped: missing dev key or iOS App Store ID.");
+    if (!APPSFLYER_DEV_KEY) {
+      console.log("AppsFlyer skipped: missing dev key.");
+      return;
+    }
+
+    if (Platform.OS === "ios" && !IOS_APP_STORE_ID) {
+      console.log("AppsFlyer skipped: missing iOS App Store ID.");
       return;
     }
 
@@ -1209,7 +1233,7 @@ function ThemedRootNavigator({
     appsFlyer.initSdk(
       {
         devKey: APPSFLYER_DEV_KEY,
-        appId: IOS_APP_STORE_ID,
+        ...(Platform.OS === "ios" ? { appId: IOS_APP_STORE_ID } : {}),
         isDebug: __DEV__,
         onDeepLinkListener: true,
         timeToWaitForATTUserAuthorization: 60,
@@ -1231,7 +1255,8 @@ function ThemedRootNavigator({
           dl?.deep_link_sub1 ||
           dl?.deep_link_sub2 ||
           dl?.sub1 ||
-          dl?.af_sub1;
+          dl?.af_sub1 ||
+          dl?.slug;
 
         if (typeof slug === "string" && slug.trim()) {
           setPendingJoinFromSlug(slug.trim());

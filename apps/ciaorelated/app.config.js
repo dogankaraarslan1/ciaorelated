@@ -1,7 +1,50 @@
 // apps/ciaorelated/app.config.js
 
-const associatedDomains = (process.env.EXPO_PUBLIC_ASSOCIATED_DOMAINS || "")
-  .split(",")
+function trimTrailingSlash(value) {
+  return String(value || "").replace(/\/+$/, "");
+}
+
+function hostFromUrl(value) {
+  const trimmed = trimTrailingSlash(value);
+  if (!trimmed) return "";
+  try {
+    return new URL(/^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`).hostname;
+  } catch {
+    return "";
+  }
+}
+
+const linkDomains = [
+  process.env.EXPO_PUBLIC_WEBSITE_URL,
+  process.env.EXPO_PUBLIC_ONELINK_URL,
+  ...(process.env.EXPO_PUBLIC_ASSOCIATED_DOMAINS || "").split(","),
+]
+  .map((domain) => domain.trim())
+  .map((domain) => domain.replace(/^applinks:/, ""))
+  .map((domain) => domain.replace(/^https?:\/\//i, ""))
+  .map((domain) => domain.split("/")[0])
+  .map((domain) => hostFromUrl(domain) || domain)
+  .filter(Boolean);
+
+const uniqueLinkDomains = Array.from(new Set(linkDomains));
+const oneLinkDomain = hostFromUrl(process.env.EXPO_PUBLIC_ONELINK_URL);
+const androidJoinLinkData = uniqueLinkDomains
+  .filter((host) => host !== oneLinkDomain)
+  .map((host) => ({
+    scheme: "https",
+    host,
+    pathPrefix: "/join",
+  }));
+const androidOneLinkData = oneLinkDomain
+  ? [
+      {
+        scheme: "https",
+        host: oneLinkDomain,
+      },
+    ]
+  : [];
+
+const associatedDomains = uniqueLinkDomains
   .map((domain) => domain.trim())
   .filter(Boolean)
   .map((domain) => `applinks:${domain}`);
@@ -103,6 +146,37 @@ export default {
       permissions: [
         'READ_MEDIA_IMAGES',
         'ACCESS_FINE_LOCATION',
+      ],
+      intentFilters: [
+        ...(androidJoinLinkData.length
+          ? [
+              {
+                action: "VIEW",
+                autoVerify: true,
+                data: androidJoinLinkData,
+                category: ["BROWSABLE", "DEFAULT"],
+              },
+            ]
+          : []),
+        ...(androidOneLinkData.length
+          ? [
+              {
+                action: "VIEW",
+                autoVerify: true,
+                data: androidOneLinkData,
+                category: ["BROWSABLE", "DEFAULT"],
+              },
+            ]
+          : []),
+        {
+          action: "VIEW",
+          data: [
+            {
+              scheme: appScheme,
+            },
+          ],
+          category: ["BROWSABLE", "DEFAULT"],
+        },
       ],
       edgeToEdgeEnabled: true,
       softwareKeyboardLayoutMode: "resize"

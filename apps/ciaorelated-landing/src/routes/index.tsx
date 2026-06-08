@@ -11,20 +11,21 @@ import { CTALink } from "@/components/site/CTAButton";
 import { PhoneMockup } from "@/components/site/PhoneMockup";
 import { FeatureSection } from "@/components/site/FeatureSection";
 import { useI18n } from "@/lib/i18n";
+import { brand, brandText, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "ciaorelated — Social moments for real communities" },
+      { title: brandTitle("Social moments for real communities") },
       {
         name: "description",
         content:
-          "Group chats, shared moments and event feeds in one place. Create spaces for friends, families and local communities.",
+          brandText("Group chats, shared moments and event feeds in one place. Create spaces for friends, families and local communities."),
       },
-      { property: "og:title", content: "ciaorelated" },
+      { property: "og:title", content: brand.appName },
       {
         property: "og:description",
-        content: "Group chats, shared moments and event feeds in one place.",
+        content: brandText("Group chats, shared moments and event feeds in one place."),
       },
     ],
   }),
@@ -102,7 +103,7 @@ function Hero() {
           <div className="absolute inset-0 -z-10 hero-glow blur-2xl" aria-hidden />
           <div className="relative flex items-end gap-4">
             <PhoneMockup className="hidden scale-90 sm:block" rotate={-6}>
-              <ScreenshotPhone src="/screenshots/activity.png" alt="ciaorelated activity screen" />
+              <ScreenshotPhone src="/screenshots/createstory.png" alt="ciaorelated create story screen" />
             </PhoneMockup>
             <PhoneMockup className="scale-100">
               <ScreenshotPhone src="/screenshots/feed.png" alt="ciaorelated feed screen" />
@@ -136,7 +137,7 @@ function SocialProof() {
 function FeedMockup() {
   return (
     <PhoneMockup className="md:ml-auto">
-      <ScreenshotPhone src="/screenshots/feed.png" alt="ciaorelated feed screen" />
+      <ScreenshotPhone src="/screenshots/moments.png" alt="ciaorelated moments screen" />
     </PhoneMockup>
   );
 }
@@ -155,7 +156,7 @@ function ScreenshotPhone({ src, alt }: { src: string; alt: string }) {
 function ChatMockup() {
   return (
     <PhoneMockup>
-      <ScreenshotPhone src="/screenshots/activity.png" alt="ciaorelated activity screen" />
+      <ScreenshotPhone src="/screenshots/chat.png" alt="ciaorelated chat screen" />
     </PhoneMockup>
   );
 }
@@ -163,7 +164,7 @@ function ChatMockup() {
 function EventsMockup() {
   return (
     <PhoneMockup className="md:ml-auto">
-      <ScreenshotPhone src="/screenshots/create.png" alt="ciaorelated create screen" />
+      <ScreenshotPhone src="/screenshots/communityfeed.png" alt="ciaorelated community feed screen" />
     </PhoneMockup>
   );
 }
@@ -182,9 +183,9 @@ function InviteMockup() {
 function TrustBand() {
   const { t } = useI18n();
   const items = [
-    { icon: ShieldCheck, title: "Private by default", text: "Spaces are invite-only. You decide who's in." },
-    { icon: Users, title: "Real moderation", text: "Clear tools for hosts. Less noise, more signal." },
-    { icon: Heart, title: "No engagement traps", text: "No ads, no algorithmic doomscroll." },
+    { icon: ShieldCheck, title: t.sections.trustPrivateTitle, text: t.sections.trustPrivateSub },
+    { icon: Users, title: t.sections.trustModerationTitle, text: t.sections.trustModerationSub },
+    { icon: Heart, title: t.sections.trustNoTrapsTitle, text: t.sections.trustNoTrapsSub },
   ];
   return (
     <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
@@ -217,7 +218,7 @@ function OpenSourceBand() {
           <h2 className="mt-4 text-2xl font-semibold tracking-tight sm:text-3xl">{t.sections.ossTitle}</h2>
           <p className="mt-2 max-w-xl text-sm text-muted-foreground">{t.sections.ossSub}</p>
         </div>
-        <CTALink href="https://github.com/" target="_blank" rel="noreferrer" variant="primary">
+        <CTALink href={brand.githubRepoUrl} target="_blank" rel="noreferrer" variant="primary">
           <Github className="h-4 w-4" />
           {t.sections.ossCta}
         </CTALink>

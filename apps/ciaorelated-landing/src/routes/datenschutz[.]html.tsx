@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout, LegalSection } from "@/components/site/LegalPageLayout";
+import { brand, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/datenschutz.html")({
   head: () => ({
     meta: [
-      { title: "Datenschutz — ciaorelated" },
-      { name: "description", content: "Datenschutzerklärung — ciaorelated." },
+      { title: brandTitle("Datenschutz") },
+      { name: "description", content: `Datenschutzerklärung — ${brand.appName}.` },
     ],
   }),
   component: DatenschutzPage,
@@ -23,10 +24,14 @@ function DatenschutzPage() {
       ]}
     >
       <p className="text-muted-foreground">
-        Diese Datenschutzerklärung informiert dich über die Verarbeitung personenbezogener Daten bei Nutzung von <strong>ciaorelated</strong> und dieser Website.
+        Diese Datenschutzerklärung informiert dich über die Verarbeitung personenbezogener Daten bei Nutzung von <strong>{brand.appName}</strong> und dieser Website.
       </p>
       <LegalSection heading="1. Verantwortlicher">
-        <p>apparrivederci<br />Schratten 56, 5441 Abtenau<br />E-Mail: <span>info@ciaorelated.com</span></p>
+        <p>
+          {brand.legalEntity}
+          {brand.legalAddress ? <><br />{brand.legalAddress}</> : null}
+          <br />E-Mail: <span>{brand.supportEmail}</span>
+        </p>
       </LegalSection>
       <LegalSection heading="2. Verarbeitete Daten & Zwecke">
         <ul className="list-disc space-y-1 pl-6">

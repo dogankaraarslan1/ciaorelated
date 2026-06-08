@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout, LegalSection } from "@/components/site/LegalPageLayout";
+import { brand, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/guidelines.html")({
   head: () => ({
     meta: [
-      { title: "Community Guidelines — ciaorelated" },
-      { name: "description", content: "How we keep ciaorelated kind and useful." },
+      { title: brandTitle("Community Guidelines") },
+      { name: "description", content: `How we keep ${brand.appName} kind and useful.` },
     ],
   }),
   component: GuidelinesPage,
@@ -23,7 +24,7 @@ function GuidelinesPage() {
       ]}
     >
       <p className="text-muted-foreground">
-        To keep <strong>ciaorelated</strong> a safe and inspiring place for everyone, the following rules apply:
+        To keep <strong>{brand.appName}</strong> a safe and inspiring place for everyone, the following rules apply:
       </p>
       <LegalSection heading="1. Respect & Safety">
         <p>Treat others with respect. No harassment, threats, hate speech, or bullying.</p>

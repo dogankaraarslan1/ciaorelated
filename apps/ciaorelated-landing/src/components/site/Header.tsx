@@ -5,6 +5,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { LanguageToggle } from "./LanguageToggle";
 import { CTALink } from "./CTAButton";
 import { useI18n } from "@/lib/i18n";
+import { brand } from "@/lib/brand";
 
 export function Header() {
   const { t } = useI18n();
@@ -21,7 +22,7 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Link to="/" className="font-semibold tracking-tight">
-          <span className="text-base">ciao<span className="text-primary">related</span></span>
+          <span className="text-base text-foreground">{brand.wordmark}</span>
         </Link>
 
         <nav className="hidden items-center gap-7 text-sm text-muted-foreground md:flex">

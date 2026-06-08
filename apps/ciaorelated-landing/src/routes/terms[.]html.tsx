@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { LegalPageLayout, LegalSection } from "@/components/site/LegalPageLayout";
+import { brand, brandTitle } from "@/lib/brand";
 
 export const Route = createFileRoute("/terms.html")({
   head: () => ({
     meta: [
-      { title: "Terms of Service — ciaorelated" },
-      { name: "description", content: "Terms for using ciaorelated." },
+      { title: brandTitle("Terms of Service") },
+      { name: "description", content: `Terms for using ${brand.appName}.` },
     ],
   }),
   component: TermsPage,
@@ -23,10 +24,10 @@ function TermsPage() {
       ]}
     >
       <p className="text-muted-foreground">
-        These terms govern the use of <strong>ciaorelated</strong>. By using the app, you agree to these terms.
+        These terms govern the use of <strong>{brand.appName}</strong>. By using the app, you agree to these terms.
       </p>
       <LegalSection heading="1. Registration & Account">
-        <p>You must create an account to use ciaorelated. Keep your login credentials secure. Multiple accounts or false information are not allowed.</p>
+        <p>You must create an account to use {brand.appName}. Keep your login credentials secure. Multiple accounts or false information are not allowed.</p>
       </LegalSection>
       <LegalSection heading="2. Use of the App">
         <ul className="list-disc space-y-1 pl-6">
@@ -42,7 +43,7 @@ function TermsPage() {
         <p>We process personal data in accordance with our <a href="/privacy.html" className="text-primary underline">Privacy Policy</a>.</p>
       </LegalSection>
       <LegalSection heading="5. Liability">
-        <p>ciaorelated is not responsible for content created by users. We are not liable for damages arising from the use of the app, except in cases of gross negligence or intent.</p>
+        <p>{brand.appName} is not responsible for content created by users. We are not liable for damages arising from the use of the app, except in cases of gross negligence or intent.</p>
       </LegalSection>
       <LegalSection heading="6. Changes">
         <p>We may update these terms at any time. Users will be notified when a new version is available and must accept it to continue using the app.</p>

@@ -12,6 +12,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportClientError } from "../lib/error-reporting";
 import { AppProviders } from "../components/providers/AppProviders";
+import { brand, brandText, brandTitle } from "@/lib/brand";
 
 function NotFoundComponent() {
   return (
@@ -78,19 +79,19 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "ciaorelated — Social moments for real communities" },
+      { title: brandTitle("Social moments for real communities") },
       {
         name: "description",
         content:
-          "ciaorelated is a social app for real groups, chats, events, and shared moments. Connect through real groups, real events, and shared moments.",
+          brandText("ciaorelated is a social app for real groups, chats, events, and shared moments. Connect through real groups, real events, and shared moments."),
       },
-      { property: "og:title", content: "ciaorelated" },
+      { property: "og:title", content: brand.appName },
       {
         property: "og:description",
         content: "Connect through real groups, real events, and shared moments.",
       },
       { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "ciaorelated" },
+      { property: "og:site_name", content: brand.appName },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [

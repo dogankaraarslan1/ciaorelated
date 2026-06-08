@@ -4,6 +4,7 @@ import { z } from "zod";
 import { useEffect } from "react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { JoinInviteCard } from "@/components/site/JoinInviteCard";
+import { brandText, brandTitle } from "@/lib/brand";
 
 const joinSearch = z.object({
   slug: fallback(z.string(), "").default(""),
@@ -13,10 +14,10 @@ export const Route = createFileRoute("/join")({
   validateSearch: zodValidator(joinSearch),
   head: () => ({
     meta: [
-      { title: "You're invited — ciaorelated" },
+      { title: brandTitle("You're invited") },
       {
         name: "description",
-        content: "Open your ciaorelated invitation in the app.",
+        content: brandText("Open your ciaorelated invitation in the app."),
       },
       { name: "robots", content: "noindex" },
     ],
@@ -34,9 +35,9 @@ function JoinPage() {
   // We do NOT redirect away from /join and we preserve all query params.
   useEffect(() => {
     if (typeof document === "undefined") return;
-    if (document.getElementById("ciaorelated-deeplink-script")) return;
+    if (document.getElementById("app-deeplink-script")) return;
     const s = document.createElement("script");
-    s.id = "ciaorelated-deeplink-script";
+    s.id = "app-deeplink-script";
     s.src = "/deep-link.js";
     s.async = true;
     s.defer = true;
