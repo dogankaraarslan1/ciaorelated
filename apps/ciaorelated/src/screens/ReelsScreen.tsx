@@ -1,7 +1,6 @@
 // apps/ciaorelated/src/screens/ReelsScreen.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  SafeAreaView,
   View,
   Text,
   FlatList,
@@ -12,7 +11,9 @@ import {
   TextInput,
   RefreshControl,
   Animated,
-  InteractionManager
+  InteractionManager,
+  StatusBar,
+  Platform
 } from "react-native";
 import { useNavigation, useIsFocused, useFocusEffect, useRoute } from "@react-navigation/native";
 import {
@@ -25,7 +26,7 @@ import {
 } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
 import { Image as ExpoImage } from "expo-image";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { PixelRatio, useWindowDimensions } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
@@ -1104,7 +1105,8 @@ useEffect(() => {
 
   // ✅ fixe Header-Höhe (wie Feed-Header)
   const HEADER_H = 52;
-  const headerPadTop = Math.max(insets.top, 10); // safe + optisch
+  const androidStatusTop = Platform.OS === "android" ? StatusBar.currentHeight ?? 0 : 0;
+  const headerPadTop = Math.max(insets.top, androidStatusTop, 10); // safe + optisch
 
   // ⬇️ "Scroll hint" arrow animation
   const arrowAnim = useRef(new Animated.Value(0)).current;
@@ -1907,7 +1909,7 @@ useEffect(() => {
   // wieviel “Luft” zwischen cards
   const CARD_GAP = 18;
   const MINI_CONTEXT_H = 56;
-  const STICKY_CONTEXT_SAFE_H = 62;
+  const STICKY_HEADER_H = headerPadTop + MINI_CONTEXT_H;
   const [listHeaderH, setListHeaderH] = useState(0);
   const ItemSep = useCallback(() => <View style={{ height: CARD_GAP }} />, []);
 
@@ -1916,9 +1918,9 @@ useEffect(() => {
   // sichtbare Card-Höhe (1 Card pro Screen, unter fixed header + über tabbar)
   const CARD_H = Math.max(
     200,
-    H - headerPadTop - STICKY_CONTEXT_SAFE_H - TABBAR_H
+    H - STICKY_HEADER_H - TABBAR_H
   );
-  const feedStartOffset = Math.max(0, listHeaderH - STICKY_CONTEXT_SAFE_H);
+  const feedStartOffset = Math.max(0, listHeaderH - STICKY_HEADER_H);
 
 const scrollToNext = useCallback(() => {
   const nextIndex = (activeIndexRef.current ?? 0) + 1;
@@ -2101,7 +2103,7 @@ const onHeaderLayout = useCallback((e: any) => {
     return (
       <View
        onLayout={onHeaderLayout}
-        style={{ paddingTop: 0 }}
+        style={{ paddingTop: headerPadTop }}
       >
         <Animated.View
           pointerEvents={inHeader ? "auto" : "none"}
@@ -2326,14 +2328,14 @@ const snapOffsets = useMemo(() => {
 const inHeaderRef2 = useRef(true); // getrennt von inHeaderRef, damit klar ist was wir tracken
 
 useEffect(() => {
-  const offset = inHeaderRef2.current ? 0 : Math.max(0, listHeaderHRef.current - STICKY_CONTEXT_SAFE_H);
+  const offset = inHeaderRef2.current ? 0 : Math.max(0, listHeaderHRef.current - STICKY_HEADER_H);
   feedListRef.current?.scrollToOffset({ offset, animated: false });
 
   if (!inHeaderRef2.current) {
     activeIndexRef.current = 0;
     setActiveId(null);
   }
-}, [selected.kind, vlogId, STICKY_CONTEXT_SAFE_H]);
+}, [selected.kind, vlogId, STICKY_HEADER_H]);
 
 useEffect(() => {
   if (inHeaderRef2.current) return;
@@ -2353,6 +2355,18 @@ useEffect(() => {
   setActiveId(firstPostId);
   lastActivePostRef.current = listData[0];
 }, [listData, selected.kind, selected.key]);
+
+useEffect(() => {
+  if (inHeaderRef2.current) return;
+  if (!listData?.length) return;
+
+  const idx = Math.max(0, Math.min(listData.length - 1, activeIndexRef.current ?? 0));
+  const offset = feedStartOffset + idx * (CARD_H + CARD_GAP);
+
+  requestAnimationFrame(() => {
+    feedListRef.current?.scrollToOffset({ offset, animated: false });
+  });
+}, [listData, feedStartOffset, CARD_H, CARD_GAP]);
 
 const onScroll = useCallback(
   (e: any) => {
@@ -2479,7 +2493,12 @@ const EndFooter = useMemo(() => {
 
   const hasSnap = snapOffsets.length > 0;
   return (
-    <SafeAreaView style={s.screen}>
+    <SafeAreaView style={s.screen} edges={["left", "right"]}>
+      <StatusBar
+        barStyle={theme.statusBar}
+        translucent={false}
+        backgroundColor={C.bg}
+      />
       <FlashList
         ref={feedListRef}
         data={listData}
@@ -2506,6 +2525,7 @@ const EndFooter = useMemo(() => {
         refreshControl={
           <RefreshControl
             tintColor={C.text}
+            progressViewOffset={headerPadTop + 56}
             refreshing={!!refreshing}
             onRefresh={onRefresh}
           />

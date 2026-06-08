@@ -1,6 +1,6 @@
 // apps/ciaorelated/src/screens/components/feed/FeedHeader.tsx
 import React, { useMemo } from "react";
-import { Animated, Modal, Pressable, Text, TouchableOpacity, View, StyleSheet } from "react-native";
+import { Animated, Modal, Pressable, Text, TouchableOpacity, View, StyleSheet, Platform } from "react-native";
 import { useNavigation, type NavigationProp, useFocusEffect } from "@react-navigation/native";
 import { gql, useQuery } from "@apollo/client";
 import * as Notifications from "expo-notifications";
@@ -270,7 +270,7 @@ export function FeedHeader({
 const styles = (C: any, mode?: string) =>
   StyleSheet.create({
     topBar: {
-      height: 52,
+      height: Platform.OS === "android" ? 64 : 52,
       paddingHorizontal: 16,
       flexDirection: "row",
       alignItems: "center",
@@ -288,7 +288,7 @@ const styles = (C: any, mode?: string) =>
     },
     logoWrap: {
       alignSelf: "flex-start",
-      minHeight: 42,
+      minHeight: Platform.OS === "android" ? 52 : 42,
       flexDirection: "row",
       alignItems: "center",
       gap: 8,
@@ -297,7 +297,7 @@ const styles = (C: any, mode?: string) =>
       position: "absolute",
       left: 0,
       right: 0,
-      top: 5,
+      top: Platform.OS === "android" ? 11 : 5,
       alignItems: "center",
       justifyContent: "center",
       zIndex: 1,
@@ -315,7 +315,7 @@ const styles = (C: any, mode?: string) =>
       fontSize: 26,
       fontWeight: "400",
       letterSpacing: 0,
-      lineHeight: 42,
+      lineHeight: Platform.OS === "android" ? 52 : 42,
       maxWidth: 132,
       marginTop: 0,
     },
