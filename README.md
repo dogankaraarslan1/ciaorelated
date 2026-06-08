@@ -51,13 +51,25 @@ No ads or third-party attribution are required to run the project locally.
 
 ## Screenshots
 
-| Feed | Create |
+| Feed | Moments |
 | --- | --- |
-| <img src="./docs/screenshots/feed.PNG" alt="ciaorelated feed screen" width="280" /> | <img src="./docs/screenshots/create.PNG" alt="ciaorelated create screen" width="280" /> |
+| <img src="./docs/phonescreens/feed.png" alt="ciaorelated feed screen" width="230" /> | <img src="./docs/phonescreens/moments.png" alt="ciaorelated moments screen" width="230" /> |
 
-| Profile | Activity |
+| Community Feed | Chat |
 | --- | --- |
-| <img src="./docs/screenshots/profile.PNG" alt="ciaorelated profile screen" width="280" /> | <img src="./docs/screenshots/activity.PNG" alt="ciaorelated activity screen" width="280" /> |
+| <img src="./docs/phonescreens/communityfeed.png" alt="ciaorelated community feed screen" width="230" /> | <img src="./docs/phonescreens/chat.png" alt="ciaorelated chat screen" width="230" /> |
+
+| Activity | Activity Settings |
+| --- | --- |
+| <img src="./docs/phonescreens/activity.png" alt="ciaorelated activity screen" width="230" /> | <img src="./docs/phonescreens/activitysettings.png" alt="ciaorelated activity settings screen" width="230" /> |
+
+| Create Post | Create Story |
+| --- | --- |
+| <img src="./docs/phonescreens/createpost.png" alt="ciaorelated create post screen" width="230" /> | <img src="./docs/phonescreens/createstory.png" alt="ciaorelated create story screen" width="230" /> |
+
+| Profile | Profile Settings |
+| --- | --- |
+| <img src="./docs/phonescreens/profile.png" alt="ciaorelated profile screen" width="230" /> | <img src="./docs/phonescreens/profilesettings.png" alt="ciaorelated profile settings screen" width="230" /> |
 
 ## Features
 
