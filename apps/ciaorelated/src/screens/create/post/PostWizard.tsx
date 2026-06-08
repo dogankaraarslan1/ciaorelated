@@ -1457,8 +1457,6 @@ const onShare = useCallback(async () => {
       return;
     }
 
-    insertPending();
-
     // =========================
     // CAROUSEL
     // =========================
@@ -1582,6 +1580,8 @@ const onShare = useCallback(async () => {
       Alert.alert(t("common.error"), t("postwizard.error.noUploadItems"));
       return;
     }
+
+    insertPending();
 
     console.log("UPLOAD_ITEMS", items.map((it, i) => ({
       i,

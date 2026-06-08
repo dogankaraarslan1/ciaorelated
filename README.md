@@ -548,7 +548,10 @@ For production Universal Links / Android App Links:
    EXPO_PUBLIC_APP_SCHEME=ciaorelated
    EXPO_PUBLIC_ASSOCIATED_DOMAINS=your-domain.example,www.your-domain.example,link.your-domain.example
    ```
-2. Deploy iOS association on every Universal Link domain:
+2. Deploy iOS association on every Universal Link domain. If you use the
+   bundled landing site, place it in
+   `apps/ciaorelated-landing/public/.well-known/`; otherwise place it in the
+   static/public folder of the site or CDN serving your domain:
    ```txt
    /.well-known/apple-app-site-association
    ```
@@ -566,7 +569,14 @@ For production Universal Links / Android App Links:
      }
    }
    ```
-3. Deploy Android association on every Android App Link domain:
+   This file is intentionally public and does not contain secrets. It does,
+   however, identify the iOS app that is allowed to open links for the domain,
+   so replace any example or deployment-specific IDs before publishing your own
+   app.
+3. Deploy Android association on every Android App Link domain. If you use the
+   bundled landing site, place it in
+   `apps/ciaorelated-landing/public/.well-known/`; otherwise place it in the
+   static/public folder of the site or CDN serving your domain:
    ```txt
    /.well-known/assetlinks.json
    ```
@@ -583,6 +593,15 @@ For production Universal Links / Android App Links:
      }
    ]
    ```
+   Use the SHA-256 from the **App signing key certificate** in Google Play
+   Console, not the upload key certificate. For Play-distributed builds this is
+   available under Release/Setup -> App integrity/App signing after Play App
+   Signing is enabled.
+
+Do not treat `.well-known/apple-app-site-association` or
+`.well-known/assetlinks.json` as secret files. They must be publicly reachable
+over HTTPS without redirects. What matters is that they are accurate for your
+own domain, bundle identifier, package name, and signing certificate.
 
 Landing website env example:
 

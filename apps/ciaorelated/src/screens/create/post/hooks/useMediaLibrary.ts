@@ -580,11 +580,10 @@ const loadAssets = useCallback(async () => {
           const key = asset.id || fileNameFrom(uri, "photo");
 
           try {
-            return await exportPhotoToJpegUnique(uri, key);
+            return await copyToCacheStable(uri, "jpg");
           } catch {
             try {
-              const stable = await copyToCacheStable(uri, "jpg");
-              return await exportPhotoToJpegUnique(stable, `${key}_stable`);
+              return await exportPhotoToJpegUnique(uri, key);
             } catch {
               return stripHash(uri);
             }
@@ -635,14 +634,12 @@ const loadAssets = useCallback(async () => {
       if (Platform.OS === "ios") {
         if (isPh(uri)) {
           if (mediaType === "photo") {
-            // export -> unique
             try {
-              return await exportPhotoToJpegUnique(uri, key);
+              const stable = await copyToCacheStable(uri, "jpg");
+              return await copyToCacheUnique(stable, key, "jpg");
             } catch {
-              // fallback: stable -> unique
               try {
-                const stable = await copyToCacheStable(uri, "jpg");
-                return await exportPhotoToJpegUnique(stable, `${key}_stable`);
+                return await exportPhotoToJpegUnique(uri, key);
               } catch {
                 return uri;
               }
