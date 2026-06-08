@@ -85,11 +85,7 @@
 
   if (!openApp) return;
 
-  openApp.addEventListener("click", function (event) {
-    if (!slug) return;
-    if (platform === "desktop") return;
-
-    event.preventDefault();
+  function openWithStoreFallback() {
     var openedAt = Date.now();
     window.location.href = appUrl;
 
@@ -98,5 +94,17 @@
       if (Date.now() - openedAt < 900) return;
       window.location.href = storeUrl;
     }, 1300);
+  }
+
+  openApp.addEventListener("click", function (event) {
+    if (!slug) return;
+    if (platform === "desktop") return;
+
+    event.preventDefault();
+    openWithStoreFallback();
   });
+
+  if (slug && platform !== "desktop") {
+    window.setTimeout(openWithStoreFallback, 250);
+  }
 })();

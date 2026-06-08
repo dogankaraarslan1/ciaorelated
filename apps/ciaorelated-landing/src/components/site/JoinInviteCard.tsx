@@ -30,7 +30,7 @@ export function JoinInviteCard({ slug }: { slug: string }) {
   }, []);
 
   const encodedSlug = encodeURIComponent(slug || "");
-  const link = slug ? `${origin}/join?slug=${encodedSlug}` : `${origin}/join`;
+  const link = slug ? `${origin}/join/${encodedSlug}` : `${origin}/join`;
   const openAppHref = slug ? `${appScheme}://join/${encodedSlug}` : `${appScheme}://`;
   const fallbackStoreHref = iosStoreUrl || androidStoreUrl || "/kampagne.html";
 
