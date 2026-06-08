@@ -1116,6 +1116,11 @@
     }
   },
   "videocontrols": {
+    "muted": "Stumm",
+    "soundOn": "Ton an",
+    "loopOn": "Loop",
+    "loopOff": "Aus",
+    "trim": "Zuschneiden",
     "cover1s": "Cover +1s",
     "length": "Länge:",
     "cover": "• Cover:"
@@ -1365,6 +1370,14 @@
     "more": "weitere"
   },
   "reportcomment": {
+    "report": "Melden",
+    "reason": {
+      "hateSpeech": "Hassrede / Diskriminierung",
+      "nudity": "Nacktheit / Sexuelle Inhalte",
+      "violence": "Gewalt / Bedrohung",
+      "spam": "Spam / Betrug",
+      "copyright": "Urheberrecht / Musikrechte"
+    },
     "cancel": "Abbrechen"
   },
   "screen": {
