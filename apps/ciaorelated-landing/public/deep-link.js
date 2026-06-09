@@ -73,11 +73,12 @@
   var slug = slugFromLocation() || openApp?.dataset?.slug || "";
   var appScheme = openApp?.dataset?.appScheme || "ciaorelated";
   var oneLinkUrl = appendInviteParams(openApp?.dataset?.onelinkUrl || "", slug);
-  var appUrl = oneLinkUrl || buildSchemeUrl(appScheme, slug);
+  var schemeUrl = buildSchemeUrl(appScheme, slug);
+  var appUrl = schemeUrl;
   var storeUrl = chooseStoreUrl(platform);
 
   if (slugText && slug) slugText.textContent = slug;
-  if (openApp) openApp.setAttribute("href", appUrl);
+  if (openApp) openApp.setAttribute("href", oneLinkUrl || appUrl);
   if (storeBtn) storeBtn.setAttribute("href", storeUrl);
   if (statusText) {
     statusText.textContent = slug ? "Invitation ready" : "Invitation link is missing a code";
