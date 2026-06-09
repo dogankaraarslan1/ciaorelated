@@ -53,7 +53,7 @@
     if (!baseUrl || !slug) return baseUrl || "";
     try {
       var url = new URL(baseUrl, window.location.origin);
-      if (!url.searchParams.get("deep_link_value")) url.searchParams.set("deep_link_value", "join");
+      if (!url.searchParams.get("deep_link_value")) url.searchParams.set("deep_link_value", slug);
       if (!url.searchParams.get("deep_link_sub1")) url.searchParams.set("deep_link_sub1", slug);
       return url.toString();
     } catch {
