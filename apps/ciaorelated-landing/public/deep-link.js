@@ -76,10 +76,11 @@
   var schemeUrl = buildSchemeUrl(appScheme, slug);
   var appUrl = schemeUrl;
   var storeUrl = chooseStoreUrl(platform);
+  var installUrl = oneLinkUrl || storeUrl;
 
   if (slugText && slug) slugText.textContent = slug;
   if (openApp) openApp.setAttribute("href", oneLinkUrl || appUrl);
-  if (storeBtn) storeBtn.setAttribute("href", storeUrl);
+  if (storeBtn) storeBtn.setAttribute("href", installUrl);
   if (statusText) {
     statusText.textContent = slug ? "Invitation ready" : "Invitation link is missing a code";
   }
@@ -105,7 +106,7 @@
       if (handoffLikelyStarted) return;
       if (document.hidden) return;
       if (Date.now() - openedAt < 900) return;
-      window.location.href = storeUrl;
+      window.location.href = installUrl;
     }, 2200);
   }
 
