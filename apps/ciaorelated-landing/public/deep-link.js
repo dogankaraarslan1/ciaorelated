@@ -86,15 +86,27 @@
 
   if (!openApp) return;
 
+  var handoffLikelyStarted = false;
+  function markHandoffStarted() {
+    handoffLikelyStarted = true;
+  }
+
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) markHandoffStarted();
+  });
+  window.addEventListener("pagehide", markHandoffStarted);
+  window.addEventListener("blur", markHandoffStarted);
+
   function openWithStoreFallback() {
     var openedAt = Date.now();
     window.location.href = appUrl;
 
     window.setTimeout(function () {
+      if (handoffLikelyStarted) return;
       if (document.hidden) return;
       if (Date.now() - openedAt < 900) return;
       window.location.href = storeUrl;
-    }, 1300);
+    }, 2200);
   }
 
   openApp.addEventListener("click", function (event) {
