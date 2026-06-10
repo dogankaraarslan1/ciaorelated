@@ -51,45 +51,25 @@ No ads or third-party attribution are required to run the project locally.
 
 ## Screenshots
 
-### Feed
+| Feed | Moments |
+| --- | --- |
+| ![ciaorelated feed screen](./docs/phonescreens-optimized/feed.jpg) | ![ciaorelated moments screen](./docs/phonescreens-optimized/moments.jpg) |
 
-![ciaorelated feed screen](./docs/phonescreens-optimized/feed.jpg)
+| Community Feed | Chat |
+| --- | --- |
+| ![ciaorelated community feed screen](./docs/phonescreens-optimized/communityfeed.jpg) | ![ciaorelated chat screen](./docs/phonescreens-optimized/chat.jpg) |
 
-### Moments
+| Activity | Activity Settings |
+| --- | --- |
+| ![ciaorelated activity screen](./docs/phonescreens-optimized/activity.jpg) | ![ciaorelated activity settings screen](./docs/phonescreens-optimized/activitysettings.jpg) |
 
-![ciaorelated moments screen](./docs/phonescreens-optimized/moments.jpg)
+| Create Post | Create Story |
+| --- | --- |
+| ![ciaorelated create post screen](./docs/phonescreens-optimized/createpost.jpg) | ![ciaorelated create story screen](./docs/phonescreens-optimized/createstory.jpg) |
 
-### Community Feed
-
-![ciaorelated community feed screen](./docs/phonescreens-optimized/communityfeed.jpg)
-
-### Chat
-
-![ciaorelated chat screen](./docs/phonescreens-optimized/chat.jpg)
-
-### Activity
-
-![ciaorelated activity screen](./docs/phonescreens-optimized/activity.jpg)
-
-### Activity Settings
-
-![ciaorelated activity settings screen](./docs/phonescreens-optimized/activitysettings.jpg)
-
-### Create Post
-
-![ciaorelated create post screen](./docs/phonescreens-optimized/createpost.jpg)
-
-### Create Story
-
-![ciaorelated create story screen](./docs/phonescreens-optimized/createstory.jpg)
-
-### Profile
-
-![ciaorelated profile screen](./docs/phonescreens-optimized/profile.jpg)
-
-### Profile Settings
-
-![ciaorelated profile settings screen](./docs/phonescreens-optimized/profilesettings.jpg)
+| Profile | Profile Settings |
+| --- | --- |
+| ![ciaorelated profile screen](./docs/phonescreens-optimized/profile.jpg) | ![ciaorelated profile settings screen](./docs/phonescreens-optimized/profilesettings.jpg) |
 
 ## Features
 
