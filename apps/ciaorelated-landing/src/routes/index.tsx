@@ -103,10 +103,10 @@ function Hero() {
           <div className="absolute inset-0 -z-10 hero-glow blur-2xl" aria-hidden />
           <div className="relative flex items-end gap-4">
             <PhoneMockup className="hidden scale-90 sm:block" rotate={-6}>
-              <ScreenshotPhone src="/screenshots/createstory.png" alt="ciaorelated create story screen" />
+              <ScreenshotPhone src="/screenshots-optimized/createstory.jpg" alt="ciaorelated create story screen" />
             </PhoneMockup>
             <PhoneMockup className="scale-100">
-              <ScreenshotPhone src="/screenshots/feed.png" alt="ciaorelated feed screen" />
+              <ScreenshotPhone src="/screenshots-optimized/feed.jpg" alt="ciaorelated feed screen" />
             </PhoneMockup>
           </div>
         </div>
@@ -137,7 +137,7 @@ function SocialProof() {
 function FeedMockup() {
   return (
     <PhoneMockup className="md:ml-auto">
-      <ScreenshotPhone src="/screenshots/moments.png" alt="ciaorelated moments screen" />
+      <ScreenshotPhone src="/screenshots-optimized/moments.jpg" alt="ciaorelated moments screen" />
     </PhoneMockup>
   );
 }
@@ -156,7 +156,7 @@ function ScreenshotPhone({ src, alt }: { src: string; alt: string }) {
 function ChatMockup() {
   return (
     <PhoneMockup>
-      <ScreenshotPhone src="/screenshots/chat.png" alt="ciaorelated chat screen" />
+      <ScreenshotPhone src="/screenshots-optimized/chat.jpg" alt="ciaorelated chat screen" />
     </PhoneMockup>
   );
 }
@@ -164,7 +164,7 @@ function ChatMockup() {
 function EventsMockup() {
   return (
     <PhoneMockup className="md:ml-auto">
-      <ScreenshotPhone src="/screenshots/communityfeed.png" alt="ciaorelated community feed screen" />
+      <ScreenshotPhone src="/screenshots-optimized/communityfeed.jpg" alt="ciaorelated community feed screen" />
     </PhoneMockup>
   );
 }
@@ -173,7 +173,7 @@ function InviteMockup() {
   return (
     <div className="relative mx-auto w-full max-w-md">
       <PhoneMockup>
-        <ScreenshotPhone src="/screenshots/profile.png" alt="ciaorelated profile screen" />
+        <ScreenshotPhone src="/screenshots-optimized/profile.jpg" alt="ciaorelated profile screen" />
       </PhoneMockup>
       <div className="pointer-events-none absolute -inset-10 -z-10 hero-glow blur-3xl" aria-hidden />
     </div>

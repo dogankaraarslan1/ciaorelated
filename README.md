@@ -51,25 +51,45 @@ No ads or third-party attribution are required to run the project locally.
 
 ## Screenshots
 
-| Feed | Moments |
-| --- | --- |
-| <img src="./docs/phonescreens/feed.png" alt="ciaorelated feed screen" width="230" /> | <img src="./docs/phonescreens/moments.png" alt="ciaorelated moments screen" width="230" /> |
+### Feed
 
-| Community Feed | Chat |
-| --- | --- |
-| <img src="./docs/phonescreens/communityfeed.png" alt="ciaorelated community feed screen" width="230" /> | <img src="./docs/phonescreens/chat.png" alt="ciaorelated chat screen" width="230" /> |
+![ciaorelated feed screen](./docs/phonescreens-optimized/feed.jpg)
 
-| Activity | Activity Settings |
-| --- | --- |
-| <img src="./docs/phonescreens/activity.png" alt="ciaorelated activity screen" width="230" /> | <img src="./docs/phonescreens/activitysettings.png" alt="ciaorelated activity settings screen" width="230" /> |
+### Moments
 
-| Create Post | Create Story |
-| --- | --- |
-| <img src="./docs/phonescreens/createpost.png" alt="ciaorelated create post screen" width="230" /> | <img src="./docs/phonescreens/createstory.png" alt="ciaorelated create story screen" width="230" /> |
+![ciaorelated moments screen](./docs/phonescreens-optimized/moments.jpg)
 
-| Profile | Profile Settings |
-| --- | --- |
-| <img src="./docs/phonescreens/profile.png" alt="ciaorelated profile screen" width="230" /> | <img src="./docs/phonescreens/profilesettings.png" alt="ciaorelated profile settings screen" width="230" /> |
+### Community Feed
+
+![ciaorelated community feed screen](./docs/phonescreens-optimized/communityfeed.jpg)
+
+### Chat
+
+![ciaorelated chat screen](./docs/phonescreens-optimized/chat.jpg)
+
+### Activity
+
+![ciaorelated activity screen](./docs/phonescreens-optimized/activity.jpg)
+
+### Activity Settings
+
+![ciaorelated activity settings screen](./docs/phonescreens-optimized/activitysettings.jpg)
+
+### Create Post
+
+![ciaorelated create post screen](./docs/phonescreens-optimized/createpost.jpg)
+
+### Create Story
+
+![ciaorelated create story screen](./docs/phonescreens-optimized/createstory.jpg)
+
+### Profile
+
+![ciaorelated profile screen](./docs/phonescreens-optimized/profile.jpg)
+
+### Profile Settings
+
+![ciaorelated profile settings screen](./docs/phonescreens-optimized/profilesettings.jpg)
 
 ## Features
 
