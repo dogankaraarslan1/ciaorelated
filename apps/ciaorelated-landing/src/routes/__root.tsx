@@ -14,6 +14,10 @@ import { reportClientError } from "../lib/error-reporting";
 import { AppProviders } from "../components/providers/AppProviders";
 import { brand, brandText, brandTitle } from "@/lib/brand";
 
+const env = (import.meta as any).env ?? {};
+const faviconUrl = env.VITE_PUBLIC_FAVICON_URL || "/favicon.png";
+const appleTouchIconUrl = env.VITE_PUBLIC_APPLE_TOUCH_ICON_URL || faviconUrl;
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -115,11 +119,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "icon",
         type: "image/png",
-        href: "/favicon.png",
+        href: faviconUrl,
       },
       {
         rel: "apple-touch-icon",
-        href: "/favicon.png",
+        href: appleTouchIconUrl,
       },
     ],
   }),
