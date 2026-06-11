@@ -203,7 +203,7 @@ export const MediaGrid = forwardRef<any, Props>(function MediaGrid(
           ]}
         >
           <Ionicons name="camera" size={28} color={C.text} />
-          <Text style={[s.cameraText, { color: C.subtext }]}>Kamera</Text>
+          <Text style={[s.cameraText, { color: C.subtext }]}>{t("mediagrid.camera")}</Text>
         </TouchableOpacity>
       );
     }
