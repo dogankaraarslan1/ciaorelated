@@ -818,9 +818,9 @@ const clusters = useMemo<Cluster[]>(() => {
   if (error) {
     return (
       <SafeAreaView style={s.center}>
-        <Text style={s.err}>Error: {error.message}</Text>
+        <Text style={s.err}>{t("common.error")}: {error.message}</Text>
         <TouchableOpacity onPress={() => refetch?.()} style={{ marginTop: 12 }}>
-          <Text style={s.link}>Retry</Text>
+          <Text style={s.link}>{t("vlogradar.retry")}</Text>
         </TouchableOpacity>
       </SafeAreaView>
     );

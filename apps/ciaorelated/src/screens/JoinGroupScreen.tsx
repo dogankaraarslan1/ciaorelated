@@ -76,7 +76,7 @@ export default function JoinGroupScreen() {
   if (state.status === "error") {
     return (
         <View style={s.center}>
-        <Text style={s.title}>Oops</Text>
+        <Text style={s.title}>{t("joingroup.oops")}</Text>
         <Text style={s.sub}>{state.message}</Text>
 
         <TouchableOpacity
@@ -84,7 +84,7 @@ export default function JoinGroupScreen() {
             navigation.reset({ index: 0, routes: [{ name: "AppTabs" }] })
             }
         >
-            <Text style={s.link}>Zur App</Text>
+            <Text style={s.link}>{t("joingroup.toApp")}</Text>
         </TouchableOpacity>
         </View>
     );

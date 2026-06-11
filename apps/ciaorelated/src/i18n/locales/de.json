@@ -725,6 +725,7 @@
     "save": "Speichern"
   },
   "vlogradar": {
+    "retry": "Erneut versuchen",
     "locationRequired": "Standort benötigt",
     "forRadarToWorkYouNeedLocationPermiss2465f0": "Damit Radar funktioniert, brauchst du Location-Permission.",
     "acquiringLocation": "Acquiring location…",
@@ -929,6 +930,7 @@
     }
   },
   "profileswitchermodal": {
+    "active": "Aktiv",
     "thisAccount": "Dieses Konto",
     "otherAccountsOnThisDevice": "Weitere Konten auf diesem Gerät",
     "noOtherAccountsSaved": "Keine weiteren Konten gespeichert.",
@@ -1399,6 +1401,7 @@
     "alignTwoFingers": "Ausrichten – Zwei Finger"
   },
   "mediagrid": {
+    "camera": "Kamera",
     "noPermissionToViewPhotosVideosPlease6e591d": "Keine Berechtigung für Fotos/Videos. Bitte in den Einstellungen erlauben."
   },
   "createpost": {
@@ -1595,6 +1598,8 @@
     }
   },
   "joingroup": {
+    "oops": "Oops",
+    "toApp": "Zur App",
     "groupAdded": "Gruppe wird hinzugefügt…",
     "pullDownToContinue": "Ziehe nach unten, um fortzufahren",
     "youWereAddedToTheGroup": "Du wurdest zur Gruppe „",

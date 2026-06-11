@@ -130,7 +130,7 @@ export default function ProfileSwitcherModal({
                 <Text style={s.name} numberOfLines={1}>
                   {activeProfile.username}
                 </Text>
-                <Text style={s.badge}>Aktiv</Text>
+                <Text style={s.badge}>{t("profileswitchermodal.active")}</Text>
               </View>
               <View style={s.iconSlot}>
                 <Ionicons name="checkmark" size={18} color={COLORS.primary} />
