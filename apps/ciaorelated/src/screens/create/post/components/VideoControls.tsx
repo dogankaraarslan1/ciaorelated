@@ -36,8 +36,8 @@ export function VideoControls({
   return (
     <View style={s.wrap}>
       <View style={s.row}>
-        <TouchableOpacity style={s.btn} onPress={onToggleMute}><Text style={s.btnText}>{muted ? "🔇 Stumm" : "🔊 Ton an"}</Text></TouchableOpacity>
-        <TouchableOpacity style={s.btn} onPress={onToggleLoop}><Text style={s.btnText}>{loop ? "⟲ Loop" : "⟲ Off"}</Text></TouchableOpacity>
+        <TouchableOpacity style={s.btn} onPress={onToggleMute}><Text style={s.btnText}>{muted ? `🔇 ${t("videocontrols.muted")}` : `🔊 ${t("videocontrols.soundOn")}`}</Text></TouchableOpacity>
+        <TouchableOpacity style={s.btn} onPress={onToggleLoop}><Text style={s.btnText}>{loop ? `⟲ ${t("videocontrols.loopOn")}` : `⟲ ${t("videocontrols.loopOff")}`}</Text></TouchableOpacity>
 
         <TouchableOpacity style={s.btn} onPress={() => onNudgeCover(-500)}><Text style={s.btnText}>◀︎ 0.5s</Text></TouchableOpacity>
         <TouchableOpacity style={s.btn} onPress={() => onNudgeCover(+500)}><Text style={s.btnText}>0.5s ▶︎</Text></TouchableOpacity>
@@ -57,7 +57,7 @@ export function VideoControls({
           );
         })}
         <TouchableOpacity style={s.btn} onPress={() => onTrimRangeChange({ startMs: 0, endMs: durationSec * 1000 })}>
-          <Text style={s.btnText}>Trim</Text>
+          <Text style={s.btnText}>{t("videocontrols.trim")}</Text>
         </TouchableOpacity>
       </View>
 

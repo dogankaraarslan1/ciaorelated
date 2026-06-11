@@ -12,11 +12,11 @@ const REPORT_CONTENT = gql`
 `;
 
 const REASONS = [
-  { key: "HATE_SPEECH", label: "Hassrede / Diskriminierung" },
-  { key: "NUDITY",      label: "Nacktheit / Sexuelle Inhalte" },
-  { key: "VIOLENCE",    label: "Gewalt / Bedrohung" },
-  { key: "SPAM",        label: "Spam / Betrug" },
-  { key: "COPYRIGHT",   label: "Urheberrecht / Musikrechte" },
+  { key: "HATE_SPEECH", labelKey: "reportcomment.reason.hateSpeech" },
+  { key: "NUDITY",      labelKey: "reportcomment.reason.nudity" },
+  { key: "VIOLENCE",    labelKey: "reportcomment.reason.violence" },
+  { key: "SPAM",        labelKey: "reportcomment.reason.spam" },
+  { key: "COPYRIGHT",   labelKey: "reportcomment.reason.copyright" },
 ];
 
 export default function ReportComment({ commentId }: { commentId: string }) {
@@ -38,7 +38,7 @@ export default function ReportComment({ commentId }: { commentId: string }) {
   return (
     <>
       <TouchableOpacity onPress={() => setOpen(true)}>
-        <Text style={{ color: "#F87171", fontWeight: "700" }}>Melden</Text>
+        <Text style={{ color: "#F87171", fontWeight: "700" }}>{t("reportcomment.report")}</Text>
       </TouchableOpacity>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
@@ -47,7 +47,7 @@ export default function ReportComment({ commentId }: { commentId: string }) {
           <View style={styles.menuBox}>
             {REASONS.map(r => (
               <TouchableOpacity key={r.key} style={[styles.menuItem, styles.menuItemBorder]} disabled={loading} onPress={() => submit(r.key)}>
-                <Text style={[styles.menuText, { color: "#F87171", fontWeight: "700" }]}>{r.label}</Text>
+                <Text style={[styles.menuText, { color: "#F87171", fontWeight: "700" }]}>{t(r.labelKey)}</Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity style={styles.menuItem} onPress={() => setOpen(false)}>
