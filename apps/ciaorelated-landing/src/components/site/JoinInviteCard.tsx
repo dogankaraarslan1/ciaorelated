@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Copy, Download, Smartphone, Check } from "lucide-react";
 import { CTAButton, CTALink } from "./CTAButton";
 import { useI18n } from "@/lib/i18n";
@@ -31,8 +31,20 @@ export function JoinInviteCard({ slug }: { slug: string }) {
 
   const encodedSlug = encodeURIComponent(slug || "");
   const link = slug ? `${origin}/join/${encodedSlug}` : `${origin}/join`;
-  const openAppHref = slug ? `${appScheme}://join/${encodedSlug}` : `${appScheme}://`;
   const fallbackStoreHref = iosStoreUrl || androidStoreUrl || "/kampagne.html";
+  const oneLinkHref = useMemo(() => {
+    if (!oneLinkUrl || !slug) return "";
+    try {
+      const url = new URL(oneLinkUrl);
+      url.searchParams.set("deep_link_value", slug);
+      url.searchParams.set("deep_link_sub1", slug);
+      return url.toString();
+    } catch {
+      return "";
+    }
+  }, [oneLinkUrl, slug]);
+  const openAppHref =
+    oneLinkHref || fallbackStoreHref || (slug ? `${appScheme}://join/${encodedSlug}` : `${appScheme}://`);
 
   const handleCopy = async () => {
     try {

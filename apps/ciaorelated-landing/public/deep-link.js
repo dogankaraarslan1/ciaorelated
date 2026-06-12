@@ -6,7 +6,7 @@
  *   - /join?slug=GROUP_SLUG
  *   - /join/GROUP_SLUG
  *   - AppsFlyer-style ?deep_link_sub1=GROUP_SLUG
- *   - Custom scheme fallback: ciaorelated://join/GROUP_SLUG
+ *   - Custom scheme URL for manual fallback only: ciaorelated://join/GROUP_SLUG
  */
 (function () {
   if (typeof window === "undefined" || typeof document === "undefined") return;
@@ -74,12 +74,11 @@
   var appScheme = openApp?.dataset?.appScheme || "ciaorelated";
   var oneLinkUrl = appendInviteParams(openApp?.dataset?.onelinkUrl || "", slug);
   var schemeUrl = buildSchemeUrl(appScheme, slug);
-  var appUrl = schemeUrl;
   var storeUrl = chooseStoreUrl(platform);
   var installUrl = oneLinkUrl || storeUrl;
 
   if (slugText && slug) slugText.textContent = slug;
-  if (openApp) openApp.setAttribute("href", oneLinkUrl || appUrl);
+  if (openApp) openApp.setAttribute("href", installUrl || schemeUrl);
   if (storeBtn) storeBtn.setAttribute("href", installUrl);
   if (statusText) {
     statusText.textContent = slug ? "Invitation ready" : "Invitation link is missing a code";
@@ -87,27 +86,12 @@
 
   if (!openApp) return;
 
-  var handoffLikelyStarted = false;
-  function markHandoffStarted() {
-    handoffLikelyStarted = true;
-  }
-
-  document.addEventListener("visibilitychange", function () {
-    if (document.hidden) markHandoffStarted();
-  });
-  window.addEventListener("pagehide", markHandoffStarted);
-  window.addEventListener("blur", markHandoffStarted);
-
-  function openWithStoreFallback() {
-    var openedAt = Date.now();
-    window.location.href = appUrl;
-
-    window.setTimeout(function () {
-      if (handoffLikelyStarted) return;
-      if (document.hidden) return;
-      if (Date.now() - openedAt < 900) return;
+  function openInstallOrAttributionLink() {
+    if (installUrl) {
       window.location.href = installUrl;
-    }, 2200);
+      return;
+    }
+    window.location.href = schemeUrl;
   }
 
   openApp.addEventListener("click", function (event) {
@@ -115,10 +99,10 @@
     if (platform === "desktop") return;
 
     event.preventDefault();
-    openWithStoreFallback();
+    openInstallOrAttributionLink();
   });
 
   if (slug && platform !== "desktop") {
-    window.setTimeout(openWithStoreFallback, 250);
+    window.setTimeout(openInstallOrAttributionLink, 250);
   }
 })();
