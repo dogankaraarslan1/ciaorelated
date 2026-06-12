@@ -417,7 +417,7 @@ export function VlogWizard({
           contentContainerStyle={{ padding: 12, paddingBottom: bottomPad }}
         >
           {/* Cover */}
-          <SectionCard s={s} title="Cover" subtitle="Optional">
+          <SectionCard s={s} title={t("vlogwizard.cover")} subtitle={t("common.optional")}>
             <TouchableOpacity style={s.cover} onPress={pickCover} activeOpacity={0.9}>
               {coverUri ? (
                 <Image source={{ uri: coverUri }} style={s.coverImg} />
@@ -446,8 +446,8 @@ export function VlogWizard({
 
 
           {/* Basics */}
-          <SectionCard s={s} title="Details" subtitle="Titel & Beschreibung">
-            <Text style={s.label}>Titel</Text>
+          <SectionCard s={s} title={t("vlogwizard.details")} subtitle={t("vlogwizard.titleAndDescription")}>
+            <Text style={s.label}>{t("vlogwizard.titleLabel")}</Text>
             <TextInput
               value={title}
               onChangeText={setTitle}
@@ -457,7 +457,7 @@ export function VlogWizard({
               returnKeyType="next"
             />
 
-            <Text style={s.label}>Slug</Text>
+            <Text style={s.label}>{t("vlogwizard.slugLabel")}</Text>
 
               <View style={s.slugRow}>
                 <TextInput
@@ -503,7 +503,7 @@ export function VlogWizard({
           <SectionCard
             s={s}
             title={t("vlogwizard.location")}
-            subtitle="Pflicht"
+            subtitle={t("vlogwizard.required")}
           >
             <View style={s.locTopRow}>
               <TouchableOpacity

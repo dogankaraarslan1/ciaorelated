@@ -116,6 +116,12 @@
 
   "setup": "[i18n setup]",
   "vlogwizard": {
+    "cover": "Cover",
+    "details": "Details",
+    "titleAndDescription": "Titel & Beschreibung",
+    "titleLabel": "Titel",
+    "slugLabel": "Slug",
+    "required": "Pflicht",
     "createANewVlog": "Neuen Vlog erstellen",
     "chooseCover": "Cover wählen",
     "giveYourVlogACleanLook": "Gib deinem Vlog einen klaren Look",
