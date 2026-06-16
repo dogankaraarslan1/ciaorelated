@@ -1,4 +1,9 @@
 {
+  "createcamera": {
+    "tabPost": "POST",
+    "tabStory": "STORY",
+    "tabReels": "REELS"
+  },
   "common": {
     "cancel": "Cancel",
     "error": "Error",
