@@ -21,7 +21,7 @@ export default {
     },
     isProcessing: async (post: any, _: unknown, ctx: Ctx) => {
       const n = await ctx.prisma.postMedia.count({
-        where: { postId: post.id, processStatus: { in: ["PENDING", "PROCESSING"] } },
+        where: { postId: post.id, kind: "VIDEO", processStatus: { in: ["PENDING", "PROCESSING"] } },
       });
       return n > 0;
     },
@@ -32,7 +32,6 @@ export default {
     // Für Bilder: signierte URL aus key; sonst null
     imageUrl: async (m: any) => {
       if (m.kind !== "IMAGE") return null;
-      if (m.processStatus === "PENDING" || m.processStatus === "PROCESSING") return null;
       if (!m.key) return null;
       return await getSignedGetUrl(m.key);
     },
@@ -45,9 +44,9 @@ export default {
     },
 
     thumbUrl: async (m: any) => {
-      if (m.processStatus === "PENDING" || m.processStatus === "PROCESSING") return null;
-      if (!m.thumbKey) return null;
-      return await getSignedGetUrl(m.thumbKey);
+      if (m.thumbKey) return await getSignedGetUrl(m.thumbKey);
+      if (m.kind === "IMAGE" && m.key) return await getSignedGetUrl(m.key);
+      return null;
     },
   },
 };

@@ -265,13 +265,22 @@ async function processOne(storyId: string) {
 export async function runStoryWorkerLoop() {
   console.log("[story-worker] loop started");
   for (;;) {
-    const jobs = await claimJobs(2);
-    if (!jobs.length) {
-      await sleep(600);
-      continue;
-    }
-    for (const j of jobs) {
-      await processOne(j.storyId);
+    try {
+      const jobs = await claimJobs(2);
+      if (!jobs.length) {
+        await sleep(600);
+        continue;
+      }
+      for (const j of jobs) {
+        try {
+          await processOne(j.storyId);
+        } catch (e) {
+          console.warn("[story-worker] job loop error", { storyId: j.storyId, err: e });
+        }
+      }
+    } catch (e) {
+      console.warn("[story-worker] loop error", e);
+      await sleep(2000);
     }
   }
 }

@@ -145,14 +145,22 @@ async function processOne(profileId: string) {
 export async function runAvatarWorkerLoop() {
   console.log("[avatar-worker] loop started");
   for (;;) {
-    const jobs = await claimAvatarJobs(2);
-    if (!jobs.length) {
-      await sleep(600);
-      continue;
-    }
-    for (const j of jobs) {
-      await processOne(j.profileId);
+    try {
+      const jobs = await claimAvatarJobs(2);
+      if (!jobs.length) {
+        await sleep(600);
+        continue;
+      }
+      for (const j of jobs) {
+        try {
+          await processOne(j.profileId);
+        } catch (e) {
+          console.warn("[avatar-worker] job loop error", { profileId: j.profileId, err: e });
+        }
+      }
+    } catch (e) {
+      console.warn("[avatar-worker] loop error", e);
+      await sleep(2000);
     }
   }
 }
-

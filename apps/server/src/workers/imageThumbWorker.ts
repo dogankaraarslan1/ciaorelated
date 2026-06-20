@@ -150,13 +150,22 @@ async function processOne(mediaId: string) {
 export async function runImageWorkerLoop() {
   console.log("[image-worker] loop started");
   for (;;) {
-    const jobs = await claimImageJobs(2);
-    if (!jobs.length) {
-      await sleep(600);
-      continue;
-    }
-    for (const j of jobs) {
-      await processOne(j.mediaId);
+    try {
+      const jobs = await claimImageJobs(2);
+      if (!jobs.length) {
+        await sleep(600);
+        continue;
+      }
+      for (const j of jobs) {
+        try {
+          await processOne(j.mediaId);
+        } catch (e) {
+          console.warn("[image-worker] job loop error", { mediaId: j.mediaId, err: e });
+        }
+      }
+    } catch (e) {
+      console.warn("[image-worker] loop error", e);
+      await sleep(2000);
     }
   }
 }

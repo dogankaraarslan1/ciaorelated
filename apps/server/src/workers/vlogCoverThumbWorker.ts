@@ -142,13 +142,22 @@ async function processOne(vlogId: string) {
 export async function runVlogCoverWorkerLoop() {
   console.log("[vlog-cover-worker] loop started");
   for (;;) {
-    const jobs = await claimJobs(2);
-    if (!jobs.length) {
-      await sleep(600);
-      continue;
-    }
-    for (const j of jobs) {
-      await processOne(j.vlogId);
+    try {
+      const jobs = await claimJobs(2);
+      if (!jobs.length) {
+        await sleep(600);
+        continue;
+      }
+      for (const j of jobs) {
+        try {
+          await processOne(j.vlogId);
+        } catch (e) {
+          console.warn("[vlog-cover-worker] job loop error", { vlogId: j.vlogId, err: e });
+        }
+      }
+    } catch (e) {
+      console.warn("[vlog-cover-worker] loop error", e);
+      await sleep(2000);
     }
   }
 }
