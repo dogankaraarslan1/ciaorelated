@@ -1,15 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
-  Apple,
   Users,
   ShieldCheck,
   Github,
   Heart,
-  Smartphone,
   Sparkles,
 } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { CTALink } from "@/components/site/CTAButton";
+import { StoreBadges } from "@/components/site/StoreBadges";
 import { PhoneMockup } from "@/components/site/PhoneMockup";
 import { FeatureSection } from "@/components/site/FeatureSection";
 import { useI18n } from "@/lib/i18n";
@@ -233,8 +232,7 @@ function DownloadCTA() {
   const { t } = useI18n();
   const hasIos = !!brand.iosStoreUrl;
   const hasAndroid = !!brand.androidStoreUrl;
-  const hasOneLink = !!brand.oneLinkUrl;
-  const hasDownloadLink = hasIos || hasAndroid || hasOneLink;
+  const hasDownloadLink = hasIos || hasAndroid;
 
   return (
     <section className="relative overflow-hidden">
@@ -244,25 +242,8 @@ function DownloadCTA() {
           <span className="gradient-text">{t.sections.downloadTitle}</span>
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">{t.sections.downloadSub}</p>
-        <div className="mt-8 flex flex-wrap justify-center gap-3">
-          {hasOneLink ? (
-            <CTALink href={brand.oneLinkUrl} variant="primary">
-              <Smartphone className="h-4 w-4" />
-              {t.campaign.openApp}
-            </CTALink>
-          ) : null}
-          {hasIos ? (
-            <CTALink href={brand.iosStoreUrl} variant={hasOneLink ? "secondary" : "primary"}>
-              <Apple className="h-4 w-4" />
-              App Store
-            </CTALink>
-          ) : null}
-          {hasAndroid ? (
-            <CTALink href={brand.androidStoreUrl} variant="secondary">
-              <Smartphone className="h-4 w-4" />
-              Google Play
-            </CTALink>
-          ) : null}
+        <StoreBadges iosUrl={brand.iosStoreUrl} androidUrl={brand.androidStoreUrl} className="mt-8 justify-center" />
+        <div className="mt-5 flex flex-wrap justify-center gap-3">
           {!hasDownloadLink ? <CTALink href="/kampagne.html" variant="primary">{t.nav.download}</CTALink> : null}
           <CTALink href="/support.html" variant="secondary">{t.footer.support}</CTALink>
         </div>

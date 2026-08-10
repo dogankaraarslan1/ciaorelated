@@ -40,8 +40,8 @@ const _translations = {
       ossTitle: "Built openly",
       ossSub: "Open source and crafted with React Native, Expo, Node.js, GraphQL, Prisma, and PostgreSQL.",
       ossCta: "View on GitHub",
-      downloadTitle: "Get ciaorelated",
-      downloadSub: "Open the app link or choose the store that is available for this deployment.",
+      downloadTitle: "Download the app",
+      downloadSub: "Get the app from the App Store or Google Play.",
     },
     join: {
       title: "You're invited",
@@ -70,12 +70,11 @@ const _translations = {
       backHome: "Back to home",
     },
     campaign: {
-      title: "Get ciaorelated on your phone",
-      sub: "Open the app link on your phone or choose the store that is available for this deployment.",
-      openApp: "Open app link",
+      title: "Download the app",
+      sub: "Get the app from the App Store or Google Play.",
       openOnPhone: "Open this page on your phone",
       openLink: "Open link",
-      noStores: "Store links are controlled by deployment configuration.",
+      noStores: "No store link is currently set.",
     },
   },
   de: {
@@ -115,8 +114,8 @@ const _translations = {
       ossTitle: "Offen gebaut",
       ossSub: "Open Source – entwickelt mit React Native, Expo, Node.js, GraphQL, Prisma und PostgreSQL.",
       ossCta: "Auf GitHub ansehen",
-      downloadTitle: "Hol dir ciaorelated",
-      downloadSub: "Öffne den App-Link oder wähle den Store, der für diese Installation gesetzt ist.",
+      downloadTitle: "App herunterladen",
+      downloadSub: "Lade die App im App Store oder bei Google Play herunter.",
     },
     join: {
       title: "Du bist eingeladen",
@@ -145,12 +144,11 @@ const _translations = {
       backHome: "Zurück zur Startseite",
     },
     campaign: {
-      title: "Hol dir ciaorelated auf dein Handy",
-      sub: "Öffne den App-Link auf deinem Handy oder wähle den Store, der für diese Installation gesetzt ist.",
-      openApp: "App-Link öffnen",
+      title: "App herunterladen",
+      sub: "Lade die App im App Store oder bei Google Play herunter.",
       openOnPhone: "Diese Seite am Handy öffnen",
       openLink: "Link öffnen",
-      noStores: "Store-Links werden über die Deployment-Konfiguration gesteuert.",
+      noStores: "Aktuell ist kein Store-Link hinterlegt.",
     },
   },
 } as const;

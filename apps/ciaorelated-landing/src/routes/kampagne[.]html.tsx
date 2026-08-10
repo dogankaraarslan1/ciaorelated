@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Apple, ExternalLink, Smartphone } from "lucide-react";
+import { ExternalLink, Smartphone } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
-import { CTALink } from "@/components/site/CTAButton";
+import { StoreBadges } from "@/components/site/StoreBadges";
 import { useI18n } from "@/lib/i18n";
 import { brand, brandHost, brandText, brandTitle } from "@/lib/brand";
 
@@ -19,9 +19,8 @@ function CampaignPage() {
   const { t } = useI18n();
   const hasIos = !!brand.iosStoreUrl;
   const hasAndroid = !!brand.androidStoreUrl;
-  const hasOneLink = !!brand.oneLinkUrl;
-  const hasDownloadLink = hasIos || hasAndroid || hasOneLink;
-  const primaryDownloadUrl = brand.oneLinkUrl || brand.iosStoreUrl || brand.androidStoreUrl || brand.websiteUrl;
+  const hasDownloadLink = hasIos || hasAndroid;
+  const primaryDownloadUrl = brand.iosStoreUrl || brand.androidStoreUrl || brand.websiteUrl;
 
   return (
     <SiteShell>
@@ -33,23 +32,7 @@ function CampaignPage() {
               <span className="gradient-text">{t.campaign.title}</span>
             </h1>
             <p className="mt-4 max-w-md text-muted-foreground">{t.campaign.sub}</p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              {hasOneLink ? (
-                <CTALink href={brand.oneLinkUrl} variant="primary" aria-label={t.campaign.openApp}>
-                  <Smartphone className="h-4 w-4" /> {t.campaign.openApp}
-                </CTALink>
-              ) : null}
-              {hasIos ? (
-                <CTALink href={brand.iosStoreUrl} variant={hasOneLink ? "secondary" : "primary"} aria-label="App Store">
-                  <Apple className="h-4 w-4" /> App Store
-                </CTALink>
-              ) : null}
-              {hasAndroid ? (
-                <CTALink href={brand.androidStoreUrl} variant="secondary" aria-label="Google Play">
-                  <Smartphone className="h-4 w-4" /> Google Play
-                </CTALink>
-              ) : null}
-            </div>
+            <StoreBadges iosUrl={brand.iosStoreUrl} androidUrl={brand.androidStoreUrl} className="mt-8" />
             {!hasDownloadLink ? <p className="mt-4 text-xs text-muted-foreground">{t.campaign.noStores}</p> : null}
           </div>
           <div className="flex justify-center">
