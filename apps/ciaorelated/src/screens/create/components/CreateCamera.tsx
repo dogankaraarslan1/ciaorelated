@@ -5,6 +5,7 @@ import * as ImageManipulator from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "../../../theme/ThemeProvider";
 import { StoryCamera, type Shot } from "./StoryCamera";
+import { useTranslation } from "react-i18next";
 
 const { width: W, height: H } = Dimensions.get("window");
 
@@ -82,6 +83,7 @@ export function CreateCamera({
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
   const COLORS = theme.colors as any;
+  const { t } = useTranslation();
 
   const [mode, setMode] = useState<Mode>(initialMode);
   const [facing, setFacing] = useState<"back" | "front">("back");
@@ -184,9 +186,9 @@ export function CreateCamera({
             {/* Tabs wie Screenshot */}
             {allowModeSwitch && (
               <View style={s.tabsRow}>
-                <Tab label="BEITRAG" active={mode === "post"} onPress={() => setMode("post")} />
-                <Tab label="STORY" active={mode === "story"} onPress={() => setMode("story")} />
-                <Tab label="REELS" active={mode === "reels"} onPress={() => setMode("reels")} />
+                <Tab label={t("createcamera.tabPost")} active={mode === "post"} onPress={() => setMode("post")} />
+                <Tab label={t("createcamera.tabStory")} active={mode === "story"} onPress={() => setMode("story")} />
+                <Tab label={t("createcamera.tabReels")} active={mode === "reels"} onPress={() => setMode("reels")} />
               </View>
             )}
           </View>
