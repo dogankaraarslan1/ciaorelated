@@ -41,7 +41,7 @@ const _translations = {
       ossSub: "Open source and crafted with React Native, Expo, Node.js, GraphQL, Prisma, and PostgreSQL.",
       ossCta: "View on GitHub",
       downloadTitle: "Get ciaorelated",
-      downloadSub: "Available soon on iOS and Android. Join the early community.",
+      downloadSub: "Open the app link or choose the store that is available for this deployment.",
     },
     join: {
       title: "You're invited",
@@ -71,7 +71,11 @@ const _translations = {
     },
     campaign: {
       title: "Get ciaorelated on your phone",
-      sub: "Scan the QR code or tap a button below to download the app.",
+      sub: "Open the app link on your phone or choose the store that is available for this deployment.",
+      openApp: "Open app link",
+      openOnPhone: "Open this page on your phone",
+      openLink: "Open link",
+      noStores: "Store links are controlled by deployment configuration.",
     },
   },
   de: {
@@ -112,7 +116,7 @@ const _translations = {
       ossSub: "Open Source – entwickelt mit React Native, Expo, Node.js, GraphQL, Prisma und PostgreSQL.",
       ossCta: "Auf GitHub ansehen",
       downloadTitle: "Hol dir ciaorelated",
-      downloadSub: "Bald verfügbar für iOS und Android. Werde Teil der frühen Community.",
+      downloadSub: "Öffne den App-Link oder wähle den Store, der für diese Installation gesetzt ist.",
     },
     join: {
       title: "Du bist eingeladen",
@@ -142,7 +146,11 @@ const _translations = {
     },
     campaign: {
       title: "Hol dir ciaorelated auf dein Handy",
-      sub: "Scanne den QR-Code oder tippe unten auf einen Button, um die App zu laden.",
+      sub: "Öffne den App-Link auf deinem Handy oder wähle den Store, der für diese Installation gesetzt ist.",
+      openApp: "App-Link öffnen",
+      openOnPhone: "Diese Seite am Handy öffnen",
+      openLink: "Link öffnen",
+      noStores: "Store-Links werden über die Deployment-Konfiguration gesteuert.",
     },
   },
 } as const;

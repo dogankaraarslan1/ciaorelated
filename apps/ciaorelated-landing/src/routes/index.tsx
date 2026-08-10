@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import {
+  Apple,
   Users,
   ShieldCheck,
   Github,
   Heart,
+  Smartphone,
   Sparkles,
 } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
@@ -229,6 +231,11 @@ function OpenSourceBand() {
 
 function DownloadCTA() {
   const { t } = useI18n();
+  const hasIos = !!brand.iosStoreUrl;
+  const hasAndroid = !!brand.androidStoreUrl;
+  const hasOneLink = !!brand.oneLinkUrl;
+  const hasDownloadLink = hasIos || hasAndroid || hasOneLink;
+
   return (
     <section className="relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 hero-glow opacity-70" aria-hidden />
@@ -238,9 +245,28 @@ function DownloadCTA() {
         </h2>
         <p className="mx-auto mt-4 max-w-xl text-muted-foreground">{t.sections.downloadSub}</p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <CTALink href="/kampagne.html" variant="primary">{t.nav.download}</CTALink>
+          {hasOneLink ? (
+            <CTALink href={brand.oneLinkUrl} variant="primary">
+              <Smartphone className="h-4 w-4" />
+              {t.campaign.openApp}
+            </CTALink>
+          ) : null}
+          {hasIos ? (
+            <CTALink href={brand.iosStoreUrl} variant={hasOneLink ? "secondary" : "primary"}>
+              <Apple className="h-4 w-4" />
+              App Store
+            </CTALink>
+          ) : null}
+          {hasAndroid ? (
+            <CTALink href={brand.androidStoreUrl} variant="secondary">
+              <Smartphone className="h-4 w-4" />
+              Google Play
+            </CTALink>
+          ) : null}
+          {!hasDownloadLink ? <CTALink href="/kampagne.html" variant="primary">{t.nav.download}</CTALink> : null}
           <CTALink href="/support.html" variant="secondary">{t.footer.support}</CTALink>
         </div>
+        {!hasDownloadLink ? <p className="mt-4 text-xs text-muted-foreground">{t.campaign.noStores}</p> : null}
       </div>
     </section>
   );

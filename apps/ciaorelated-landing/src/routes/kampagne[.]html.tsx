@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Apple, Smartphone, QrCode } from "lucide-react";
+import { Apple, ExternalLink, Smartphone } from "lucide-react";
 import { SiteShell } from "@/components/site/SiteShell";
 import { CTALink } from "@/components/site/CTAButton";
 import { useI18n } from "@/lib/i18n";
@@ -17,6 +17,12 @@ export const Route = createFileRoute("/kampagne.html")({
 
 function CampaignPage() {
   const { t } = useI18n();
+  const hasIos = !!brand.iosStoreUrl;
+  const hasAndroid = !!brand.androidStoreUrl;
+  const hasOneLink = !!brand.oneLinkUrl;
+  const hasDownloadLink = hasIos || hasAndroid || hasOneLink;
+  const primaryDownloadUrl = brand.oneLinkUrl || brand.iosStoreUrl || brand.androidStoreUrl || brand.websiteUrl;
+
   return (
     <SiteShell>
       <section className="relative overflow-hidden">
@@ -28,23 +34,36 @@ function CampaignPage() {
             </h1>
             <p className="mt-4 max-w-md text-muted-foreground">{t.campaign.sub}</p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-              <CTALink href={brand.iosStoreUrl || "#"} variant="primary" aria-label="App Store">
-                <Apple className="h-4 w-4" /> App Store
-              </CTALink>
-              <CTALink href={brand.androidStoreUrl || "#"} variant="secondary" aria-label="Google Play">
-                <Smartphone className="h-4 w-4" /> Google Play
-              </CTALink>
+              {hasOneLink ? (
+                <CTALink href={brand.oneLinkUrl} variant="primary" aria-label={t.campaign.openApp}>
+                  <Smartphone className="h-4 w-4" /> {t.campaign.openApp}
+                </CTALink>
+              ) : null}
+              {hasIos ? (
+                <CTALink href={brand.iosStoreUrl} variant={hasOneLink ? "secondary" : "primary"} aria-label="App Store">
+                  <Apple className="h-4 w-4" /> App Store
+                </CTALink>
+              ) : null}
+              {hasAndroid ? (
+                <CTALink href={brand.androidStoreUrl} variant="secondary" aria-label="Google Play">
+                  <Smartphone className="h-4 w-4" /> Google Play
+                </CTALink>
+              ) : null}
             </div>
-            <p className="mt-4 text-xs text-muted-foreground">
-              Coming soon. Real store links will be added once the apps are published.
-            </p>
+            {!hasDownloadLink ? <p className="mt-4 text-xs text-muted-foreground">{t.campaign.noStores}</p> : null}
           </div>
           <div className="flex justify-center">
-            <div className="glass-card flex aspect-square w-full max-w-xs flex-col items-center justify-center rounded-3xl p-6 text-center">
-              <QrCode className="h-32 w-32 text-foreground" />
-              <div className="mt-4 text-sm font-medium">{brandHost}</div>
-              <div className="text-xs text-muted-foreground">Scan with your phone</div>
-            </div>
+            <a
+              href={primaryDownloadUrl}
+              className="glass-card flex aspect-square w-full max-w-xs flex-col items-center justify-center rounded-3xl p-6 text-center transition hover:bg-accent/30"
+            >
+              <Smartphone className="h-20 w-20 text-foreground" />
+              <div className="mt-5 text-sm font-medium">{brandHost}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{t.campaign.openOnPhone}</div>
+              <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-xs font-medium">
+                {t.campaign.openLink} <ExternalLink className="h-3.5 w-3.5" />
+              </div>
+            </a>
           </div>
         </div>
       </section>
