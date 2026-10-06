@@ -8,7 +8,7 @@ export function useFeedColors() {
   return {
     bg: C.bg,
     text: C.text,
-    subtext: C.subtext ?? C.sub,
+    subtext: C.subtext,
     border: C.border,
     card: C.card ?? "transparent",
     primary: C.primary,

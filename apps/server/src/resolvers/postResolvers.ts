@@ -1,3 +1,5 @@
+import { visiblePostWhere } from "../lib/postVisibility";
+import { captureCommunityInteraction } from "../lib/communityInfluenceEvents";
 // apps/server/src/resolvers/postResolvers.ts
 import type { Ctx } from "../context";
 import crypto from "node:crypto";
@@ -89,6 +91,7 @@ async function attachGroupContextToPost(tx: any, postId: string, groupLinkId: st
   const context = await ensureContext(tx, {
     kind: "TOPIC",
     key: groupContextKey(group.id),
+    groupLinkId: group.id,
     label: group.title,
     cityScoped: false,
   });
@@ -348,8 +351,8 @@ const resolvers = {
   Query: {
     feed: (_: unknown, { offset = 0, limit = 10 }: { offset?: number; limit?: number }, ctx: Ctx) =>
       ctx.prisma.post.findMany({
-        where: { author: { isPrivate: false } ,
-                media: { none: { processStatus: { in: ["PENDING", "PROCESSING"] } } },},
+        where: { AND: [visiblePostWhere(ctx), { author: { isPrivate: false } ,
+                media: { none: { processStatus: { in: ["PENDING", "PROCESSING"] } } },}] },
         orderBy: { createdAt: "desc" },
         skip: offset,
         take: limit,
@@ -359,6 +362,7 @@ const resolvers = {
 
     getSignedPostDownload: async (_: unknown, { postId }: { postId: string }, ctx: Ctx) => {
       if (!ctx.profileId) throw new Error("Not authenticated");
+      await assertCanViewPost(ctx, postId);
       const pending = await ctx.prisma.postMedia.count({
         where: { postId, processStatus: { in: ["PENDING", "PROCESSING"] } },
       });
@@ -374,11 +378,8 @@ const resolvers = {
     },
 
     postsByUser: async (_: unknown, { userId, kind, offset = 0, limit = 12 }: any, ctx: Ctx) =>{
-      const ok = await canViewProfileContent(ctx, userId);
-      if (!ok) return [];
-
       return ctx.prisma.post.findMany({
-        where: { authorId: userId, kind, media: { none: { processStatus: { in: ["PENDING", "PROCESSING"] } } }, },
+        where: { AND: [visiblePostWhere(ctx), { authorId: userId, kind, media: { none: { processStatus: { in: ["PENDING", "PROCESSING"] } } }, }] },
         orderBy: { createdAt: "desc" },
         skip: offset,
         take: limit,
@@ -398,7 +399,7 @@ const resolvers = {
       // 1) Kandidaten: Posts wo userId ACCEPTED getaggt ist
       // 2) OWNER-CHECK: falls Autor privat ist, muss der Profilinhaber (userId) dem Autor folgen
       const posts = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           tags: { some: { userId, status: "ACCEPTED" } },
 
           // ✅ Owner-basierte Sichtbarkeit (entscheidend für "wenn ICH entfolge -> keiner sieht es auf meinem Profil")
@@ -419,7 +420,7 @@ const resolvers = {
               },
             },
           ],
-        },
+        }] },
         orderBy: { createdAt: "desc" },
         skip: offset,
         take: limit,
@@ -499,7 +500,7 @@ const resolvers = {
       const ownPostWhere = { post: { authorId: ctx.profileId } };
       const [totalPostViewsAgg, viewsAgg, previousViewsAgg, viewRows, dailyLikes, dailyComments, likes, comments, newFollowers] = await Promise.all([
         ctx.prisma.post.aggregate({
-          where: { authorId: ctx.profileId },
+          where: { AND: [visiblePostWhere(ctx), { authorId: ctx.profileId }] },
           _sum: { viewCount: true, uniqueViewCount: true },
         }),
         ctx.prisma.postView.aggregate({
@@ -635,6 +636,7 @@ const resolvers = {
 
       const text = (content ?? "").trim();
       if (!text) throw new Error("Empty comment");
+      await assertCanViewPost(ctx, postId);
 
       // 2) Post existiert + Autor ermitteln
       const post = await ctx.prisma.post.findUnique({
@@ -661,6 +663,8 @@ const resolvers = {
           where: { id: postId },
           data: { commentCount: { increment: 1 } },
         });
+
+        await captureCommunityInteraction(tx, userId, postId);
 
         // Keine Notification, wenn Self-Comment
         if (post.authorId !== userId) {
@@ -802,6 +806,17 @@ const resolvers = {
         }
 
         if (communityChanged) {
+          // A private post must not become public by removing its community.
+          const privateContext = await tx.postContext.findFirst({
+            where: { postId: p.id, context: { key: { startsWith: "group:" },
+              OR: [{ groupLinkId: null }, { groupLink: { visibility: "PRIVATE" } }],
+            } },
+            select: { context: { select: { groupLinkId: true, key: true } } },
+          });
+          if (privateContext) {
+            const existingGroupId = privateContext.context.groupLinkId ?? privateContext.context.key.slice(6);
+            if (input.groupLinkId !== existingGroupId) throw new Error("PRIVATE_COMMUNITY_POST_CANNOT_MOVE");
+          }
           await clearGroupContextFromPost(tx as any, p.id);
           const nextGroupLinkId = input.groupLinkId ? String(input.groupLinkId) : null;
           if (nextGroupLinkId) {
@@ -1374,6 +1389,7 @@ const resolvers = {
       await tx.like.create({
         data: { userId: ctx.profileId!, postId },
       });
+      await captureCommunityInteraction(tx, ctx.profileId!, postId);
 
       // Lift contexts from the post itself
       await applyLikeContextLift(tx as any, ctx.profileId!, postId, +1);
@@ -1760,7 +1776,7 @@ const resolvers = {
 
       const group = await ctx.prisma.groupLink.findUnique({
         where: { id: groupId },
-        select: { id: true, title: true, type: true, slug: true },
+        select: { id: true, title: true, type: true, slug: true, visibility: true },
       });
       if (!group) return null;
 
@@ -1768,6 +1784,7 @@ const resolvers = {
         groupId: group.id,
         title: group.title,
         type: group.type,
+        visibility: group.visibility,
         slug: group.slug,
       };
     },

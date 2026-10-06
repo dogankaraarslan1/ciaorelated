@@ -1,3 +1,4 @@
+import { visiblePostWhere, canViewPost } from "../lib/postVisibility";
 // apps/server/src/resolvers/storyResolvers.ts
 import type { Ctx } from "../context";
 import crypto from "node:crypto";
@@ -267,7 +268,7 @@ async function filterStoriesWithDeletedSharedPosts(ctx: Ctx, stories: any[]) {
 
   // existierende posts laden
   const existing = await ctx.prisma.post.findMany({
-    where: { id: { in: Array.from(ids) } },
+    where: { AND: [visiblePostWhere(ctx), { id: { in: Array.from(ids) } }] },
     select: { id: true },
   });
 
@@ -337,10 +338,16 @@ async function isMentionedInStory(ctx: Ctx, storyId: string, profileId: string):
 
 async function canViewStoryRecord(
   ctx: Ctx,
-  story: { id: string; authorId: string; isCloseFriends?: boolean | null }
+  story: { id: string; authorId: string; isCloseFriends?: boolean | null; editJson?: string | null }
 ): Promise<boolean> {
   const me = ctx.profileId ?? null;
   if (!me) return false;
+
+  const source = story.editJson === undefined
+    ? await ctx.prisma.story.findUnique({ where: { id: story.id }, select: { editJson: true } })
+    : story;
+  const sharedPostId = extractSharedPostId(source?.editJson);
+  if (sharedPostId && !(await canViewPost(ctx, sharedPostId))) return false;
 
   const { blockedByMe, blockedMe } = await getBlockedSets(ctx);
   if (blockedByMe.has(story.authorId) || blockedMe.has(story.authorId)) return false;
@@ -674,6 +681,8 @@ const storyResolvers = {
 
     createStory: async (_: unknown, { input }: { input: CreateStoryInput }, ctx: Ctx) => {
       if (!ctx.profileId) throw new Error("Not authenticated");
+      const sharedPostId = extractSharedPostId(input.editJson);
+      if (sharedPostId && !(await canViewPost(ctx, sharedPostId))) throw new Error("Forbidden");
       await requireVerifiedEmail(ctx);
       await ensureTermsAccepted(ctx);
       await assertNotBanned(ctx);
@@ -1060,15 +1069,10 @@ const storyResolvers = {
    */
   Story: {
     mediaUrl: async (s: any, _: unknown, ctx: Ctx) => {
+      const ok = await canViewStoryRecord(ctx, s);
+      if (!ok) return null;
       if (s.mediaUrl) return s.mediaUrl;
       if (!s.mediaKey) return null;
-
-      const ok = await canViewStoryRecord(ctx, {
-        id: s.id,
-        authorId: s.authorId,
-        isCloseFriends: s.isCloseFriends,
-      });
-      if (!ok) return null;
 
       try {
         return await getSignedGetUrl(s.mediaKey);
@@ -1079,19 +1083,14 @@ const storyResolvers = {
 
 
     thumbUrl: async (s: any, _: unknown, ctx: Ctx) => {
+      const ok = await canViewStoryRecord(ctx, s);
+      if (!ok) return null;
       if (s.thumbUrl) return s.thumbUrl;
       if (!s.thumbKey) {
         // nur für video fallback (sonst bei images lieber null lassen)
         if (typeof s.mime === "string" && s.mime.startsWith("video/")) return PLACEHOLDER;
         return null;
       }
-
-      const ok = await canViewStoryRecord(ctx, {
-        id: s.id,
-        authorId: s.authorId,
-        isCloseFriends: s.isCloseFriends,
-      });
-      if (!ok) return null;
 
       try {
         return await getSignedGetUrl(s.thumbKey);

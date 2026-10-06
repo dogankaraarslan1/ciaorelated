@@ -1,3 +1,5 @@
+import { visiblePostWhere, visiblePostSql } from "../lib/postVisibility";
+import { Prisma } from "@prisma/client";
 // apps/server/src/resolvers/contextResolvers.ts
 import type { Ctx } from "../context";
 import { UserInputError } from "apollo-server-errors";
@@ -137,7 +139,7 @@ export default {
             WHERE
               (author."bannedUntil" IS NULL OR author."bannedUntil" < NOW())
               AND (${hiddenAuthorIds.length} = 0 OR NOT (post."authorId" = ANY(${hiddenAuthorIds}::text[])))
-              AND (author."isPrivate" = false OR post."authorId" = ${ctx.profileId} OR post."authorId" = ANY(${followingIds}::text[]))
+              AND ${visiblePostSql(ctx, Prisma.sql`post.id`)}
 
             UNION ALL
 
@@ -232,7 +234,7 @@ export default {
               )
               AND (author."bannedUntil" IS NULL OR author."bannedUntil" < NOW())
               AND (${hiddenAuthorIds.length} = 0 OR NOT (post."authorId" = ANY(${hiddenAuthorIds}::text[])))
-              AND (author."isPrivate" = false OR post."authorId" = ${ctx.profileId} OR post."authorId" = ANY(${followingIds}::text[]))
+              AND ${visiblePostSql(ctx, Prisma.sql`post.id`)}
 
             UNION ALL
 
@@ -265,7 +267,7 @@ export default {
               AND post."createdAt" >= ${seedSince}
               AND (author."bannedUntil" IS NULL OR author."bannedUntil" < NOW())
               AND (${hiddenAuthorIds.length} = 0 OR NOT (post."authorId" = ANY(${hiddenAuthorIds}::text[])))
-              AND (author."isPrivate" = false OR post."authorId" = ${ctx.profileId} OR post."authorId" = ANY(${followingIds}::text[]))
+              AND ${visiblePostSql(ctx, Prisma.sql`post.id`)}
 
           ),
           context_like_stats AS (
@@ -641,7 +643,7 @@ export default {
 
             AND (a."bannedUntil" IS NULL OR a."bannedUntil" < NOW())
             AND (${hiddenAuthorIds.length} = 0 OR NOT (p."authorId" = ANY(${hiddenAuthorIds}::text[])))
-            AND (a."isPrivate" = false OR p."authorId" = ${me} OR p."authorId" = ANY(${followingIds}::text[]))
+            AND ${visiblePostSql(ctx, Prisma.sql`p.id`)}
         )
         SELECT "postId"
         FROM ranked_city_posts
@@ -674,7 +676,7 @@ export default {
 
             AND (a."bannedUntil" IS NULL OR a."bannedUntil" < NOW())
             AND (${hiddenAuthorIds.length} = 0 OR NOT (p."authorId" = ANY(${hiddenAuthorIds}::text[])))
-            AND (a."isPrivate" = false OR p."authorId" = ${me} OR p."authorId" = ANY(${followingIds}::text[]))
+            AND ${visiblePostSql(ctx, Prisma.sql`p.id`)}
 
         ORDER BY
             (
@@ -696,7 +698,7 @@ export default {
 
         // Prisma: Reihenfolge beibehalten
         const posts = await ctx.prisma.post.findMany({
-        where: { id: { in: ids } },
+        where: { AND: [visiblePostWhere(ctx), { id: { in: ids } }] },
         include: {
             author: true,
             media: true,

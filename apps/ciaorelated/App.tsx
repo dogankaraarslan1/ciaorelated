@@ -33,6 +33,7 @@ import { DefaultTheme as NavDefaultTheme } from "@react-navigation/native";
 
 import GroupsScreen from "./src/screens/GroupsScreen";
 import CommunitySpaceScreen from "./src/screens/CommunitySpaceScreen";
+import CommunityInfluenceScreen from "./src/screens/CommunityInfluenceScreen";
 import FeedScreen from "./src/screens/FeedScreen";
 import ExploreScreen from "./src/screens/ExploreScreen";
 import ReelsScreen from "./src/screens/ReelsScreen";
@@ -431,6 +432,7 @@ export type RootStackParamList = {
   Register: { asAddAccount?: boolean };
   Groups: undefined;
   CommunitySpace: { id: string; title?: string; slug?: string; type?: string };
+  CommunityInfluence: undefined;
 
   VlogDetail: { id: string; slug?: string; highlightPostId?: string; fromPush?: boolean; fromActivity?: boolean };
   Notifications: undefined;
@@ -1310,6 +1312,7 @@ function ThemedRootNavigator({
         <Root.Screen name="Gate" component={Gate} />
         <Root.Screen name="Groups" component={GroupsScreen} options={{ headerShown: false }} />
         <Root.Screen name="CommunitySpace" component={CommunitySpaceScreen} options={{ headerShown: false }} />
+        <Root.Screen name="CommunityInfluence" component={CommunityInfluenceScreen} options={{ headerShown: false }} />
 
 
         <Root.Screen

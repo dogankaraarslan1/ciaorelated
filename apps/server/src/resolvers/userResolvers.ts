@@ -1,3 +1,4 @@
+import { visiblePostWhere } from "../lib/postVisibility";
 // apps/server/src/resolvers/userResolvers.ts
 import type { Ctx } from "../context";
 import { getSignedPutUrl, getSignedGetUrl, deleteObjects, s3ObjectExists } from "../s3";
@@ -588,7 +589,7 @@ const resolvers = {
       }
 
       return ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           authorId: parent.id,
           // (Optional zusätzlicher Schutz – falls jemand Fremdposts hier einschleust)
           ...(me
@@ -598,7 +599,7 @@ const resolvers = {
                 return {};
               })()
             : {}),
-        },
+        }] },
         include: { author: true },
       });
     },
@@ -607,7 +608,9 @@ const resolvers = {
     // user.resolvers.ts
     postCount: async (user: any, _: any, ctx: Ctx) => {
       const ok = await canViewProfileContent(ctx, user.id);
-      if (!ok) return 0;
+      if (!ok) return ctx.prisma.post.count({
+        where: { AND: [visiblePostWhere(ctx), { authorId: user.id, hideFromGrid: false }] },
+      });
 
       const targetId = user.id;          // Profil, dessen Count wir berechnen
       const viewerId = ctx.profileId ?? null; // aktueller eingeloggter User
@@ -620,18 +623,18 @@ const resolvers = {
 
       // A) eigene normale Posts (nicht im Vlog)
       const ownNormal = await ctx.prisma.post.count({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           authorId: targetId,
           tagsVlogs: { none: {} },
-        },
+        }] },
       });
 
       // B) Posts anderer, in denen target getaggt ist (sonst doppelt)
       const taggedInOthers = await ctx.prisma.post.count({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           authorId: { not: targetId },
           tags: { some: { userId: targetId, status: "ACCEPTED" } },
-        },
+        }] },
       });
       return ownNormal + taggedInOthers;
     },
@@ -645,13 +648,13 @@ const resolvers = {
       if (!ok) return 0;
 
       return ctx.prisma.post.count({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           authorId: user.id,
           OR: [
             { kind: "REEL" as any },
             { tagsVlogs: { some: { status: "ACCEPTED" } } },
           ],
-        },
+        }] },
       });
     },
 
@@ -692,7 +695,7 @@ const resolvers = {
 
       // Kandidaten + OWNER-CHECK (owner = user.id)
       const posts = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           tags: { some: { userId: user.id, status: "ACCEPTED" } },
           AND: [
             {
@@ -708,7 +711,7 @@ const resolvers = {
               ],
             },
           ],
-        },
+        }] },
         orderBy: { createdAt: "desc" },
         skip: args.offset ?? 0,
         take: args.limit ?? 12,

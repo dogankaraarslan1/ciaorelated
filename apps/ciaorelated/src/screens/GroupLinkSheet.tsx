@@ -12,7 +12,8 @@ import {
   ScrollView,
   Alert,
   Modal,
-  Pressable
+  Pressable,
+  Switch,
 } from "react-native";
 import { useMutation } from "@apollo/client";
 import { Ionicons } from "@expo/vector-icons";
@@ -25,12 +26,13 @@ import { gql } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 
 export const CREATE_GROUP_LINK = gql`
-  mutation CreateGroupLink($title: String!, $type: GroupLinkType!) {
-    createGroupLink(title: $title, type: $type) {
+  mutation CreateGroupLink($title: String!, $type: GroupLinkType!, $visibility: GroupLinkVisibility!) {
+    createGroupLink(title: $title, type: $type, visibility: $visibility) {
       id
       slug
       title
       type
+      visibility
     }
   }
 `;
@@ -47,6 +49,7 @@ const JOIN_GROUP = gql`
 const TYPES = [
   { key: "COMMUNITY" },
   { key: "EVENT" },
+  { key: "DROP" },
   { key: "UNI" },
   { key: "BUSINESS" },
   { key: "FAMILY" },
@@ -54,6 +57,8 @@ const TYPES = [
 
 function iconForType(type: string) {
   switch (type) {
+    case "DROP":
+      return "shirt-outline";
     case "EVENT":
       return "flash";
     case "COMMUNITY":
@@ -80,7 +85,8 @@ export default function GroupLinkSheet({
   const { t } = useTranslation();
 
   const [title, setTitle] = useState("");
-  const [type, setType] = useState<"FAMILY" | "UNI" | "BUSINESS" | "EVENT"| "COMMUNITY">("COMMUNITY");
+  const [type, setType] = useState<(typeof TYPES)[number]["key"]>("COMMUNITY");
+  const [isPublic, setIsPublic] = useState(false);
   const [createdLink, setCreatedLink] = useState<string | null>(null);
 
   const { theme } = useTheme();
@@ -113,6 +119,7 @@ export default function GroupLinkSheet({
       variables: {
         title: title || t("grouplinksheet.invitationLinkFallbackTitle"),
         type,
+        visibility: isPublic ? "PUBLIC" : "PRIVATE",
       },
     });
 
@@ -149,7 +156,7 @@ export default function GroupLinkSheet({
           <View pointerEvents="none" style={[styles.keyboardFill, { height: keyboardHeight }]} />
         ) : null}
 
-        <View style={[styles.sheetScroll, styles.sheet]}>
+        <ScrollView style={styles.sheetScroll} contentContainerStyle={styles.sheet} keyboardShouldPersistTaps="handled">
           <View style={styles.handle} />
           <View style={styles.header}>
             <View style={{ flex: 1 }}>
@@ -197,6 +204,7 @@ export default function GroupLinkSheet({
               </ScrollView>
 
               <TextInput
+                maxLength={80}
                 placeholder={t("grouplinksheet.titleEGUniversityComputerScience2026")}
                 value={title}
                 onChangeText={setTitle}
@@ -204,6 +212,16 @@ export default function GroupLinkSheet({
                 placeholderTextColor={C.subtext}
                 returnKeyType="done"
               />
+
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 12, marginBottom: 8 }}>
+                <Ionicons name={isPublic ? "globe-outline" : "lock-closed-outline"} size={20} color={C.text} />
+                <Text style={{ flex: 1, color: C.text, fontWeight: "600" }}>{t("communityprivacy.public")}</Text>
+                <Switch value={isPublic} onValueChange={setIsPublic} disabled={loading} accessibilityLabel={t("communityprivacy.public")} />
+              </View>
+              <Text style={{ color: C.subtext, fontSize: 13, lineHeight: 18, marginBottom: 14 }}>
+                {t(isPublic ? "communityprivacy.publicDescription" : "communityprivacy.privateDescription")}
+                {" "}{t("communityprivacy.fixed")}
+              </Text>
 
               <TouchableOpacity
                 style={styles.primaryButton}
@@ -243,7 +261,7 @@ export default function GroupLinkSheet({
               </View>
             </>
           )}
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );

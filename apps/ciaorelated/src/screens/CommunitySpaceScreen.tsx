@@ -50,12 +50,20 @@ const QRCode = require("qrcode/lib/core/qrcode") as {
   };
 };
 
+const JOIN_COMMUNITY = gql`
+  mutation JoinCommunitySpace($slug: String!) {
+    joinGroupLink(slug: $slug) { id title }
+  }
+`;
+
 const COMMUNITY_SPACE = gql`
   query CommunitySpace($id: ID!, $offset: Int = 0, $limit: Int = 30) {
     groupLink(id: $id) {
       id
       title
       type
+      visibility
+      isNetworkCommunity
       slug
       imageUrl
       imageThumbUrl
@@ -231,6 +239,7 @@ export default function CommunitySpaceScreen() {
     fetchPolicy: "network-only",
   });
   const [setCommunityChatKind, { loading: chatModeSaving }] = useMutation(SET_COMMUNITY_CHAT_KIND);
+  const [joinCommunity, { loading: joining }] = useMutation(JOIN_COMMUNITY);
   const [updateGroupLink, { loading: groupSaving }] = useMutation(UPDATE_GROUP_LINK);
   const [getSignedGroupImageUpload] = useMutation(GET_SIGNED_GROUP_IMAGE_UPLOAD);
   const [removeGroupLinkMember, { loading: memberRemoving }] = useMutation(REMOVE_GROUP_LINK_MEMBER);
@@ -259,8 +268,10 @@ export default function CommunitySpaceScreen() {
   const groupAvatarThumb = group?.imageThumbUrl ?? group?.owner?.avatarThumbUrl ?? null;
   const groupAvatarFull = group?.imageUrl ?? group?.owner?.avatarUrl ?? null;
   const communityThread = threadData?.communityThread;
-  const isChatDisabled = communityThread?.kind === "DISABLED";
+  const isNetworkCommunity = group?.isNetworkCommunity === true;
+  const isChatDisabled = isNetworkCommunity || communityThread?.kind === "DISABLED";
   const isOwner = Boolean(group?.viewerIsOwner);
+  const isMember = isOwner || Boolean(group?.viewerIsMember);
   const qrShareRef = useRef<View>(null);
   const [qrSharing, setQrSharing] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
@@ -281,6 +292,7 @@ export default function CommunitySpaceScreen() {
   };
 
   const openCommunityChat = async () => {
+    if (!isMember || isNetworkCommunity) return;
     try {
       const result = communityThread
         ? { data: { communityThread } }
@@ -433,8 +445,9 @@ export default function CommunitySpaceScreen() {
   };
 
   const openCommunitySettings = async () => {
+    if (!isMember) return;
     setSettingsOpen(true);
-    if (!communityThread && groupId) {
+    if (!isNetworkCommunity && !communityThread && groupId) {
       try {
         await loadCommunityThread({ variables: { groupId: String(group?.id ?? groupId) } });
       } catch {}
@@ -463,6 +476,16 @@ export default function CommunitySpaceScreen() {
     );
   };
 
+  const join = async () => {
+    if (!group?.slug || joining) return;
+    try {
+      await joinCommunity({ variables: { slug: group.slug } });
+      await refetch();
+    } catch (e: any) {
+      Alert.alert(t("common.error"), e?.message ?? t("communityprivacy.joinFailed"));
+    }
+  };
+
   const Header = (
     <View>
       <View style={s.hero}>
@@ -473,8 +496,8 @@ export default function CommunitySpaceScreen() {
         <View style={s.heroShade} />
         <View style={s.heroContent}>
           <View style={s.pill}>
-            <Ionicons name={isEvent ? "flash" : "people"} size={14} color="#fff" />
-            <Text style={s.pillText}>{isEvent ? t("communityspace.festivalFeed") : t("communityspace.communityLiveFeed")}</Text>
+            <Ionicons name={isEvent ? "flash" : group?.type === "DROP" ? "shirt-outline" : "people"} size={14} color="#fff" />
+            <Text style={s.pillText}>{isEvent ? t("communityspace.festivalFeed") : group?.type === "DROP" ? "Drop" : t("communityspace.communityLiveFeed")}</Text>
           </View>
           <View style={s.titleRow}>
             <AvatarImage
@@ -507,7 +530,7 @@ export default function CommunitySpaceScreen() {
           <View style={s.metaRow}>
             <Text style={s.meta}>{t("communityspace.peopleHere", { count: group?.memberCount ?? 0 })}</Text>
             <Text style={s.metaDot}>•</Text>
-            <Text style={s.meta}>{t("communityspace.joinWithLink")}</Text>
+            <Text style={s.meta}>{t(group?.visibility === "PUBLIC" ? "communityprivacy.public" : "communityprivacy.private")}</Text>
           </View>
         </View>
       </View>
@@ -515,13 +538,14 @@ export default function CommunitySpaceScreen() {
       <View style={s.actions}>
         <TouchableOpacity
           style={s.primaryAction}
-          onPress={() => nav.navigate("CreateMedia", { initialMode: "POST" })}
+          onPress={isMember ? () => nav.navigate("CreateMedia", { initialMode: "POST" }) : join}
+          disabled={joining || (!isMember && !group?.slug)}
           activeOpacity={0.9}
         >
-          <Ionicons name="camera-outline" size={18} color={C.bg} />
-          <Text style={s.primaryActionText}>{t("communityspace.createEventMoment")}</Text>
+          <Ionicons name={isMember ? "camera-outline" : "person-add-outline"} size={18} color={C.bg} />
+          <Text style={s.primaryActionText}>{t(isMember ? "communityspace.createEventMoment" : joining ? "communityprivacy.joining" : "communityprivacy.join")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
+        {isMember ? <TouchableOpacity
           style={s.secondaryAction}
           onPress={openCommunitySettings}
           activeOpacity={0.9}
@@ -533,7 +557,7 @@ export default function CommunitySpaceScreen() {
           ) : (
             <Ionicons name="settings-outline" size={18} color={C.text} />
           )}
-        </TouchableOpacity>
+        </TouchableOpacity> : null}
       </View>
 
       <View style={s.peopleSection}>
@@ -717,23 +741,25 @@ export default function CommunitySpaceScreen() {
 
           <ScrollView contentContainerStyle={s.settingsBody}>
             <View style={s.settingsCard}>
-              <TouchableOpacity
-                style={[s.settingsRow, isChatDisabled && { opacity: 0.55 }]}
-                onPress={openCommunityChat}
-                activeOpacity={0.78}
-                disabled={isChatDisabled}
-              >
-                <Ionicons name="chatbubbles-outline" size={22} color={C.text} />
-                <View style={s.settingsRowText}>
-                  <Text style={s.settingsRowTitle}>
-                    {isChatDisabled ? t("communityspace.chatDisabledTitle") : t("communityspace.openChat")}
-                  </Text>
-                  <Text style={s.settingsRowSub}>
-                    {isChatDisabled ? t("communityspace.chatDisabledBody") : t("communityspace.chatModeBody")}
-                  </Text>
-                </View>
-                {!isChatDisabled ? <Ionicons name="chevron-forward" size={18} color={C.subtext} /> : null}
-              </TouchableOpacity>
+              {!isNetworkCommunity ? (
+                <TouchableOpacity
+                  style={[s.settingsRow, isChatDisabled && { opacity: 0.55 }]}
+                  onPress={openCommunityChat}
+                  activeOpacity={0.78}
+                  disabled={isChatDisabled}
+                >
+                  <Ionicons name="chatbubbles-outline" size={22} color={C.text} />
+                  <View style={s.settingsRowText}>
+                    <Text style={s.settingsRowTitle}>
+                      {isChatDisabled ? t("communityspace.chatDisabledTitle") : t("communityspace.openChat")}
+                    </Text>
+                    <Text style={s.settingsRowSub}>
+                      {isChatDisabled ? t("communityspace.chatDisabledBody") : t("communityspace.chatModeBody")}
+                    </Text>
+                  </View>
+                  {!isChatDisabled ? <Ionicons name="chevron-forward" size={18} color={C.subtext} /> : null}
+                </TouchableOpacity>
+              ) : null}
 
               {isOwner ? (
                 <TouchableOpacity style={s.settingsRow} onPress={openCommunityEdit} activeOpacity={0.78}>
@@ -773,7 +799,7 @@ export default function CommunitySpaceScreen() {
                 {qrSharing ? <ActivityIndicator size="small" color={C.text} /> : <Ionicons name="chevron-forward" size={18} color={C.subtext} />}
               </TouchableOpacity>
 
-              {isOwner ? (
+              {isOwner && !isNetworkCommunity ? (
                 <TouchableOpacity
                   style={s.settingsRow}
                   onPress={() => setChatDisabledMode(!isChatDisabled)}

@@ -1,3 +1,4 @@
+import { visiblePostWhere } from "../lib/postVisibility";
 // apps/server/src/resolvers/shareResolvers.ts
 import type { Ctx } from "../context";
 import { notify } from "../lib/notify";
@@ -201,19 +202,15 @@ export default {
   // Zielprofil-Privacy: wenn privat und viewer nicht follower -> []
   // ─────────────────────────────────────────────────────────────
   const canSeeTarget = await canViewProfileContent(ctx, userId);
-  if (!canSeeTarget) return [];
-
-  // ─────────────────────────────────────────────────────────────
-  // helper: cached check ob viewer author sehen darf
-  // ─────────────────────────────────────────────────────────────
-  const canViewAuthorCache = new Map<string, boolean>();
-  const canViewAuthor = async (authorId: string) => {
-    const hit = canViewAuthorCache.get(authorId);
-    if (hit !== undefined) return hit;
-    const ok = await canViewProfileContent(ctx, authorId);
-    canViewAuthorCache.set(authorId, ok);
-    return ok;
-  };
+  if (!canSeeTarget) {
+    // Only the target's own readable community posts, never their private tags.
+    if (tab !== "posts") return [];
+    return ctx.prisma.post.findMany({
+      where: { AND: [visiblePostWhere(ctx), { authorId: userId, hideFromGrid: false }] },
+      orderBy: { createdAt: "desc" }, skip: offset, take: limit,
+      include: { author: true },
+    });
+  }
 
   // ─────────────────────────────────────────────────────────────
   // POSTS TAB (own + sharedVisible)
@@ -224,7 +221,7 @@ export default {
     const fetchN = offset + limit;
 
     const own = await ctx.prisma.post.findMany({
-      where: { authorId: userId, hideFromGrid: false },
+      where: { AND: [visiblePostWhere(ctx), { authorId: userId, hideFromGrid: false }] },
       orderBy: { createdAt: "desc" },
       take: fetchN,
       include: {
@@ -236,7 +233,7 @@ export default {
     // in profileGrid -> if (tab === "posts") { ... }
 
     const sharedVisible = await ctx.prisma.post.findMany({
-      where: {
+      where: { AND: [visiblePostWhere(ctx), {
         tags: {
           some: {
             userId,               // Profilbesitzer
@@ -262,7 +259,7 @@ export default {
             },
           },
         ],
-      },
+      }] },
 
       orderBy: { createdAt: "desc" },
       skip: 0,
@@ -295,7 +292,7 @@ export default {
       // wenn autor geblockt/blocked: raus (zusätzlicher safety-gurt)
       if (me && (blockedByMe.has(authorId) || blockedMe.has(authorId))) continue;
 
-      if (await canViewAuthor(authorId)) filtered.push(p);
+      filtered.push(p); // Audience already checked before pagination.
     }
 
     return filtered.slice(offset, offset + limit);
@@ -307,7 +304,7 @@ export default {
   if (tab === "tagged") {
     // wir holen bis offset+limit und paginieren nach dem filter
     const tagged = await ctx.prisma.post.findMany({
-      where: {
+      where: { AND: [visiblePostWhere(ctx), {
         tags: { some: { userId, status: "ACCEPTED" } },
 
         OR: [
@@ -315,7 +312,7 @@ export default {
           { authorId: userId },
           { author: { followers: { some: { followerId: userId } } } },
         ],
-      },
+      }] },
       orderBy: { createdAt: "desc" },
       skip: 0,
       take: offset + limit,
@@ -333,7 +330,7 @@ export default {
 
       if (me && (blockedByMe.has(authorId) || blockedMe.has(authorId))) continue;
 
-      if (await canViewAuthor(authorId)) filtered.push(p);
+      filtered.push(p);
     }
 
     return filtered.slice(offset, offset + limit);
@@ -348,7 +345,7 @@ export default {
     // hideFromGrid soll nur das Haupt-Profilgrid beeinflussen. Im Community-Tab
     // bleiben Community-Posts erreichbar, damit sie wieder hinzugefügt werden können.
     const rows = await ctx.prisma.post.findMany({
-      where: {
+      where: { AND: [visiblePostWhere(ctx), {
         authorId: userId,
         postContexts: {
           some: {
@@ -358,7 +355,7 @@ export default {
             },
           },
         },
-      },
+      }] },
       orderBy: { createdAt: "desc" },
       skip: offset,
       take: limit,
@@ -376,7 +373,7 @@ export default {
   // fallback: own posts
   // ─────────────────────────────────────────────────────────────
   return ctx.prisma.post.findMany({
-    where: { authorId: userId, hideFromGrid: false },
+    where: { AND: [visiblePostWhere(ctx), { authorId: userId, hideFromGrid: false }] },
     orderBy: { createdAt: "desc" },
     skip: offset,
     take: limit,

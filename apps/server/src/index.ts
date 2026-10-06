@@ -7,6 +7,7 @@ import cors from "cors";
 import { ApolloServer } from "@apollo/server";
 import { expressMiddleware } from "@apollo/server/express4";
 import { makeExecutableSchema } from "@graphql-tools/schema";
+import { protectPostResults } from "./graphql/post-visibility";
 import { ApolloServerPluginDrainHttpServer } from "@apollo/server/plugin/drainHttpServer";
 
 import { Server as WebSocketServer } from "ws";
@@ -19,6 +20,7 @@ import { createContext, prisma } from "./context";
 import { runVideoWorkerLoop } from "./workers/videoRenderWorker";
 import cron from "node-cron";
 import { runDailyDigest } from "./jobs/dailyDigest";
+import { runCommunityInfluence } from "./jobs/communityInfluence";
 import { runImageWorkerLoop } from "./workers/imageThumbWorker";
 import { runStoryWorkerLoop } from "./workers/storyThumbWorker";
 import { runAvatarWorkerLoop } from "./workers/avatarThumbWorker";
@@ -70,7 +72,7 @@ const corsOptions = {
 };
 
 async function start() {
-  const schema = makeExecutableSchema({ typeDefs, resolvers });
+  const schema = protectPostResults(makeExecutableSchema({ typeDefs, resolvers }));
 
   const app = express();
   const httpServer = http.createServer(app);
@@ -220,6 +222,20 @@ async function start() {
       runVlogCoverWorkerLoop().catch((e) => {
         console.error("[vlog-cover-worker] crashed", e);
       });
+    }
+
+    if (process.env.ENABLE_COMMUNITY_INFLUENCE_WORKER === "true") {
+      let influenceRunning = false;
+      cron.schedule("10 * * * *", async () => {
+        if (influenceRunning) return;
+        influenceRunning = true;
+        try {
+          const result = await runCommunityInfluence(prisma, { apply: true });
+          if (result.errors.length) console.error("[community-influence] retry next run", result);
+          else if (result.days) console.log("[community-influence] settled", result);
+        } catch (error) { console.error("[community-influence] failed; retry next run", error); }
+        finally { influenceRunning = false; }
+      }, { timezone: "UTC" });
     }
 
     if (process.env.ENABLE_DAILY_DIGEST === "true") {

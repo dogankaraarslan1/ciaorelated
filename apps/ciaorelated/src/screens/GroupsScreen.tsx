@@ -20,6 +20,7 @@ const MY_GROUP_LINKS = gql`
         id
         title
         type
+        visibility
         slug
         createdAt
         memberCount
@@ -39,6 +40,8 @@ const LEAVE_GROUP = gql`
 
 function iconForType(type: string) {
   switch (type) {
+    case "DROP":
+      return "shirt-outline";
     case "EVENT":
       return "flash";
     case "COMMUNITY":
@@ -180,6 +183,8 @@ export default function GroupsScreen() {
                       </View>
                       <Text style={s.cardTitle} numberOfLines={1}>{g.title ?? t("groups.groupFallback")}</Text>
                       <Text style={s.cardSub} numberOfLines={1}>
+                        <Ionicons name={g.visibility === "PUBLIC" ? "globe-outline" : "lock-closed-outline"} size={12} color={C.subtext} />
+                        {" "}{t(g.visibility === "PUBLIC" ? "communityprivacy.public" : "communityprivacy.private")}{" · "}
                         {t("communityspace.peopleHere", { count: g.memberCount ?? 0 })}
                       </Text>
                     </View>

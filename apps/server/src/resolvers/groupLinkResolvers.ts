@@ -4,8 +4,10 @@ import { getSignedGetUrl, getSignedPutUrl } from "../s3";
 import { getBlockedSets } from "../lib/blocks";
 import { ensureCommunityThread, removeCommunityThreadMember } from "../chat/service";
 import { assertNoProfanity } from "../graphql/profanity-guard";
+import { visiblePostWhere } from "../lib/postVisibility";
+import { candidateInfluenceUnits, diversifyInfluencedFeed, influenceCandidateCount, influenceRankingPolicy, rankInfluencedPosts } from "../lib/communityInfluenceRanking";
 
-import { GroupLinkType } from "@prisma/client";
+import { GroupLinkType, GroupLinkVisibility } from "@prisma/client";
 const GROUP_IMAGE_MAX_BYTES = Number(process.env.MAX_GROUP_IMAGE_BYTES ?? 5 * 1024 * 1024);
 
 function makeCode() {
@@ -20,25 +22,12 @@ function groupContextKey(groupId: string) {
   return `group:${groupId}`;
 }
 
-function canViewAuthorWhere(now: Date, followingIds: string[] = []) {
-  return {
-    AND: [
-      { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-      {
-        OR: [
-          { isPrivate: false },
-          ...(followingIds.length ? [{ id: { in: followingIds } }] : []),
-        ],
-      },
-    ],
-  };
-}
-
-async function assertCanViewGroup(ctx: Ctx, groupId: string) {
+async function assertCanViewGroup(ctx: Ctx, groupId: string, membersOnly = false) {
   if (!ctx.profileId) throw new Error("Not authenticated");
 
   const group = await ctx.prisma.groupLink.findUnique({ where: { id: groupId } });
   if (!group || !group.isActive) throw new Error("Group not found");
+  if (!membersOnly && group.visibility === "PUBLIC") return group;
   if (group.ownerId === ctx.profileId) return group;
 
   const membership = await ctx.prisma.groupLinkMember.findUnique({
@@ -99,7 +88,7 @@ export default {
       if (!context) return [];
 
       const rows = await ctx.prisma.postContext.findMany({
-        where: { contextId: context.id },
+        where: { contextId: context.id, post: visiblePostWhere(ctx) },
         orderBy: { post: { createdAt: "desc" } },
         skip: Math.max(0, offset),
         take: Math.min(50, Math.max(1, limit)),
@@ -134,7 +123,7 @@ export default {
     },
 
     communityThread: async (_: any, { groupId }: { groupId: string }, ctx: Ctx) => {
-      await assertCanViewGroup(ctx, groupId);
+      await assertCanViewGroup(ctx, groupId, true);
       return ensureCommunityThread(ctx.prisma as any, groupId);
     },
 
@@ -142,15 +131,16 @@ export default {
       if (!ctx.profileId) throw new Error("Not authenticated");
 
       const me = ctx.profileId;
-      const now = new Date();
       const safeOffset = Math.max(0, Number(offset) || 0);
       const safeLimit = Math.min(60, Math.max(1, Number(limit) || 20));
-      const need = safeOffset + safeLimit;
-      const take = Math.max(need + 30, safeLimit * 4);
+      const rankingNow = new Date();
+      const ranking = influenceRankingPolicy(rankingNow);
+      const need = ranking ? influenceCandidateCount(safeOffset + safeLimit) : safeOffset + safeLimit;
+      const take = ranking ? need : Math.max(need + 30, safeLimit * 4);
       const { blockedByMe, blockedMe } = await getBlockedSets(ctx);
       const hiddenAuthorIds = [...new Set([...blockedByMe, ...blockedMe])];
 
-      const [memberships, ownedGroups, following] = await Promise.all([
+      const [memberships, ownedGroups] = await Promise.all([
         ctx.prisma.groupLinkMember.findMany({
           where: { profileId: me, groupLink: { isActive: true } },
           select: { groupLinkId: true },
@@ -158,10 +148,6 @@ export default {
         ctx.prisma.groupLink.findMany({
           where: { ownerId: me, isActive: true },
           select: { id: true },
-        }),
-        ctx.prisma.follow.findMany({
-          where: { followerId: me },
-          select: { followingId: true },
         }),
       ]);
 
@@ -171,25 +157,26 @@ export default {
       ]));
       if (!groupIds.length) return [];
 
-      const followingIds = following.map((f) => f.followingId);
       const groupKeys = groupIds.map(groupContextKey);
 
       const reasonGroups = await ctx.prisma.groupLink.findMany({
         where: { id: { in: groupIds } },
-        select: { id: true, title: true, type: true, slug: true },
+        select: { id: true, title: true, type: true, slug: true, systemKey: true },
       });
       const reasonGroupById = new Map(reasonGroups.map((group) => [group.id, group]));
+      // Network membership alone is not a personal-content recommendation reason.
+      const memberMixGroupIds = reasonGroups.filter(group => group.systemKey === null).map(group => group.id);
 
       const [memberRows, groupOwners] = await Promise.all([
         ctx.prisma.groupLinkMember.findMany({
           where: {
-            groupLinkId: { in: groupIds },
+            groupLinkId: { in: memberMixGroupIds },
             profileId: { not: me },
           },
           select: { profileId: true, groupLinkId: true },
         }),
         ctx.prisma.groupLink.findMany({
-          where: { id: { in: groupIds }, ownerId: { not: me } },
+          where: { id: { in: memberMixGroupIds }, ownerId: { not: me } },
           select: { id: true, ownerId: true },
         }),
       ]);
@@ -232,14 +219,20 @@ export default {
         ...groupOwners.map((g) => g.ownerId),
       ]));
 
-      const explicitRows = await ctx.prisma.postContext.findMany({
+      const explicitRows = ranking ? (await ctx.prisma.post.findMany({
+        where: { kind: "POST", authorId: { notIn: hiddenAuthorIds }, AND: [visiblePostWhere(ctx)],
+          postContexts: { some: { source: "IMPORT", context: { key: { in: groupKeys } } } },
+        },
+        orderBy: [{ createdAt: "desc" }, { id: "desc" }], take,
+        include: { author: true, media: true },
+      })).map(post => ({ post })) : await ctx.prisma.postContext.findMany({
         where: {
           source: "IMPORT",
           context: { key: { in: groupKeys } },
           post: {
             kind: "POST",
             authorId: { notIn: hiddenAuthorIds },
-            author: canViewAuthorWhere(now, followingIds),
+            AND: [visiblePostWhere(ctx)],
           },
         },
         orderBy: { post: { createdAt: "desc" } },
@@ -251,21 +244,24 @@ export default {
         },
       });
 
-      const explicitPosts = explicitRows
+      let explicitPosts = explicitRows
         .map((row) => row.post)
         .filter(Boolean);
       const explicitIds = new Set(explicitPosts.map((p) => p.id));
 
-      const memberPosts = sharedAuthorIds.length
+      let memberPosts = sharedAuthorIds.length
         ? await ctx.prisma.post.findMany({
             where: {
               kind: "POST",
               id: { notIn: [...explicitIds] },
+              ...(ranking ? { NOT: { postContexts: { some: {
+                source: "IMPORT" as const, context: { key: { in: groupKeys } },
+              } } } } : {}),
               authorId: {
                 in: sharedAuthorIds,
                 notIn: [me, ...hiddenAuthorIds],
               },
-              author: canViewAuthorWhere(now, followingIds),
+              AND: [visiblePostWhere(ctx)],
             },
             orderBy: [{ createdAt: "desc" }, { id: "desc" }],
             take,
@@ -273,12 +269,18 @@ export default {
           })
         : [];
 
+      const influence = await candidateInfluenceUnits(ctx.prisma, [...explicitPosts, ...memberPosts], ranking, rankingNow);
+      if (ranking) {
+        explicitPosts = rankInfluencedPosts(explicitPosts, influence, ranking, rankingNow);
+        memberPosts = rankInfluencedPosts(memberPosts, influence, ranking, rankingNow);
+      }
+
       const combined: any[] = [];
       const seen = new Set<string>();
       let e = 0;
       let m = 0;
 
-      while (combined.length < need + 20 && (e < explicitPosts.length || m < memberPosts.length)) {
+      while (combined.length < (ranking ? need : need + 20) && (e < explicitPosts.length || m < memberPosts.length)) {
         for (let i = 0; i < 2 && e < explicitPosts.length; i++) {
           const post = explicitPosts[e++];
           if (post?.id && !seen.has(post.id)) {
@@ -310,12 +312,15 @@ export default {
         }
       }
 
-      return combined.slice(safeOffset, safeOffset + safeLimit);
+      const ranked = ranking ? diversifyInfluencedFeed(combined.slice(0, need), post => post.authorId) : combined;
+      return ranked.slice(safeOffset, safeOffset + safeLimit);
     },
 
   },
 
   GroupLink: {
+    isNetworkCommunity: (group: any) => group.systemKey === "BVRLY",
+
     imageUrl: async (group: any) => {
       const key = typeof group?.imageKey === "string" ? group.imageKey : "";
       if (!key) return null;
@@ -334,7 +339,7 @@ export default {
       ctx.prisma.profile.findUnique({ where: { id: group.ownerId } }),
 
     memberCount: (group: any, _args: any, ctx: Ctx) =>
-      ctx.prisma.groupLinkMember.count({ where: { groupLinkId: group.id } }),
+      group._count?.members ?? ctx.prisma.groupLinkMember.count({ where: { groupLinkId: group.id } }),
 
     viewerIsOwner: (group: any, _args: any, ctx: Ctx) =>
       !!ctx.profileId && group.ownerId === ctx.profileId,
@@ -342,6 +347,7 @@ export default {
     viewerIsMember: async (group: any, _args: any, ctx: Ctx) => {
       if (!ctx.profileId) return false;
       if (group.ownerId === ctx.profileId) return true;
+      if (typeof group.viewerIsMember === "boolean") return group.viewerIsMember;
       const membership = await ctx.prisma.groupLinkMember.findUnique({
         where: {
           groupLinkId_profileId: {
@@ -371,6 +377,7 @@ export default {
 
     updateGroupLink: async (_: any, { id, input }: { id: string; input: { title?: string | null; imageKey?: string | null } }, ctx: Ctx) => {
       await assertOwnsGroup(ctx, id);
+      if (Object.prototype.hasOwnProperty.call(input, "visibility")) throw new Error("COMMUNITY_VISIBILITY_IMMUTABLE");
 
       const data: any = {};
       if (Object.prototype.hasOwnProperty.call(input, "title")) {
@@ -415,8 +422,11 @@ export default {
       return true;
     },
 
-    createGroupLink: async (_: any, { title, type }: { title: string; type: GroupLinkType}, ctx: Ctx) => {
+    createGroupLink: async (_: any, { title, type, visibility = "PRIVATE" }: { title: string; type: GroupLinkType; visibility?: GroupLinkVisibility | null }, ctx: Ctx) => {
       if (!ctx.profileId) throw new Error("Not authenticated");
+      title = String(title).trim();
+      if (!title || title.length > 80) throw new Error("Invalid title");
+      assertNoProfanity({ title }, ["title"]);
       const slug = makeSlug();
 
       return ctx.prisma.groupLink.create({
@@ -424,6 +434,7 @@ export default {
           ownerId: ctx.profileId,
           title,
           type,
+          visibility: visibility ?? "PRIVATE",
           code: makeCode(),
           slug,
         },
@@ -491,25 +502,22 @@ export default {
           id: true,
           title: true,
           isActive: true,
+          systemKey: true,
         },
       });
 
       if (!link || !link.isActive) throw new Error("Invalid link");
 
       // 1) Mitgliedschaft anlegen
-      await ctx.prisma.groupLinkMember.upsert({
-        where: {
-          groupLinkId_profileId: {
-            groupLinkId: link.id,
-            profileId: me,
-          },
-        },
-        update: {},
-        create: {
+      await ctx.prisma.groupLinkMember.createMany({
+        data: [{
           groupLinkId: link.id,
           profileId: me,
-        },
+        }],
+        skipDuplicates: true,
       });
+
+      if (link.systemKey === "BVRLY") return { id: link.id, title: link.title, chatThread: null };
 
       // 2) Andere Mitglieder laden
       const others = await ctx.prisma.groupLinkMember.findMany({

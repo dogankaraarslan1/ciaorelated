@@ -581,6 +581,7 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
   const isPrivate = !!user?.isPrivate;
   const isFollowing = !!user?.isFollowing;
   const locked = !isMe && isPrivate && !isFollowing;
+  const gridLocked = locked && tab !== "posts";
   const sharedCommunities = useMemo(
     () => (!isMe && Array.isArray(user?.sharedCommunities) ? user.sharedCommunities : []),
     [isMe, user?.sharedCommunities]
@@ -615,7 +616,7 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
   /** ---------- Grid ---------- */
   const { data: gridQ, loading: gridLoading, fetchMore, refetch } = useQuery(PROFILE_GRID, {
     variables: { userId, tab: serverTab, offset: 0, limit: 100 },
-    skip: !userId|| locked,
+    skip: !userId || gridLocked,
     fetchPolicy: "cache-and-network",
     nextFetchPolicy: "cache-and-network",
   });
@@ -629,9 +630,9 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
 
   useFocusEffect(
     useCallback(() => {
-      if (!userId || locked) return;
+      if (!userId || gridLocked) return;
       refetch({ userId, tab: serverTab, offset: 0, limit: 100 });
-    }, [userId, locked, serverTab, refetch])
+    }, [userId, gridLocked, serverTab, refetch])
   );
 
  
@@ -726,8 +727,9 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
 
   /** ---------- DataForTab ---------- */
   const dataForTab = useMemo(() => {
-    if (locked) return [];
+    if (gridLocked) return [];
     if (tab === "posts") {
+      if (locked) return uniqById(base);
       if (isMe) return uniqById(base);
       return uniqById([...base, ...sharedVisibleForPosts]);
     }
@@ -742,7 +744,7 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
     }
 
     return uniqById(base);
-  }, [tab, isMe, base, sharedVisibleForPosts, taggedMineVisible, taggedForTabOther]);
+  }, [tab, isMe, locked, gridLocked, base, sharedVisibleForPosts, taggedMineVisible, taggedForTabOther]);
 
   const tilesForTab = useMemo(
     () =>
@@ -812,17 +814,17 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
 
   const onRefresh = useCallback(async () => {
-    if (!userId || locked) return;
+    if (!userId || gridLocked) return;
     setRefreshing(true);
     try {
       await Promise.all([
         refetch({ userId, tab: serverTab, offset: 0, limit: 100 }),
-        refetchTaggedAny?.(),
+        locked ? Promise.resolve() : refetchTaggedAny?.(),
       ]);
     } finally {
       setRefreshing(false);
     }
-  }, [userId, serverTab, refetch, refetchTaggedAny]);
+  }, [userId, locked, gridLocked, serverTab, refetch, refetchTaggedAny]);
 
   
 
@@ -1285,7 +1287,7 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
     { __type: "tabs", id: "__profile_tabs__" },
     { __type: "filler", id: "__tabs_filler_a__" },
     { __type: "filler", id: "__tabs_filler_b__" },
-    ...(locked
+    ...(gridLocked || (locked && !tilesForTab.length && !gridLoading)
       ? [{ __type: "locked", id: "__locked__" }, { __type: "filler", id: "__locked_filler_a__" }, { __type: "filler", id: "__locked_filler_b__" }]
       : showingSkeleton
         ? Array.from({ length: 9 }).map((_, i) => ({ __type: "skeleton", id: `__skeleton_${i}__`, gridIndex: i }))
@@ -1610,7 +1612,7 @@ export default function ProfileUnifiedScreen({ route, navigation }: any) {
                   <View style={[s.tabs, { width: SCREEN_W }]}>
                     <TouchableOpacity
                       style={[s.tab, tab === "posts" && s.activeTab]}
-                      onPress={() => !locked && setTab("posts")}
+                      onPress={() => setTab("posts")}
                       hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                     >
                       <MaterialCommunityIcons name="view-grid-outline" size={20} color={COLORS.text} />

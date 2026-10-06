@@ -33,6 +33,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { FlashList } from "@shopify/flash-list";
 import { useTheme } from "../theme/ThemeProvider";
 import { VlogPostCard } from "./components/post/VlogPostCard";
+import { CommunitySearchResults } from "./components/community/CommunityDiscovery";
 import { useMarkPostViewed } from "../hooks/useMarkPostViewed";
 
 import { FOLLOW } from "../graphql/mutations/social";
@@ -2122,6 +2123,10 @@ const onHeaderLayout = useCallback((e: any) => {
             <TouchableOpacity onPress={() => nav.navigate("Groups")} hitSlop={10} style={s.iconBtn}>
               <Ionicons name="people-circle-outline" size={24} color={C.text} />
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => nav.navigate("CommunityInfluence")} hitSlop={10} style={s.iconBtn}
+              accessibilityRole="button" accessibilityLabel={t("influence.title")}>
+              <Ionicons name="flash-outline" size={23} color={C.text} />
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -2161,6 +2166,8 @@ const onHeaderLayout = useCallback((e: any) => {
             </TouchableOpacity>
           )}
         </View>
+
+          <CommunitySearchResults query={query} />
 
           {/* Popular Bar */}
           {cbLoading && !(contextBubbles?.length ?? 0) ? (

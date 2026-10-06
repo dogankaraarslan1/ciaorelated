@@ -1,6 +1,7 @@
 // apps/server/src/jobs/dailyDigest.ts
 import type { PrismaClient } from "@prisma/client";
 import { notify } from "../lib/notify";
+import { visiblePostWhere } from "../lib/postVisibility";
 
 type NotifSettings = {
   pushEnabled?: boolean;
@@ -130,6 +131,16 @@ export async function runDailyDigest(prisma: PrismaClient) {
     }
 
     if (myPosts.length === 0) continue;
+
+    const readable = await prisma.post.findMany({
+      where: { AND: [{ id: { in: myPosts.map(p => p.id) } }, visiblePostWhere({ profileId: recipientId })] },
+      select: { id: true },
+    });
+    const readableIds = new Set(readable.map(p => p.id));
+    for (let i = myPosts.length - 1; i >= 0; i--) {
+      if (!readableIds.has(myPosts[i].id)) myPosts.splice(i, 1);
+    }
+    if (!myPosts.length) continue;
 
     myPosts.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 

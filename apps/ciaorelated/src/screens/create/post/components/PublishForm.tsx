@@ -64,6 +64,7 @@ export const MY_GROUP_LINKS = gql`
       id
       title
       type
+      visibility
       slug
     }
   }
@@ -877,6 +878,11 @@ useEffect(() => {
                     ? t("publishform.communitySummarySelected", { title: selectedCommunity.title })
                     : t("publishform.communitySummaryProfileOnly")}
                 </Text>
+                {selectedCommunity ? (
+                  <Text style={s.summaryText}>
+                    {t(selectedCommunity.visibility === "PUBLIC" ? "communityprivacy.publicPost" : "communityprivacy.privatePost")}
+                  </Text>
+                ) : null}
               </View>
             )}
 

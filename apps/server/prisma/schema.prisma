@@ -28,7 +28,23 @@ enum GroupLinkType {
   BUSINESS
   EVENT
   COMMUNITY
+  DROP
   OTHER
+}
+
+enum GroupLinkVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+enum CommunityMembershipOrigin {
+  JOIN
+  OWNER
+  BACKFILL
+}
+
+enum CommunitySystemKey {
+  BVRLY
 }
 
 model GroupLink {
@@ -38,6 +54,9 @@ model GroupLink {
   type  GroupLinkType @default(OTHER)
   slug  String?       @unique
   imageKey String?
+  visibility GroupLinkVisibility @default(PRIVATE)
+  systemKey CommunitySystemKey? @unique
+  context Context?
 
   ownerId String
   owner   Profile @relation("GroupLinkOwner", fields: [ownerId], references: [id], onDelete: Cascade)
@@ -48,6 +67,9 @@ model GroupLink {
   expiresAt DateTime?
 
   members     GroupLinkMember[]
+  membershipHistory CommunityMembershipHistory[]
+  influenceSettlements CommunityInfluenceSettlement[]
+  influenceEvents CommunityInfluenceEvent[]
   connections Connection[]
 
   @@index([ownerId, createdAt])
@@ -63,6 +85,121 @@ model GroupLinkMember {
 
   @@id([groupLinkId, profileId])
   @@index([profileId, joinedAt])
+}
+
+// Separate from current membership: history never grants content access.
+model CommunityMembershipHistory {
+  groupLinkId String
+  profileId String
+  firstJoinedAt DateTime
+  seniorityAt DateTime
+  recordedAt DateTime @default(now())
+  origin CommunityMembershipOrigin
+  influenceEntryPosition Int?
+  influenceGrowthCount BigInt @default(0)
+
+  groupLink GroupLink @relation(fields: [groupLinkId], references: [id], onDelete: Cascade)
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  periods CommunityMembershipPeriod[]
+  influenceCredits CommunityInfluenceCredit[]
+  influenceSupport CommunityInfluenceSupport?
+
+  @@id([groupLinkId, profileId])
+  @@index([profileId, firstJoinedAt])
+}
+
+model CommunityMembershipPeriod {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  groupLinkId String
+  profileId String
+  startedAt DateTime
+  endedAt DateTime?
+  history CommunityMembershipHistory @relation(fields: [groupLinkId, profileId], references: [groupLinkId, profileId], onDelete: Cascade, map: "CommunityMembershipPeriod_history_fkey")
+
+  // The migration also enforces one open period per profile/community.
+  @@index([groupLinkId, profileId, startedAt])
+}
+
+// Internal accounting only. No automatic earning or ranking is enabled by these tables.
+model CommunityInfluenceSettlement {
+  id String @id @default(cuid())
+  groupLinkId String
+  periodStart DateTime
+  periodEnd DateTime
+  policyVersion String
+  evidenceHash String
+  inputHash String
+  budgetUnits BigInt
+  creditedUnits BigInt
+  createdAt DateTime @default(now())
+
+  groupLink GroupLink @relation(fields: [groupLinkId], references: [id], onDelete: Cascade)
+  credits CommunityInfluenceCredit[]
+
+  @@unique([groupLinkId, periodStart, periodEnd], map: "CommunityInfluenceSettlement_period_key")
+  @@unique([id, groupLinkId], map: "CommunityInfluenceSettlement_id_group_key")
+}
+
+model CommunityInfluenceCredit {
+  settlementId String
+  groupLinkId String
+  profileId String
+  units BigInt
+  communityUnits BigInt @default(0)
+  participationUnits BigInt @default(0)
+  resonanceUnits BigInt @default(0)
+  growthCount BigInt @default(0)
+
+  settlement CommunityInfluenceSettlement @relation(fields: [settlementId, groupLinkId], references: [id, groupLinkId], onDelete: Cascade, map: "CommunityInfluenceCredit_settlement_fkey")
+  history CommunityMembershipHistory @relation(fields: [groupLinkId, profileId], references: [groupLinkId, profileId], onDelete: Cascade, map: "CommunityInfluenceCredit_history_fkey")
+
+  @@id([settlementId, profileId])
+  @@index([groupLinkId, profileId])
+}
+
+// Installed inactive. Activation persists the policy before any events are captured.
+model CommunityInfluenceSettings {
+  id String @id
+  startsAt DateTime
+  policyVersion String
+  policy Json
+  createdAt DateTime @default(now())
+}
+
+// An assignment routes only this history's own credits; it never moves ledger entries.
+model CommunityInfluenceSupport {
+  groupLinkId String
+  profileId String
+  recipientId String?
+  updatedAt DateTime @updatedAt
+  history CommunityMembershipHistory @relation(fields: [groupLinkId, profileId], references: [groupLinkId, profileId], onDelete: Cascade, map: "CommunityInfluenceSupport_history_fkey")
+  recipient Profile? @relation("InfluenceRecipient", fields: [recipientId], references: [id], onDelete: SetNull)
+
+  @@id([groupLinkId, profileId])
+  @@index([recipientId])
+}
+
+enum CommunityInfluenceEventKind {
+  JOIN
+  INTERACTION
+}
+
+model CommunityInfluenceEvent {
+  id String @id @default(dbgenerated("(gen_random_uuid())::text"))
+  groupLinkId String
+  actorId String
+  authorId String?
+  postId String?
+  kind CommunityInfluenceEventKind
+  eventKey String
+  occurredAt DateTime @default(now())
+  groupLink GroupLink @relation(fields: [groupLinkId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  actor Profile @relation("InfluenceActor", fields: [actorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  author Profile? @relation("InfluenceAuthor", fields: [authorId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  post Post? @relation(fields: [postId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([groupLinkId, eventKey])
+  @@index([groupLinkId, occurredAt])
 }
 
 model Connection {
@@ -217,6 +354,10 @@ model Profile {
 
   ownedGroupLinks  GroupLink[]       @relation("GroupLinkOwner")
   groupMemberships GroupLinkMember[]
+  communityMembershipHistory CommunityMembershipHistory[]
+  influenceActions CommunityInfluenceEvent[] @relation("InfluenceActor")
+  influenceResponses CommunityInfluenceEvent[] @relation("InfluenceAuthor")
+  influenceSupportReceived CommunityInfluenceSupport[] @relation("InfluenceRecipient")
   connectionsFrom  Connection[]      @relation("ConnectionsFrom")
   connectionsTo    Connection[]      @relation("ConnectionsTo")
 
@@ -250,6 +391,8 @@ model Context {
   kind       ContextKind
   label      String
   cityScoped Boolean     @default(true)
+  groupLinkId String? @unique
+  groupLink GroupLink? @relation(fields: [groupLinkId], references: [id], onDelete: SetNull)
 
   profileLinks ProfileContext[]
   postLinks    PostContext[]
@@ -335,6 +478,7 @@ model Post {
   kind PostKind @default(POST)
 
   postContexts PostContext[]
+  influenceEvents CommunityInfluenceEvent[]
 
   // Medien: für POST Bild, für REEL Video (+ Thumb empfohlen)
   imageKey  String? // Bild-Datei (POST)

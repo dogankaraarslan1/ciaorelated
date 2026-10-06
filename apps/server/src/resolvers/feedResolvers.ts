@@ -1,6 +1,8 @@
+import { visiblePostWhere } from "../lib/postVisibility";
 
 import type { Ctx } from "../context";
 import { getBlockedSets, notBlockedFilter, authorNotBlockedWhere } from "../lib/blocks";
+import { candidateInfluenceUnits, diversifyInfluencedFeed, influenceCandidateCount, influenceRankingPolicy, newestFirst, rankInfluencedPosts } from "../lib/communityInfluenceRanking";
 
 
 
@@ -78,11 +80,11 @@ export default {
       // A) Network reels (me + following)
       // -----------------------------
       const networkReels = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           kind: "POST",
           authorId: { in: [me, ...followingIds], notIn: hiddenAuthorIds },
           author: { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-        },
+        }] },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: want, // instead of fixed 200
         select: POST_SELECT,
@@ -94,17 +96,16 @@ export default {
       // B) Explore reels (public, not followed)
       // -----------------------------
       const exploreRaw = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           kind: "POST",
           id: { notIn: [...networkIdSet] },
           authorId: { notIn: [me, ...followingIds, ...hiddenAuthorIds] },
           author: {
             AND: [
               { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-              { isPrivate: false },
             ],
           },
-        },
+        }] },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: want, // instead of fixed 300
         select: POST_SELECT,
@@ -189,7 +190,7 @@ export default {
 
       const now = new Date();
       const raw = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           kind: "POST",
           // nur ich + Gefolgte …
           authorId: {
@@ -199,7 +200,7 @@ export default {
           },
           // zusätzlich: Autoren, die (temporär) gebannt sind, ausschließen
           author: { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-        },
+        }] },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }], // deterministisch
         take: POOL,
         include: {
@@ -249,12 +250,14 @@ export default {
       const me = ctx.profileId;
       const safeOffset = Math.max(0, Number(offset) || 0);
       const safeLimit = Math.min(50, Math.max(1, Number(limit) || 20));
-      const need = safeOffset + safeLimit;
+      const rankingNow = new Date();
+      const ranking = mode === "FOLLOWING" ? null : influenceRankingPolicy(rankingNow);
+      const need = ranking ? influenceCandidateCount(safeOffset + safeLimit) : safeOffset + safeLimit;
       const overscan = Math.max(80, safeLimit * 4);
-      const poolPosts = need + overscan;
-      const poolSuggestedPosts = need + overscan;
+      const poolPosts = ranking ? need : need + overscan;
+      const poolSuggestedPosts = ranking ? need : need + overscan;
       const suggestedProfileBlocksNeeded = Math.ceil(need / 8) + 2;
-      const poolSuggestedUsers = Math.min(240, suggestedProfileBlocksNeeded * 10);
+      const poolSuggestedUsers = ranking ? 240 : Math.min(240, suggestedProfileBlocksNeeded * 10);
 
       // --------------------------------------------------
       // 0) Block- & Basisdaten
@@ -273,11 +276,11 @@ export default {
         if (!followingIds.length) return [];
 
         const followingPosts = await ctx.prisma.post.findMany({
-          where: {
+          where: { AND: [visiblePostWhere(ctx), {
             kind: "POST",
             authorId: { in: followingIds, notIn: hiddenAuthorIds },
             author: { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-          },
+          }] },
           orderBy: [{ createdAt: "desc" }, { id: "desc" }],
           skip: safeOffset,
           take: safeLimit,
@@ -298,7 +301,7 @@ export default {
       // 0.1) Connections (Group Networks)
       // --------------------------------------------------
       const connections = await ctx.prisma.connection.findMany({
-        where: { fromId: me },
+        where: { fromId: me, OR: [{ groupLinkId: null }, { groupLink: { systemKey: null } }] },
         select: {
           toId: true,
           groupLink: {
@@ -440,12 +443,12 @@ export default {
       // --------------------------------------------------
       // 2) A) Base Posts (ich + following)
       // --------------------------------------------------
-      const basePosts = await ctx.prisma.post.findMany({
-        where: {
+      let basePosts = await ctx.prisma.post.findMany({
+        where: { AND: [visiblePostWhere(ctx), {
           kind: "POST",
           authorId: { in: [...feedAuthorIds], notIn: hiddenAuthorIds },
           author: { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-        },
+        }] },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: poolPosts,
         select: POST_SELECT,
@@ -455,12 +458,24 @@ export default {
       // --------------------------------------------------
       // 2.1) Community Posts (nur explizit verknüpfte Posts)
       // --------------------------------------------------
-      const communityRows = groupContextKeys.length
-        ? await ctx.prisma.postContext.findMany({
+      const communityRows = !groupContextKeys.length ? [] : ranking
+        ? (await ctx.prisma.post.findMany({
+            where: { AND: [visiblePostWhere(ctx)], kind: "POST",
+              authorId: { notIn: [...followingIds, me, ...hiddenAuthorIds] },
+              postContexts: { some: { source: "IMPORT", context: { key: { in: groupContextKeys } } } },
+            },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: poolSuggestedPosts,
+            select: { ...POST_SELECT, postContexts: {
+              where: { source: "IMPORT", context: { key: { in: groupContextKeys } } },
+              orderBy: { contextId: "asc" }, take: 1, select: { context: { select: { key: true } } },
+            } },
+          })).map(post => ({ post, context: post.postContexts[0]?.context }))
+        : await ctx.prisma.postContext.findMany({
             where: {
               source: "IMPORT",
               context: { key: { in: groupContextKeys } },
               post: {
+                AND: [visiblePostWhere(ctx)],
                 kind: "POST",
                 authorId: { notIn: [...followingIds, me, ...hiddenAuthorIds] },
                 author: {
@@ -471,7 +486,6 @@ export default {
                         { bannedUntil: { lt: now } },
                       ],
                     },
-                    { isPrivate: false },
                   ],
                 },
               },
@@ -482,8 +496,7 @@ export default {
               context: { select: { key: true } },
               post: { select: POST_SELECT },
             },
-          })
-        : [];
+          });
 
       const communitySourceByPost = new Map<
         string,
@@ -512,9 +525,12 @@ export default {
       // 3) B) Suggested Posts (context-refined)
       // --------------------------------------------------
       const suggestedPostsRaw = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           kind: "POST",
           id: { notIn: [...basePostIdSet, ...communityPostIdSet] },
+          ...(ranking && groupContextKeys.length ? { NOT: { postContexts: { some: {
+            source: "IMPORT" as const, context: { key: { in: groupContextKeys } },
+          } } } } : {}),
           authorId: {
             notIn: [
               ...followingIds,
@@ -526,21 +542,22 @@ export default {
           author: {
             AND: [
               { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-              { isPrivate: false },
             ],
           },
-        },
+        }] },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: poolSuggestedPosts,
         select: POST_SELECT,
       });
 
-      const suggestedPostScores = await getContextScoresForPosts(
-        [...communityPosts, ...suggestedPostsRaw].map((p) => p.id)
-      );
+      const suggestedCandidates = ranking
+        ? [...communityPosts, ...suggestedPostsRaw].sort(newestFirst).slice(0, poolSuggestedPosts)
+        : [...communityPosts, ...suggestedPostsRaw];
+      const suggestedPostScores = await getContextScoresForPosts(suggestedCandidates.map(p => p.id));
+      const influence = await candidateInfluenceUnits(ctx.prisma, [...basePosts, ...suggestedCandidates], ranking, rankingNow);
+      if (ranking) basePosts = rankInfluencedPosts(basePosts, influence, ranking, rankingNow);
 
-      const suggestedPosts = [...communityPosts, ...suggestedPostsRaw].sort(
-        (a, b) => {
+      const suggestedRelevance = (a: typeof basePosts[number], b: typeof basePosts[number]) => {
           const sa =
             (communitySourceByPost.has(a.id) ? 8 : 0) +
             (suggestedPostScores.get(a.id) ?? 0);
@@ -548,8 +565,10 @@ export default {
             (communitySourceByPost.has(b.id) ? 8 : 0) +
             (suggestedPostScores.get(b.id) ?? 0);
           return sb - sa || b.createdAt.getTime() - a.createdAt.getTime();
-        }
-      );
+        };
+      const suggestedPosts = ranking
+        ? rankInfluencedPosts(suggestedCandidates, influence, ranking, rankingNow, suggestedRelevance)
+        : suggestedCandidates.sort(suggestedRelevance);
 
       // --------------------------------------------------
       // 4) C) Suggested Profiles (NETZWERK FIRST)
@@ -559,7 +578,7 @@ export default {
           id: { notIn: [...followingIds, me, ...hiddenAuthorIds] },
           OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }],
         },
-        orderBy: [{ followerCount: "desc" }, { createdAt: "desc" }],
+        orderBy: [{ followerCount: "desc" }, { createdAt: "desc" }, { id: "desc" }],
         take: poolSuggestedUsers,
       });
 
@@ -665,7 +684,8 @@ export default {
         if (!pushUserBlock()) break;
       }
 
-      return items.slice(safeOffset, safeOffset + safeLimit);
+      const rankedItems = ranking ? diversifyInfluencedFeed(items, item => item.post?.author?.id) : items;
+      return rankedItems.slice(safeOffset, safeOffset + safeLimit);
     },
 
 
@@ -723,22 +743,16 @@ export default {
         : {};
 
       const posts = await ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           ...cursorWhere,
           kind: "POST",
           authorId: { notIn: [me ?? "", ...hiddenAuthorIds] },
           author: {
             AND: [
               { OR: [{ bannedUntil: null }, { bannedUntil: { lt: now } }] },
-              {
-                OR: [
-                  { isPrivate: false },
-                  ...(followingIds.length ? [{ id: { in: followingIds } }] : []),
-                ],
-              },
             ],
           },
-        },
+        }] },
         orderBy: [{ createdAt: "desc" }, { id: "desc" }],
         take: safeLimit + 1,
         select: POST_SELECT,

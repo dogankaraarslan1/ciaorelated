@@ -189,6 +189,7 @@ export const typeDefs = gql`
     groupId: ID!
     title: String!
     type: GroupLinkType!
+    visibility: GroupLinkVisibility
     slug: String
     reason: String
     sharedCount: Int
@@ -589,7 +590,13 @@ export const typeDefs = gql`
     BUSINESS
     EVENT
     COMMUNITY
+    DROP
     OTHER
+  }
+
+  enum GroupLinkVisibility {
+    PRIVATE
+    PUBLIC
   }
 
   type GroupLink {
@@ -597,6 +604,8 @@ export const typeDefs = gql`
     code: String!
     title: String!
     type: GroupLinkType!
+    visibility: GroupLinkVisibility!
+    isNetworkCommunity: Boolean!
     imageUrl: String
     imageThumbUrl: String
     owner: User!
@@ -612,6 +621,60 @@ export const typeDefs = gql`
   input UpdateGroupLinkInput {
     title: String
     imageKey: String
+  }
+
+  type CommunitySearchConnection {
+    items: [GroupLink!]!
+    hasMore: Boolean!
+  }
+
+  type CommunityInfluenceProfile { id: ID!, username: String!, name: String, avatarUrl: String }
+  enum CommunityInfluenceEarnState { ACTIVE PAUSED PRIVATE UNAVAILABLE }
+  enum CommunityInfluenceSupportState { SELF ASSIGNED UNAVAILABLE }
+  type CommunityInfluencePosition {
+    communityId: ID!
+    title: String!
+    type: GroupLinkType!
+    visibility: GroupLinkVisibility!
+    imageUrl: String
+    isMember: Boolean!
+    joinedAt: DateTime!
+    entryPosition: Int
+    growthCount: String!
+    settledThrough: DateTime
+    earnState: CommunityInfluenceEarnState!
+    canAssign: Boolean!
+    supportState: CommunityInfluenceSupportState!
+    recipient: CommunityInfluenceProfile
+    earnedUnits: String!
+    communityUnits: String!
+    participationUnits: String!
+    resonanceUnits: String!
+  }
+  type CommunityInfluenceOverview {
+    profile: CommunityInfluenceProfile!
+    earnedUnits: String!
+    retainedUnits: String!
+    assignedUnits: String!
+    receivedUnits: String!
+    availableUnits: String!
+    earningStartsAt: DateTime
+    rankingEnabled: Boolean!
+    positions: [CommunityInfluencePosition!]!
+    hasMore: Boolean!
+  }
+  extend type Query {
+    myCommunityInfluence(offset: Int = 0, limit: Int = 20): CommunityInfluenceOverview!
+    communityInfluenceRecipients(q: String!, limit: Int = 20): [CommunityInfluenceProfile!]!
+  }
+  extend type Mutation {
+    setCommunityInfluenceRecipient(communityId: ID!, recipientId: ID, expectedProfileId: ID!): Boolean!
+  }
+
+  enum CommunitySuggestionReason { FOLLOWING ACTIVE PUBLIC }
+  type CommunitySuggestion {
+    community: GroupLink!
+    reason: CommunitySuggestionReason!
   }
 
   type FeedSource {
@@ -718,6 +781,8 @@ export const typeDefs = gql`
     myJoinedGroupLinks: [GroupLink!]!
     myGroupLinks: [GroupLink!]!
     groupLink(id: ID!): GroupLink
+    searchCommunities(q: String!, offset: Int = 0, limit: Int = 6): CommunitySearchConnection!
+    suggestedCommunities(limit: Int = 6): [CommunitySuggestion!]!
     groupLinkPosts(groupId: ID!, offset: Int = 0, limit: Int = 20): [Post!]!
     groupLinkMembers(groupId: ID!, limit: Int = 24): [User!]!
     communityThread(groupId: ID!): Thread
@@ -818,7 +883,7 @@ export const typeDefs = gql`
   # ---------- Mutations ----------
   type Mutation {
     leaveGroup(groupId: ID!): Boolean!
-    createGroupLink(title: String!, type: GroupLinkType!): GroupLink!
+    createGroupLink(title: String!, type: GroupLinkType!, visibility: GroupLinkVisibility = PRIVATE): GroupLink!
     updateGroupLink(id: ID!, input: UpdateGroupLinkInput!): GroupLink!
     getSignedGroupLinkImageUpload(groupId: ID!, mime: String!, size: Int!): SignedUpload!
     removeGroupLinkMember(groupId: ID!, profileId: ID!): Boolean!

@@ -30,7 +30,7 @@ const POST_Q = gql`
       locationLat
       locationLng
       interests
-      communityContext { groupId title type slug __typename }
+      communityContext { groupId title type slug visibility __typename }
       taggedUsers {
         status
         user { id username avatarUrl }
@@ -41,7 +41,7 @@ const POST_Q = gql`
 
 const UPDATE_POST = gql`
   mutation UpdatePost($input: UpdatePostInput!) {
-    updatePost(input: $input) { id caption location locationLat locationLng interests communityContext { groupId title type slug __typename } }
+    updatePost(input: $input) { id caption location locationLat locationLng interests communityContext { groupId title type slug visibility __typename } }
   }
 `;
 
@@ -57,6 +57,7 @@ const MY_GROUP_LINKS = gql`
       id
       title
       type
+      visibility
       slug
       __typename
     }
@@ -140,6 +141,7 @@ export default function PostEditScreen() {
   const p = postQ?.post;
 
   const initialGroupLinkId = p?.communityContext?.groupId ? String(p.communityContext.groupId) : null;
+  const communityLocked = !!initialGroupLinkId && p?.communityContext?.visibility !== "PUBLIC";
 
   // Caption
   const [caption, setCaption] = useState<string>(p?.caption ?? "");
@@ -425,15 +427,20 @@ const toggleInterestLimited = (key: InterestKey) =>
               <Text style={s.label}>{t("publishform.selectedCommunity")}</Text>
               <View style={s.chips}>
                 <TouchableOpacity
+                  disabled={communityLocked}
                   onPress={() => setSelectedGroupLinkId(null)}
                   style={[s.chip, s.chipActive]}
                 >
                   <Text style={[s.chipTxt, { color: COLORS.text }]} numberOfLines={1}>
                     {(myGroups as any[]).find((x) => String(x.id) === String(selectedGroupLinkId))?.title ?? p?.communityContext?.title ?? "Community"}
                   </Text>
-                  <Ionicons name="close" size={14} color={COLORS.subtext} style={{ marginLeft: 6 }} />
+                  <Ionicons name={communityLocked ? "lock-closed-outline" : "close"} size={14} color={COLORS.subtext} style={{ marginLeft: 6 }} />
                 </TouchableOpacity>
               </View>
+              {communityLocked ? <Text style={{ color: COLORS.subtext, fontSize: 13 }}>{t("communityprivacy.privatePostLocked")}</Text> : null}
+              <Text style={{ color: COLORS.subtext, fontSize: 13, marginTop: 4 }}>
+                {t(((myGroups as any[]).find(x => String(x.id) === String(selectedGroupLinkId))?.visibility ?? p?.communityContext?.visibility) === "PUBLIC" ? "communityprivacy.publicPost" : "communityprivacy.privatePost")}
+              </Text>
             </View>
           )}
 
@@ -473,6 +480,7 @@ const toggleInterestLimited = (key: InterestKey) =>
                 showCommunityList ? (
                   <TouchableOpacity
                     key={String(item.id)}
+                    disabled={communityLocked}
                     onPress={() => {
                       Keyboard.dismiss();
                       setSelectedGroupLinkId(String(item.id));

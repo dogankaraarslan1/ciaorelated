@@ -61,14 +61,17 @@ export function PostAuthorRow({
   const acceptedTaggedAll: TaggedUser[] = useMemo(() => {
     const list = Array.isArray(taggedUsers) ? taggedUsers : [];
     return list
-      .filter((t: any) => t?.status === "ACCEPTED" || t?.status === "APPROVED")
+      .filter((t: any) => (t?.status === "ACCEPTED" || t?.status === "APPROVED") && t?.user?.id && t?.user?.username)
       .map((t: any) => ({
-        id: t?.user?.id,
-        username: t?.user?.username,
-        avatarUrl: t?.user?.avatarUrl,
+        user: {
+          id: t.user.id,
+          username: t.user.username,
+          avatarThumbUrl: t.user.avatarThumbUrl,
+          avatarUrl: t.user.avatarUrl,
+        },
         status: t?.status,
         showOnProfile: t?.showOnProfile,
-      })) as TaggedUser[];
+      }));
   }, [taggedUsers]);
 
   const taggedCount = acceptedTaggedAll.length;

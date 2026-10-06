@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client";
 import { getBlockedSets } from "../lib/blocks";
 import { bundleActivityEdges } from "../lib/activityBundler";
 import { getSignedGetUrlCached } from "../s3_cached";
+import { visiblePostWhere } from "../lib/postVisibility";
 
 const EMPTY_CONN = { edges: [], nextCursor: null as string | null };
 
@@ -24,6 +25,7 @@ export default {
       if (!ctx.profileId) return EMPTY_CONN;
 
       const where: Prisma.NotificationWhereInput = {
+        AND: [{ OR: [{ postId: null }, { post: visiblePostWhere(ctx) }] }],
         recipientId: ctx.profileId,
         channel: { in: ["INBOX", "BOTH"] as any },
       };
@@ -64,6 +66,7 @@ export default {
       if (!ctx.profileId) return EMPTY_CONN;
 
       const where: Prisma.NotificationWhereInput = {
+        AND: [{ OR: [{ postId: null }, { post: visiblePostWhere(ctx) }] }],
         recipientId: ctx.profileId,
         // ✅ Activity = alles (ACTIVITY + INBOX + BOTH)
         channel: { in: ["ACTIVITY", "INBOX", "BOTH"] as any },
@@ -126,6 +129,7 @@ export default {
       const hidden = new Set([...blockedByMe, ...blockedMe]);
 
       const baseWhere = (channels: ("INBOX" | "ACTIVITY" | "BOTH")[]) => ({
+        AND: [{ OR: [{ postId: null }, { post: visiblePostWhere(ctx) }] }],
         recipientId: ctx.profileId,
         isRead: false,
         OR: channels.map((c) => ({ channel: c })) as any,

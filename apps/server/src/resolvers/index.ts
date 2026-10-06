@@ -22,6 +22,8 @@ import placeResolvers from "./placeResolvers";
 import contextResolvers from "./contextResolvers";
 import {contextSearchResolvers} from "./contextSearchResolvers";
 import groupLinkResolvers from "./groupLinkResolvers";
+import communityDiscoveryResolvers from "./communityDiscoveryResolvers";
+import communityInfluenceResolvers from "./communityInfluenceResolvers";
 import appConfigResolvers from "./appConfigResolvers";
 
 const base = {
@@ -56,5 +58,7 @@ export const resolvers = merge(
   contextResolvers,
   contextSearchResolvers,
   groupLinkResolvers,
+  communityDiscoveryResolvers,
+  communityInfluenceResolvers,
   appConfigResolvers
 );

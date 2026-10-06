@@ -36,7 +36,7 @@ export async function createContext({ req }: { req: Request }): Promise<Ctx> {
     (req.headers["x-profile-id"] as string | undefined) ||
     (req.headers["X-Profile-Id"] as any);
 
-  const profileId = payload?.profileId ?? headerProfileId;
+  const profileId = payload ? (payload.profileId ?? (payload.accountId ? headerProfileId : undefined)) : undefined;
 
   let isAdmin = false;
   let validProfileId: string | undefined;

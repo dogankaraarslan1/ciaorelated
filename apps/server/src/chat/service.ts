@@ -43,6 +43,40 @@ async function assertThreadNotBlocked(prisma: PrismaClient, meId: string, thread
   if (blockedMember) throw new GraphQLError("BLOCKED");
 }
 
+// ThreadMember can lag behind a community exit; GroupLink membership is authoritative.
+export async function assertThreadAccess(prisma: PrismaClient, userId: string, threadId: string) {
+  const thread = await prisma.thread.findFirst({
+    where: { id: threadId, members: { some: { userId } } },
+  });
+  if (!thread) throw new GraphQLError("NO_ACCESS_TO_THREAD");
+  if (thread.groupKey?.startsWith("community:")) {
+    const group = await prisma.groupLink.findFirst({
+      where: {
+        id: thread.groupKey.slice("community:".length), isActive: true, systemKey: null,
+        OR: [{ ownerId: userId }, { members: { some: { profileId: userId } } }],
+      },
+      select: { id: true },
+    });
+    if (!group) throw new GraphQLError("NO_ACCESS_TO_THREAD");
+  }
+  await assertThreadNotBlocked(prisma, userId, threadId);
+  return thread;
+}
+
+async function accessibleThreads<T extends { groupKey: string | null }>(prisma: PrismaClient, userId: string, threads: T[]) {
+  const groupIds = threads.flatMap(t => t.groupKey?.startsWith("community:") ? [t.groupKey.slice("community:".length)] : []);
+  if (!groupIds.length) return threads;
+  const groups = await prisma.groupLink.findMany({
+    where: {
+      id: { in: groupIds }, isActive: true, systemKey: null,
+      OR: [{ ownerId: userId }, { members: { some: { profileId: userId } } }],
+    },
+    select: { id: true },
+  });
+  const allowed = new Set(groups.map(g => communityGroupKey(g.id)));
+  return threads.filter(t => !t.groupKey?.startsWith("community:") || allowed.has(t.groupKey));
+}
+
 
 // ----------------- Delete Message -----------------
 export async function deleteMessage(prisma: PrismaClient, profileId: string, messageId: string) {
@@ -81,9 +115,10 @@ export async function listThreads(prisma: PrismaClient, userId: string) {
     },
   });
 
+  const memberThreads = await accessibleThreads(prisma, userId, threadsAll);
   const threads = hidden.size
-    ? threadsAll.filter((t) => !t.members.some((m: any) => hidden.has(m.userId)))
-    : threadsAll;
+    ? memberThreads.filter((t) => !t.members.some((m: any) => hidden.has(m.userId)))
+    : memberThreads;
 
 
   const mems = await prisma.threadMember.findMany({
@@ -128,14 +163,7 @@ export async function messages(
   cursor?: string,
   take = 30
 ) {
-  // Sicherheitscheck: gehört User zum Thread?
-  const membership = await prisma.threadMember.findUnique({
-    where: { threadId_userId: { threadId, userId } },
-  });
-  if (!membership) throw new GraphQLError("NO_ACCESS_TO_THREAD");
-
-  // Block-Safety: wenn irgendwer im Thread geblockt ist (in beide Richtungen) => kein Zugriff
-  await assertThreadNotBlocked(prisma, userId, threadId);
+  await assertThreadAccess(prisma, userId, threadId);
 
   const items = await prisma.message.findMany({
     where: { threadId },
@@ -180,18 +208,7 @@ export async function sendMessage(
     }
   }
 
-  // Sicherheitscheck: gehört User zum Thread?
-  const [membership, thread] = await Promise.all([
-    prisma.threadMember.findUnique({
-      where: { threadId_userId: { threadId: input.threadId, userId } },
-    }),
-    prisma.thread.findUnique({
-      where: { id: input.threadId },
-      select: { id: true, kind: true, groupKey: true },
-    }),
-  ]);
-  if (!membership) throw new Error("NO_ACCESS_TO_THREAD");
-  if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
+  const thread = await assertThreadAccess(prisma, userId, input.threadId);
 
   if (String(thread.kind) === "DISABLED") {
     throw new GraphQLError("CHAT_DISABLED");
@@ -207,14 +224,20 @@ export async function sendMessage(
     if (!group?.isActive || group.ownerId !== userId) throw new GraphQLError("BROADCAST_ONLY");
   }
 
-  // Block-Safety: wenn irgendwer im Thread geblockt ist (in beide Richtungen) => nicht senden
-  await assertThreadNotBlocked(prisma, userId, input.threadId);
-
   // ✅ Thread-Mitglieder holen (für Story Safety + Push)
-  const members = await prisma.threadMember.findMany({
+  let members = await prisma.threadMember.findMany({
     where: { threadId: input.threadId },
     select: { userId: true },
   });
+  if (thread.groupKey?.startsWith("community:")) {
+    const group = await prisma.groupLink.findUnique({
+      where: { id: thread.groupKey.slice("community:".length) },
+      select: { ownerId: true, isActive: true, members: { select: { profileId: true } } },
+    });
+    if (!group?.isActive) throw new GraphQLError("NO_ACCESS_TO_THREAD");
+    const currentMembers = new Set([group.ownerId, ...group.members.map(m => m.profileId)]);
+    members = members.filter(m => currentMembers.has(m.userId));
+  }
   const memberIds = new Set(members.map((m) => m.userId));
 
   // ✅ Sendername separat holen (damit TS nicht über msg.sender stolpert)
@@ -345,7 +368,7 @@ export async function sendMessage(
 
 // ----------------- Mark Read -----------------
 export async function markThreadRead(prisma: PrismaClient, userId: string, threadId: string) {
-  await assertThreadNotBlocked(prisma, userId, threadId);
+  await assertThreadAccess(prisma, userId, threadId);
   await prisma.threadMember.update({
     where: { threadId_userId: { threadId, userId } },
     data: { lastReadAt: new Date() },
@@ -361,7 +384,10 @@ export async function markThreadRead(prisma: PrismaClient, userId: string, threa
 
 // ----------------- Unread Count -----------------
 export async function unreadCount(prisma: PrismaClient, userId: string) {
-  const memberships = await prisma.threadMember.findMany({ where: { userId } });
+  const allMemberships = await prisma.threadMember.findMany({ where: { userId }, include: { thread: true } });
+  const allowedThreads = await accessibleThreads(prisma, userId, allMemberships.map(m => m.thread));
+  const allowedIds = new Set(allowedThreads.map(t => t.id));
+  const memberships = allMemberships.filter(m => allowedIds.has(m.threadId));
 
   // Threads mit geblockten Teilnehmern ignorieren
   const hidden = await getHiddenUserIds(prisma, userId);
@@ -463,9 +489,10 @@ export async function createThread(
 export async function ensureCommunityThread(prisma: PrismaClient, groupId: string) {
   const group = await prisma.groupLink.findUnique({
     where: { id: groupId },
-    select: { id: true, title: true, ownerId: true, isActive: true },
+    select: { id: true, title: true, ownerId: true, isActive: true, systemKey: true },
   });
   if (!group || !group.isActive) throw new GraphQLError("GROUP_NOT_FOUND");
+  if (group.systemKey === "BVRLY") return null;
 
   const rows = await prisma.groupLinkMember.findMany({
     where: { groupLinkId: group.id },
@@ -475,15 +502,15 @@ export async function ensureCommunityThread(prisma: PrismaClient, groupId: strin
   const groupKey = communityGroupKey(group.id);
 
   return prisma.$transaction(async (tx) => {
-    const thread =
-      (await tx.thread.findUnique({ where: { groupKey } })) ??
-      (await tx.thread.create({
-        data: {
-          title: group.title,
-          groupKey,
-          kind: "COMMUNITY",
-        },
-      }));
+    let thread = await tx.thread.findUnique({ where: { groupKey } });
+    if (!thread) {
+      // Concurrent joins must converge on the same community thread.
+      await tx.thread.createMany({
+        data: [{ title: group.title, groupKey, kind: "COMMUNITY" }],
+        skipDuplicates: true,
+      });
+      thread = await tx.thread.findUniqueOrThrow({ where: { groupKey } });
+    }
 
     if (thread.title !== group.title) {
       await tx.thread.update({

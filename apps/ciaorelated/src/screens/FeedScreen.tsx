@@ -14,6 +14,9 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 
 //import { FEED_QUERY } from "../graphql/queries/social";
 import { HOME_FEED_QUERY } from "../graphql/queries/social";
+import { SUGGESTED_COMMUNITIES } from "../graphql/queries/communities";
+import { CommunityRail } from "./components/community/CommunityDiscovery";
+import { feedPostId, withCommunitySuggestions, type CommunitySuggestion } from "../lib/communityDiscovery";
 import { useTheme } from "../theme/ThemeProvider";
 
 import { FeedHeader } from "./components/feed/FeedHeader";
@@ -51,9 +54,14 @@ export default function FeedScreen() {
     notifyOnNetworkStatusChange: true,
   });
 
+  const { data: communityData, error: communityError, refetch: refetchCommunities } = useQuery(SUGGESTED_COMMUNITIES, {
+    variables: { limit: 6 }, skip: isDetailMode, fetchPolicy: "cache-and-network",
+  });
+  const communities: CommunitySuggestion[] = communityError ? [] : (communityData?.suggestedCommunities ?? [])
+    .filter((item: CommunitySuggestion) => !item.community.viewerIsMember && !item.community.viewerIsOwner);
   const posts = data?.homeFeed ?? [];
-  const visiblePosts = posts;
   const isInitialLoading = loading && networkStatus === NetworkStatus.loading;
+  const visiblePosts = withCommunitySuggestions(posts, !isDetailMode && !isInitialLoading && communities.length > 0);
 
   useLayoutEffect(() => {
     const tabNav = navigation.getParent?.();
@@ -86,12 +94,15 @@ export default function FeedScreen() {
     try {
       setHasMore(true);
       fetchingMoreRef.current = false;
-      await refetch({ offset: 0, limit: PAGE_LIMIT, mode: feedMode });
+      await Promise.all([
+        refetch({ offset: 0, limit: PAGE_LIMIT, mode: feedMode }),
+        isDetailMode ? Promise.resolve() : refetchCommunities().catch(() => {}),
+      ]);
       listRef.current?.scrollToOffset({ offset: 0, animated: true });
     } finally {
       setRefreshing(false);
     }
-  }, [refetch]);
+  }, [refetch, refetchCommunities, feedMode, isDetailMode]);
 
   const loadMore = useCallback(async () => {
     if (fetchingMoreRef.current || loading || !hasMore) return;
@@ -129,11 +140,10 @@ export default function FeedScreen() {
 
   const onViewableItemsChanged = useRef(
     ({ viewableItems }: { viewableItems: Array<{ item: any; isViewable: boolean }> }) => {
-      const top = viewableItems.find((v) => v.isViewable && v.item?.id);
-      setActiveId(top?.item?.id ?? null);
-      if (!top?.item || top.item.kind === "SUGGESTED_PROFILES") return;
-      const post = top?.item?.post ?? top?.item;
-      const postId = post?.id ?? null;
+      const top = viewableItems.find((v) => v.isViewable && feedPostId(v.item));
+      const postId = feedPostId(top?.item);
+      setActiveId(postId);
+      if (!postId) return;
       markPostViewed(postId);
     }
   ).current;
@@ -155,6 +165,10 @@ export default function FeedScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
           const source = item?.source ?? null;
+
+          if (item?.kind === "COMMUNITY_SUGGESTIONS") {
+            return <CommunityRail title={t("communitydiscovery.suggestedTitle")} items={communities} />;
+          }
 
           if (item?.kind === "SUGGESTED_PROFILES") {
             return (

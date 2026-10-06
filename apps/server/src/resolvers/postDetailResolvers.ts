@@ -1,15 +1,15 @@
 // apps/server/src/resolvers/postDetailResolvers.ts
 import type { Ctx } from "../context";
 import { getBlockedSets } from "../lib/blocks";
-import { canViewProfileContent } from "../lib/privacy";
+import { visiblePostWhere } from "../lib/postVisibility";
 
 export default {
   Query: {
     post: async (_:unknown, { id }: { id: string }, ctx: Ctx) => {
       const admin = !!ctx.isAdmin;
 
-      const p = await ctx.prisma.post.findUnique({
-        where: { id },
+      const p = await ctx.prisma.post.findFirst({
+        where: { AND: [{ id }, visiblePostWhere(ctx)] },
         include: { author: true },
       });
       if (!p) return null;
@@ -21,31 +21,11 @@ export default {
         if (!admin && (!ctx.profileId || ctx.profileId !== p.authorId)) throw new Error("Forbidden");
       }
 
-      const ok = admin || (await canViewProfileContent(ctx, p.authorId));
-      if (!ok) throw new Error("Forbidden");
       // Blocks
       const { blockedByMe, blockedMe } = await getBlockedSets(ctx);
       const hidden = new Set([...blockedByMe, ...blockedMe]);
       if (p.authorId && hidden.has(p.authorId)) {
         throw new Error("Forbidden");
-      }
-
-      // ✅ Privacy (private account)
-      if (!admin && p.author?.isPrivate) {
-        const me = ctx.profileId ?? null;
-
-        // nicht eingeloggt -> keine Sicht
-        if (!me) throw new Error("Forbidden");
-
-        // Owner darf
-        if (me !== p.authorId) {
-          // nur Follower dürfen
-          const follow = await ctx.prisma.follow.findUnique({
-            where: { followerId_followingId: { followerId: me, followingId: p.authorId } },
-            select: { followerId: true },
-          });
-          if (!follow) throw new Error("Forbidden");
-        }
       }
 
       return p;

@@ -61,6 +61,11 @@ const isAuthOp = (opName?: string) => {
 
 const LOCAL_ERROR_OPS = new Set([
   "leavegroup",
+  "searchcommunities",
+  "suggestedcommunities",
+  "mycommunityinfluence",
+  "communityinfluencerecipients",
+  "setcommunityinfluencerecipient",
 ]);
 
 const isLocalErrorOp = (opName?: string) => {
@@ -160,7 +165,7 @@ const errorLink = onError(({ graphQLErrors, networkError, operation }) => {
   }
 
   // ✅ NetworkError auch bei Auth-Ops eher lokal behandeln (optional)
-  if (networkError && !isAuth) {
+  if (networkError && !isAuth && !isLocalError) {
     showError({ title: i18n.t("common.networkErrorTitle"), message: i18n.t("common.networkErrorBody") });
   }
 });

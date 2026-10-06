@@ -60,12 +60,7 @@ export const resolvers = {
 
     thread: async (_: unknown, { threadId }: { threadId: string }, ctx: Ctx) => {
       requireAuth(ctx);
-      const membership = await (ctx.prisma as PrismaClient).threadMember.findUnique({
-        where: { threadId_userId: { threadId, userId: ctx.profileId } },
-        select: { id: true },
-      });
-      if (!membership) throw new GraphQLError("FORBIDDEN");
-      return (ctx.prisma as PrismaClient).thread.findUnique({ where: { id: threadId } });
+      return svc.assertThreadAccess(ctx.prisma, ctx.profileId, threadId);
     },
 
     messages: async (
@@ -138,6 +133,7 @@ export const resolvers = {
       // existiert Nachricht?
       const msg = await ctx.prisma.message.findUnique({ where: { id: messageId }});
       if (!msg) throw new Error("NOT_FOUND");
+      await svc.assertThreadAccess(ctx.prisma, ctx.profileId, msg.threadId);
 
       const key = { messageId_userId: { messageId, userId: ctx.profileId } };
       const existing = await ctx.prisma.messageLike.findUnique({ where: key });
@@ -221,10 +217,11 @@ export const resolvers = {
 
       const group = await (ctx.prisma as PrismaClient).groupLink.findUnique({
         where: { id: groupId },
-        select: { id: true, ownerId: true, isActive: true },
+        select: { id: true, ownerId: true, isActive: true, systemKey: true },
       });
       if (!group || !group.isActive) throw new GraphQLError("GROUP_NOT_FOUND");
       if (group.ownerId !== ctx.profileId) throw new GraphQLError("FORBIDDEN");
+      if (group.systemKey === "BVRLY") throw new GraphQLError("NETWORK_COMMUNITY_CHAT_UNAVAILABLE");
 
       const thread = await svc.ensureCommunityThread(ctx.prisma as PrismaClient, group.id);
       if (!thread) throw new GraphQLError("THREAD_NOT_FOUND");
@@ -237,6 +234,7 @@ export const resolvers = {
 
     setTyping: async (_: unknown, { threadId, typing }: { threadId: string; typing: boolean }, ctx: Ctx) => {
       if (!ctx.profileId) return false;
+      await svc.assertThreadAccess(ctx.prisma, ctx.profileId, threadId);
       await pubsub.publish(topicTyping(threadId), { isTyping: typing });
       return true;
     },
@@ -247,21 +245,33 @@ export const resolvers = {
   // -----------------------------
   Subscription: {
     messageAdded: {
-      subscribe: (_: unknown, args: { threadId: string }) => {
+      subscribe: async (_: unknown, args: { threadId: string }, ctx: Ctx) => {
+        requireAuth(ctx);
+        await svc.assertThreadAccess(ctx.prisma, ctx.profileId, args.threadId);
         const iter = pubsub.asyncIterator([topicMsg(args.threadId)]);
         if (!isAsyncIterable(iter)) throw new Error("messageAdded source is not AsyncIterable");
         return iter;
       },
-      resolve: (payload: any) => payload.messageAdded,
+      resolve: async (payload: any, args: { threadId: string }, ctx: Ctx) => {
+        requireAuth(ctx);
+        await svc.assertThreadAccess(ctx.prisma, ctx.profileId, args.threadId);
+        return payload.messageAdded;
+      },
     },
 
     typing: {
-      subscribe: (_: unknown, args: { threadId: string }) => {
+      subscribe: async (_: unknown, args: { threadId: string }, ctx: Ctx) => {
+        requireAuth(ctx);
+        await svc.assertThreadAccess(ctx.prisma, ctx.profileId, args.threadId);
         const iter = pubsub.asyncIterator([topicTyping(args.threadId)]);
         if (!isAsyncIterable(iter)) throw new Error("typing source is not AsyncIterable");
         return iter;
       },
-      resolve: (payload: any) => Boolean(payload.isTyping),
+      resolve: async (payload: any, args: { threadId: string }, ctx: Ctx) => {
+        requireAuth(ctx);
+        await svc.assertThreadAccess(ctx.prisma, ctx.profileId, args.threadId);
+        return Boolean(payload.isTyping);
+      },
     },
 
     unreadUpdated: {

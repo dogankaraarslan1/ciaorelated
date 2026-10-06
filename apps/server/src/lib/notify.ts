@@ -2,6 +2,7 @@
 import { Prisma } from "@prisma/client";
 import type { PrismaClient } from "@prisma/client";
 import { DEFAULTS } from "../resolvers/notificationSettingsResolvers";
+import { visiblePostWhere } from "./postVisibility";
 
 export type PrismaClientOrTx = PrismaClient | Prisma.TransactionClient;
 type PushData = Record<string, any>;
@@ -382,6 +383,13 @@ export async function notify(opts: {
   try {
     // ✅ normalize payload (text fallback)
     const normalizedPayload = normalizePayload(kind, payload);
+    const postIds = [...new Set([postId, normalizedPayload?.postId,
+      ...(Array.isArray(normalizedPayload?.postIds) ? normalizedPayload.postIds : [])]
+      .filter((id): id is string => typeof id === "string"))];
+    if (postIds.length && (await prisma.post.findMany({
+      where: { AND: [{ id: { in: postIds } }, visiblePostWhere({ profileId: recipientId })] },
+      select: { id: true },
+    })).length !== postIds.length) return null;
 
     const isRequest =
       kind === "FOLLOW_REQUEST" ||

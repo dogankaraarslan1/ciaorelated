@@ -1,6 +1,7 @@
 // apps/server/src/lib/privacy.ts
 import type { Ctx } from "../context";
 import { getBlockedSets } from "./blocks";
+import { visiblePostWhere } from "./postVisibility";
 
 export async function canViewProfileContent(ctx: Ctx, authorId: string): Promise<boolean> {
   const me = ctx.profileId;
@@ -33,14 +34,11 @@ export async function canViewProfileContent(ctx: Ctx, authorId: string): Promise
 
 
 export async function assertCanViewPost(ctx: Ctx, postId: string): Promise<{ authorId: string }> {
-  const p = await ctx.prisma.post.findUnique({
-    where: { id: postId },
+  const p = await ctx.prisma.post.findFirst({
+    where: { AND: [{ id: postId }, visiblePostWhere(ctx)] },
     select: { authorId: true },
   });
   if (!p) throw new Error("Not found");
-
-  const ok = await canViewProfileContent(ctx, p.authorId);
-  if (!ok) throw new Error("Forbidden");
 
   return { authorId: p.authorId };
 }

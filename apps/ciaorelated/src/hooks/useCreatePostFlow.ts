@@ -1,4 +1,5 @@
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy";
 import { useMutation } from "@apollo/client";
 import { GET_SIGNED_POST_UPLOAD, CREATE_POST } from "../graphql/mutations/storage";
 import { ME_QUERY } from "../graphql/queries/profile";
@@ -40,9 +41,8 @@ export function useCreatePostFlow() {
     // Dateigröße ermitteln (nur für iOS/Android nativ sicher; im Zweifel ohne size und serverseitig nur Softlimit)
     let size = 0;
     try {
-      const { stat } = await import("react-native-fs"); // optional; oder skip
-      const s = await stat(picked.uri.replace("file://", ""));
-      size = Number(s.size) || 0;
+      const info = await FileSystem.getInfoAsync(picked.uri);
+      if (info.exists && !info.isDirectory) size = info.size;
     } catch {
       size = 0; // not critical
     }

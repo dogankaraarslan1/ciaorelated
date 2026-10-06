@@ -1,3 +1,4 @@
+import { visiblePostWhere } from "../lib/postVisibility";
 // apps/server/src/resolvers/vlogResolvers.ts
 import type { Ctx } from "../context";
 
@@ -229,12 +230,12 @@ const resolvers = {
       if (blockedByMe.has(userId) || blockedMe.has(userId)) return [];
 
       return ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           authorId: userId,
           tagsVlogs: { some: { status: "ACCEPTED" } },
           ...notBannedAuthor(now),
           // authorId ist schon fest → authorNotBlockedWhere wäre no-op
-        },
+        }] },
         orderBy: { createdAt: "desc" },
         skip: offset,
         take: limit,
@@ -321,11 +322,11 @@ const resolvers = {
       const now = new Date();
 
       return ctx.prisma.post.findMany({
-        where: {
+        where: { AND: [visiblePostWhere(ctx), {
           tagsVlogs: { some: { vlogId, status: "ACCEPTED" } },
           ...authorNotBlockedWhere(blockedByMe, blockedMe),
           ...notBannedAuthor(now),
-        },
+        }] },
         orderBy: { createdAt: "desc" },
         skip: offset,
         take: Math.min(60, limit),

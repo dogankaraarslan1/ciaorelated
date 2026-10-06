@@ -104,13 +104,13 @@ export function PostModerationMenu({
         <TouchableOpacity style={StyleSheet.absoluteFill as any} onPress={onClose} />
         <View style={[s.menuBox, { backgroundColor: COLORS.menuBg }]}>
           {!isMine && (
-            <TouchableOpacity style={[s.menuItem, s.border(COLORS.border)]} onPress={openReportPicker}>
+            <TouchableOpacity style={[s.menuItem, s.border, { borderBottomColor: COLORS.border }]} onPress={openReportPicker}>
               <Text style={[s.menuText, { color: "#F87171", fontWeight: "700" }]}>{t("postmoderationmenu.reportPost")}</Text>
             </TouchableOpacity>
           )}
 
           {!isMine && (
-            <TouchableOpacity style={[s.menuItem, s.border(COLORS.border)]} onPress={confirmBlock}>
+            <TouchableOpacity style={[s.menuItem, s.border, { borderBottomColor: COLORS.border }]} onPress={confirmBlock}>
               <Text style={[s.menuText, { color: "#F59E0B", fontWeight: "700" }]}>{t("postmoderationmenu.blockUsers")}</Text>
             </TouchableOpacity>
           )}
@@ -129,8 +129,7 @@ const s = StyleSheet.create({
   menuBox: { borderTopLeftRadius: 12, borderTopRightRadius: 12, paddingBottom: 24 },
   menuItem: { paddingVertical: 16, alignItems: "center" },
   menuText: { fontSize: 16 },
-  border: (borderColor: string) => ({
+  border: {
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: borderColor,
-  }),
+  },
 });

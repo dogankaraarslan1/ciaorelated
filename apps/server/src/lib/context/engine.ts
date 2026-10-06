@@ -8,16 +8,18 @@ type Tx = PrismaClient;
 
 export async function ensureContext(
   tx: Tx,
-  opts: { kind: any; key: string; label: string; cityScoped?: boolean }
+  opts: { kind: any; key: string; label: string; cityScoped?: boolean; groupLinkId?: string }
 ) {
   return tx.context.upsert({
     where: { key: opts.key },
     update: {
+      ...(opts.groupLinkId ? { groupLinkId: opts.groupLinkId } : {}),
       label: opts.label,
       kind: opts.kind,
       cityScoped: opts.cityScoped ?? true,
     },
     create: {
+      ...(opts.groupLinkId ? { groupLinkId: opts.groupLinkId } : {}),
       key: opts.key,
       kind: opts.kind,
       label: opts.label,

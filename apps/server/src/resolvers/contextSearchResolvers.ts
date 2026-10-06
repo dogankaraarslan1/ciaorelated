@@ -1,5 +1,7 @@
 // apps/server/src/resolvers/contextSearchResolvers.ts
 import type { Ctx } from "../context";
+import { Prisma } from "@prisma/client";
+import { visiblePostSql } from "../lib/postVisibility";
 import { normalizeTag } from "../lib/context/hashtags";
 import { normalizePlaceLabel } from "../lib/geo/placeLabel";
 
@@ -87,6 +89,10 @@ export const contextSearchResolvers = {
         FROM "Context" c
         WHERE
           c.kind IN ('CITY','TOPIC','INTEREST','HASHTAG','EDU_FIELD','EDU_ORG','EDU_LEVEL','PLACE')
+          AND c.key NOT LIKE 'group:%' AND c."groupLinkId" IS NULL
+          AND (EXISTS (SELECT 1 FROM "ProfileContext" seed WHERE seed."contextId" = c.id AND seed.source = 'SEED')
+            OR EXISTS (SELECT 1 FROM "PostContext" pc WHERE pc."contextId" = c.id
+              AND ${visiblePostSql(ctx, Prisma.sql`pc."postId"`)}))
           AND (
             regexp_replace(lower(c.label), '[^a-z0-9äöüß]+', '', 'g') LIKE '%' || ${norm.labelNorm} || '%'
             OR regexp_replace(lower(c.key),   '[^a-z0-9äöüß]+', '', 'g') LIKE '%' || ${norm.labelNorm} || '%'
@@ -126,6 +132,7 @@ export const contextSearchResolvers = {
         LEFT JOIN "Context" c ON c.key = ('tag:' || ph.tag)
         WHERE
           ph.tag LIKE ('%' || ${norm.tagNorm ?? norm.labelNorm} || '%')
+          AND ${visiblePostSql(ctx, Prisma.sql`ph."postId"`)}
         GROUP BY ph.tag, c.id
         ORDER BY "score" DESC, "uniqueLikerCount" DESC, "likeCount" DESC, "postCount" DESC
         LIMIT ${Math.max(10, Math.min(30, lim))};
